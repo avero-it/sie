@@ -105,6 +105,8 @@ func runEditor(configPath string, args []string) error {
 	if err != nil {
 		return err
 	}
+	workDir, _ := os.Getwd()       // "" falls back to "." in the app
+	homeDir, _ := os.UserHomeDir() // "" disables "~"
 	highlighter := syntax.New(term.Wake)
 	defer highlighter.Close()
 	eol := buffer.LF
@@ -121,6 +123,9 @@ func runEditor(configPath string, args []string) error {
 		ShowInvisibles: settings.ShowInvisibles,
 		ShowEmptyCells: settings.ShowEmptyCells,
 		JumpLines:      settings.JumpLines,
+
+		WorkDir: workDir,
+		HomeDir: homeDir,
 
 		Highlighter:        highlighter,
 		SyntaxHighlighting: settings.SyntaxHighlighting,

@@ -44,6 +44,26 @@ func (Store) Exists(path string) (bool, error) {
 	}
 }
 
+// List returns the entries of dir. Symbolic links to directories count as
+// directories; broken links are listed as files.
+func (Store) List(dir string) ([]ports.DirEntry, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, fmt.Errorf("list: %w", err)
+	}
+	out := make([]ports.DirEntry, 0, len(entries))
+	for _, e := range entries {
+		isDir := e.IsDir()
+		if e.Type()&iofs.ModeSymlink != 0 {
+			if info, err := os.Stat(filepath.Join(dir, e.Name())); err == nil {
+				isDir = info.IsDir()
+			}
+		}
+		out = append(out, ports.DirEntry{Name: e.Name(), Dir: isDir})
+	}
+	return out, nil
+}
+
 // Write saves data atomically: it writes a temporary file next to the
 // target, syncs it and renames it over the target, so a crash never leaves
 // a half-written file. Symlinks are followed (the link is kept) and the

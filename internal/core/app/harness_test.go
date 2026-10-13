@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -14,6 +15,8 @@ import (
 type memFS struct {
 	files    map[string][]byte
 	writeErr error
+	work     string           // relative keys live here (for List)
+	listErr  map[string]error // List errors by directory
 }
 
 func (m *memFS) Read(path string) ([]byte, error) {
@@ -35,6 +38,38 @@ func (m *memFS) Write(path string, data []byte) error {
 func (m *memFS) Exists(path string) (bool, error) {
 	_, ok := m.files[path]
 	return ok, nil
+}
+
+// List derives directory entries from the file keys; a key ending in "/"
+// is an empty directory.
+func (m *memFS) List(dir string) ([]ports.DirEntry, error) {
+	if err := m.listErr[dir]; err != nil {
+		return nil, err
+	}
+	work := m.work
+	if work == "" {
+		work = "."
+	}
+	seen := map[string]bool{}
+	var out []ports.DirEntry
+	for key := range m.files {
+		isDirKey := strings.HasSuffix(key, "/")
+		abs := filepath.FromSlash(strings.TrimSuffix(key, "/"))
+		if !filepath.IsAbs(abs) {
+			abs = filepath.Join(work, abs)
+		}
+		rel, err := filepath.Rel(dir, abs)
+		if err != nil || rel == "." || strings.HasPrefix(rel, "..") {
+			continue
+		}
+		first, rest, nested := strings.Cut(filepath.ToSlash(rel), "/")
+		isDir := nested && rest != "" || isDirKey && !nested
+		if !seen[first] {
+			seen[first] = true
+			out = append(out, ports.DirEntry{Name: first, Dir: isDir || nested})
+		}
+	}
+	return out, nil
 }
 
 type memClip struct {

@@ -25,6 +25,15 @@ type FileStore interface {
 	// Write replaces the file atomically, keeping its permissions if it exists.
 	Write(path string, data []byte) error
 	Exists(path string) (bool, error)
+	// List returns the entries of a directory in any order.
+	List(dir string) ([]DirEntry, error)
+}
+
+// DirEntry is one entry of a directory listing. Dir is true for
+// directories, including symbolic links to directories.
+type DirEntry struct {
+	Name string
+	Dir  bool
 }
 
 // Clipboard is the system clipboard.

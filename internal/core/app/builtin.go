@@ -23,10 +23,18 @@ func builtins() []command {
 	return []command{
 		{ID: "file.new", Title: "New file", Aliases: []string{"new"}, Run: (*Editor).cmdNew},
 		{ID: "file.open", Title: "Open file", Aliases: []string{"open", "edit"},
-			Args: []arg{{Prompt: "Open"}}, Run: (*Editor).cmdOpen},
+			Args: []arg{{Prompt: "Open", Kind: commands.ArgPath,
+				Default: func(e *Editor) string { return e.dirInput(e.currentDir()) }}},
+			Run: (*Editor).cmdOpen},
 		{ID: "file.save", Title: "Save file", Aliases: []string{"save", "write"}, Run: (*Editor).cmdSave},
 		{ID: "file.saveAs", Title: "Save as", Aliases: []string{"saveas"},
-			Args: []arg{{Prompt: "Save as", Default: func(e *Editor) string { return e.path }}}, Run: (*Editor).cmdSaveAs},
+			Args: []arg{{Prompt: "Save as", Kind: commands.ArgPath, Default: func(e *Editor) string {
+				if e.path == "" {
+					return e.dirInput(e.currentDir())
+				}
+				return e.displayPath(e.resolvePath(e.path))
+			}}},
+			Run: (*Editor).cmdSaveAs},
 		{ID: "file.quit", Title: "Quit", Aliases: []string{"exit"}, Run: (*Editor).cmdQuit},
 
 		{ID: "edit.undo", Title: "Undo", Run: (*Editor).cmdUndo},
@@ -107,7 +115,7 @@ func (e *Editor) cmdNew([]string) error {
 }
 
 func (e *Editor) cmdOpen(args []string) error {
-	path := strings.TrimSpace(args[0])
+	path := e.expandHome(strings.TrimSpace(args[0]))
 	if path == "" {
 		return errors.New("no file name")
 	}
@@ -138,7 +146,7 @@ func (e *Editor) cmdSave([]string) error {
 }
 
 func (e *Editor) cmdSaveAs(args []string) error {
-	path := strings.TrimSpace(args[0])
+	path := e.expandHome(strings.TrimSpace(args[0]))
 	if path == "" {
 		return errors.New("no file name")
 	}

@@ -95,3 +95,34 @@ func TestWriteDirectory(t *testing.T) {
 		t.Error("writing over a directory succeeded")
 	}
 }
+
+func TestList(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(dir, "sub"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".hidden"), nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	linked := os.Symlink(filepath.Join(dir, "sub"), filepath.Join(dir, "link")) == nil
+	entries, err := Store{}.List(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]bool{}
+	for _, e := range entries {
+		got[e.Name] = e.Dir
+	}
+	if dirFlag, ok := got["sub"]; !ok || !dirFlag {
+		t.Errorf("sub: %v", got)
+	}
+	if dirFlag, ok := got[".hidden"]; !ok || dirFlag {
+		t.Errorf(".hidden: %v", got)
+	}
+	if linked && !got["link"] {
+		t.Errorf("symlink to dir not a dir: %v", got)
+	}
+	if _, err := (Store{}).List(filepath.Join(dir, "missing")); err == nil {
+		t.Error("listing a missing dir succeeded")
+	}
+}

@@ -31,7 +31,7 @@ internal/core/app/              application layer (tcell-free, os-free)
   menu.go / prompt.go / view.go  menus, prompt modes + completions, layout, hit-testing, ViewModel
 internal/core/ports/            interfaces only
   driving:  EditorService (HandleKey, HandleMouse, HandlePaste, Resize, Dispatch, View, Done, Poll)
-  driven:   FileStore, Clipboard, Keymap, Highlighter (async: Highlight job → Result)   (settings are read once by cmd/sie and passed as plain app.Config values, so no config port)
+  driven:   FileStore (Read, Write, Exists, List), Clipboard, Keymap, Highlighter (async: Highlight job → Result)   (settings are read once by cmd/sie and passed as plain app.Config values, so no config port)
   values:   KeyEvent, MouseEvent, ViewModel{Runs, Cursor}, Style, Token/TokenClass, HighlightJob/Result
 internal/adapters/
   tui/        Terminal (owns the tcell screen; New, SetClipboard, Run), event loop, key/mouse/paste normalization, painter + Theme
@@ -103,6 +103,22 @@ internal/adapters/
 - **Between results:** the kept tokens are mapped through `Document.ChangesSince` (a change log covering edits, undo and redo). Tokens before an edit stay, tokens after it shift, and tokens touched by it are dropped and drawn plain until the next result. Typing latency doesn't depend on file size; colors settle about one scan later (about 50 ms for 130 KB of Go).
 - **Limits and toggle:** documents over `syntax_max_size` (default `2MB`) are never sent to the highlighter. "Syntax highlighting" (`view.toggleSyntax`, ✓ option, config `syntax_highlighting`, default on) turns it off.
 - **Classes and precedence:** keyword, string, number, comment, constant, key, type, builtin and meta, mapped in `syntax.classify`. Precedence: whitespace markers > selection > control/invalid glyphs > syntax class.
+
+### File dialog (Open, Save as)
+
+- Arguments with `Kind: commands.ArgPath` make the prompt a file browser (`app/files.go`). Any future command that takes a path gets it for free.
+- The input is a path. The text after the last separator filters the listed directory by prefix, ignoring case. `/` is accepted on every OS, and dotfiles are always listed. The popup shows up to 12 rows: `../` first (except at the root), then directories, then files. An exact name match is listed first, and a listing error shows as an unselectable line.
+- **Keys:**
+  - Tab completes the longest common prefix, or the single match (a directory gets a trailing separator).
+  - ↑/↓ or a click highlights an entry. Nothing is highlighted at first.
+  - Enter acts on the highlighted entry: a directory is entered, a file is chosen. With no highlight, Enter takes the typed text (entering it if it's a directory), so a partial name creates a new file rather than opening the first match.
+  - Backspace right after a separator goes up one directory.
+  - A single click acts.
+- **Paths:**
+  - Browsing starts in the current file's directory.
+  - Paths are shown relative to `Config.WorkDir` when inside it, else as `~/…` (`Config.HomeDir`), else absolute.
+  - `~` is expanded in `cmdOpen`/`cmdSaveAs`, so it also works inline: `open ~/notes.txt`.
+  - The core only uses `path/filepath`. Listing goes through `FileStore.List`, and `cmd/sie` supplies the working and home directories (`os.Getwd`, `os.UserHomeDir`).
 
 ### Prompt line and status line
 

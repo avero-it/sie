@@ -11,11 +11,20 @@ import (
 	"strings"
 )
 
+// ArgKind tells the prompt how to help with an argument.
+type ArgKind uint8
+
+const (
+	ArgText ArgKind = iota // free text
+	ArgPath                // a file path: the prompt browses directories
+)
+
 // Arg describes one argument of a command. Missing arguments are asked for
 // in the prompt, labelled with Prompt and pre-filled with Default.
 type Arg[E any] struct {
 	Prompt  string
 	Default func(env E) string
+	Kind    ArgKind
 }
 
 // Command is one user-facing action.

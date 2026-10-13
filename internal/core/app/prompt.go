@@ -25,12 +25,18 @@ const (
 )
 
 // completion is one row of the prompt's popup: a command, possibly with
-// arguments (from inline parsing or history).
+// arguments (from inline parsing or history), or a directory entry while
+// browsing files.
 type completion struct {
 	cmd   *commands.Command[*Editor]
 	args  []string
 	label string
 	hint  string
+
+	name     string // browsing: entry name
+	dir      bool   // browsing: a directory
+	up       bool   // browsing: the "../" entry
+	disabled bool   // browsing: an error line, not selectable
 }
 
 type promptState struct {
@@ -46,9 +52,15 @@ type promptState struct {
 	replace *replaceSession // modeReplace
 	onClose func()          // runs when the prompt closes for any reason
 
-	items    []completion // modeCommand
-	selected int
-	top      int // first visible completion
+	items    []completion // modeCommand, or browsing
+	selected int          // -1: nothing highlighted (browsing)
+	top      int          // first visible completion
+
+	browse  bool             // modeArgs with an ArgPath argument
+	entries []ports.DirEntry // browsing: listing of listDir, sorted
+	listDir string           // browsing: the directory listed
+	listErr error            // browsing: why listDir could not be read
+	listed  bool             // browsing: entries are valid
 }
 
 func (e *Editor) openPrompt() {
@@ -68,9 +80,13 @@ func (e *Editor) closePrompt() {
 
 func (e *Editor) askArgs(c *commands.Command[*Editor], args []string) {
 	e.focus = focusPrompt
-	e.prompt = promptState{mode: modeArgs, cmd: c, args: args}
-	if def := c.Args[len(args)].Default; def != nil {
-		e.prompt.input.Set(def(e))
+	arg := c.Args[len(args)]
+	e.prompt = promptState{mode: modeArgs, cmd: c, args: args, browse: arg.Kind == commands.ArgPath}
+	if arg.Default != nil {
+		e.prompt.input.Set(arg.Default(e))
+	}
+	if e.prompt.browse {
+		e.refreshFiles()
 	}
 }
 
@@ -98,6 +114,9 @@ func (e *Editor) promptKey(k ports.KeyEvent) {
 			return
 		}
 		e.check(onYes())
+		return
+	}
+	if p.browse && e.browseKey(k) {
 		return
 	}
 	switch k.Key {
@@ -146,19 +165,30 @@ func (e *Editor) promptKey(k ports.KeyEvent) {
 }
 
 func (e *Editor) promptChanged() {
-	if e.prompt.mode == modeCommand {
+	switch {
+	case e.prompt.browse:
+		e.refreshFiles()
+	case e.prompt.mode == modeCommand:
 		e.refreshCompletions()
 	}
 }
 
+// submitArg passes the input as the pending command's next argument.
+func (e *Editor) submitArg() {
+	p := e.prompt
+	args := append(slices.Clone(p.args), p.input.String())
+	e.closePrompt()
+	_ = e.Dispatch(p.cmd.ID, args...)
+}
+
 func (e *Editor) submitPrompt() {
 	p := e.prompt
-	switch p.mode {
-	case modeArgs:
-		args := append(slices.Clone(p.args), p.input.String())
-		e.closePrompt()
-		_ = e.Dispatch(p.cmd.ID, args...)
-	case modeCommand:
+	switch {
+	case p.browse:
+		e.browseEnter()
+	case p.mode == modeArgs:
+		e.submitArg()
+	case p.mode == modeCommand:
 		e.closePrompt()
 		if len(p.items) == 0 {
 			if in := strings.TrimSpace(p.input.String()); in != "" {

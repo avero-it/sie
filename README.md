@@ -62,6 +62,14 @@ Moving the cursor (hold **Shift** with any of these to select):
 
 The mouse works too: click to place the cursor, drag or Shift+click to select, and use the wheel to scroll.
 
+### Opening and saving files
+
+**Ctrl+O** (Open) and **Save as** show a file browser in the prompt line:
+- Type a path. Entries of the directory that start with what you typed are listed above, directories first.
+- **Tab** completes. **↑/↓** or a click selects. **Enter** goes into a directory or opens a file. **Backspace** right after a `/` goes up a level.
+- `~` is your home directory.
+- If nothing is selected, Enter takes exactly what you typed, so a name that doesn't exist yet creates a new file.
+
 ### Showing whitespace
 
 - **Empty cells** (cells after the end of a line, and rows below the last line) show a faint `·` by default.
