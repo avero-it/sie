@@ -1,0 +1,14 @@
+# build output
+/sie
+/sie.exe
+/dist/
+
+# test artifacts
+*.test
+*.out
+coverage.*
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store

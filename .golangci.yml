@@ -1,0 +1,50 @@
+version: "2"
+
+# The hexagonal rules are also enforced by internal/archtest (plain go test);
+# keep both in sync with CLAUDE.md.
+linters:
+  enable:
+    - depguard
+    - errorlint
+    - gocritic
+    - misspell
+    - unconvert
+  settings:
+    depguard:
+      rules:
+        core-no-os:
+          files:
+            - "**/internal/core/**"
+          deny:
+            - pkg: "os"
+              desc: "core must not touch the OS; go through a port"
+            - pkg: "syscall"
+              desc: "core must not touch the OS; go through a port"
+            - pkg: "net"
+              desc: "core must not touch the OS; go through a port"
+            - pkg: "github.com/gdamore/tcell"
+              desc: "tcell is allowed only in internal/adapters/tui"
+            - pkg: "github.com/avero-it/sie/internal/adapters"
+              desc: "core must not depend on adapters"
+        domain-inward:
+          files:
+            - "**/internal/core/domain/**"
+          deny:
+            - pkg: "github.com/avero-it/sie/internal/core/app"
+              desc: "domain is the innermost layer"
+            - pkg: "github.com/avero-it/sie/internal/core/ports"
+              desc: "domain is the innermost layer"
+        tcell-only-in-tui:
+          files:
+            - "**/internal/adapters/fs/**"
+            - "**/internal/adapters/clipboard/**"
+            - "**/internal/adapters/config/**"
+            - "**/internal/adapters/keymap/**"
+          deny:
+            - pkg: "github.com/gdamore/tcell"
+              desc: "tcell is allowed only in internal/adapters/tui"
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
