@@ -69,6 +69,15 @@ The mouse works too: click to place the cursor, drag or Shift+click to select, a
 
 Toggle either one from the **View** menu or the prompt (`whitespace`, `empty cells`), or set it in the config file.
 
+### Syntax highlighting
+
+Files are colored by type: Go, JSON and YAML, plus every other language [chroma](https://github.com/alecthomas/chroma) knows. The type comes from the file name and is shown in the status line.
+- To pick it yourself, use **View → Set language…**, or `language yaml` in the prompt. `language plain` turns coloring off for that file.
+- **View → Syntax highlighting** turns coloring on or off.
+- Files larger than `syntax_max_size` stay plain.
+
+Coloring runs in the background, so typing never waits for it. Right after an edit, the edited token may briefly show without color.
+
 ## Configuration
 
 sie reads `/etc/sie/config.yaml` and then `~/.sie/config.yaml`. Each key in the user file overrides the same key in the system file. `SIE_*` environment variables override both, and `--config <file>` reads only that file.
@@ -79,6 +88,8 @@ show_invisibles: false  # mark spaces (␣) and tabs (»)
 show_empty_cells: true  # mark cells holding no character (·)
 line_ending: lf         # for new files: lf or crlf
 jump_lines: 5           # lines moved by Alt+↑/↓ (1–100)
+syntax_highlighting: true
+syntax_max_size: 2MB    # larger files are not colored
 ```
 
 `sie config` prints the effective settings and which files they came from. `sie version` prints the version, commit, commit and build time, Go version and platform.

@@ -152,6 +152,7 @@ type fakeService struct {
 	mice   []ports.MouseEvent
 	w, h   int
 	done   bool
+	polls  int
 }
 
 func (f *fakeService) HandleKey(k ports.KeyEvent) {
@@ -174,6 +175,7 @@ func (f *fakeService) HandlePaste(s string) {
 }
 func (f *fakeService) Resize(w, h int)                  { f.mu.Lock(); f.w, f.h = w, h; f.mu.Unlock() }
 func (f *fakeService) Dispatch(string, ...string) error { return nil }
+func (f *fakeService) Poll()                            { f.mu.Lock(); f.polls++; f.mu.Unlock() }
 func (f *fakeService) Done() bool                       { f.mu.Lock(); defer f.mu.Unlock(); return f.done }
 func (f *fakeService) View() ports.ViewModel {
 	return ports.ViewModel{Runs: []ports.Run{{Text: "hello"}}}
@@ -231,5 +233,33 @@ func TestRunEndToEnd(t *testing.T) {
 	}
 	if len(svc.keys) != 2 || svc.keys[0] != (ports.KeyEvent{Key: ports.KeyRune, Rune: 'x'}) {
 		t.Errorf("keys %+v", svc.keys)
+	}
+}
+
+func TestWakePollsBeforeDrawing(t *testing.T) {
+	s := tcell.NewSimulationScreen("UTF-8")
+	svc := &fakeService{}
+	term := &Terminal{screen: s, theme: DefaultTheme()}
+	errc := make(chan error, 1)
+	go func() { errc <- term.Run(svc) }()
+	deadline := time.Now().Add(5 * time.Second)
+	polls := func() int { svc.mu.Lock(); defer svc.mu.Unlock(); return svc.polls }
+	for polls() == 0 { // the first draw polls
+		if time.Now().After(deadline) {
+			t.Fatal("never polled")
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	before := polls()
+	term.Wake()
+	for polls() == before {
+		if time.Now().After(deadline) {
+			t.Fatal("Wake did not lead to a poll")
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	s.InjectKey(tcell.KeyCtrlQ, 'q', tcell.ModCtrl)
+	if err := <-errc; err != nil {
+		t.Fatal(err)
 	}
 }

@@ -170,7 +170,7 @@ func (d *Document) SelectAll() {
 
 // Undo reverts the last undo step. It reports false when there was nothing to undo.
 func (d *Document) Undo() (bool, error) {
-	sel, ok, err := d.hist.Undo(d.buf)
+	sel, ok, err := d.hist.Undo(recorder{d})
 	if err != nil || !ok {
 		return false, err
 	}
@@ -181,7 +181,7 @@ func (d *Document) Undo() (bool, error) {
 
 // Redo re-applies the last undone step. It reports false when there was nothing to redo.
 func (d *Document) Redo() (bool, error) {
-	sel, ok, err := d.hist.Redo(d.buf)
+	sel, ok, err := d.hist.Redo(recorder{d})
 	if err != nil || !ok {
 		return false, err
 	}
@@ -201,6 +201,7 @@ func (d *Document) replace(start, end int, text string, after Selection, key str
 	if err := d.buf.Insert(start, []byte(text)); err != nil {
 		return fmt.Errorf("edit: %w", err)
 	}
+	d.logChange(start, len(removed), len(text))
 	// An edit can fuse clusters (e.g. "x" typed before a combining mark),
 	// so move the selection past any cluster it now falls inside.
 	after = Selection{d.snapForward(after.Anchor), d.snapForward(after.Head)}

@@ -15,6 +15,7 @@ import (
 	"github.com/avero-it/sie/internal/adapters/config"
 	fsadapter "github.com/avero-it/sie/internal/adapters/fs"
 	"github.com/avero-it/sie/internal/adapters/keymap"
+	"github.com/avero-it/sie/internal/adapters/syntax"
 	"github.com/avero-it/sie/internal/adapters/tui"
 	"github.com/avero-it/sie/internal/buildinfo"
 	"github.com/avero-it/sie/internal/core/app"
@@ -88,6 +89,7 @@ func newConfigCmd(configPath *string) *cobra.Command {
 			}
 			fmt.Fprintf(out, "tab_width: %d\nshow_invisibles: %t\nshow_empty_cells: %t\nline_ending: %s\njump_lines: %d\n",
 				s.TabWidth, s.ShowInvisibles, s.ShowEmptyCells, s.LineEnding, s.JumpLines)
+			fmt.Fprintf(out, "syntax_highlighting: %t\nsyntax_max_size: %s\n", s.SyntaxHighlighting, s.SyntaxMaxSize)
 			return nil
 		},
 	}
@@ -103,6 +105,8 @@ func runEditor(configPath string, args []string) error {
 	if err != nil {
 		return err
 	}
+	highlighter := syntax.New(term.Wake)
+	defer highlighter.Close()
 	eol := buffer.LF
 	if settings.LineEnding == "crlf" {
 		eol = buffer.CRLF
@@ -117,6 +121,10 @@ func runEditor(configPath string, args []string) error {
 		ShowInvisibles: settings.ShowInvisibles,
 		ShowEmptyCells: settings.ShowEmptyCells,
 		JumpLines:      settings.JumpLines,
+
+		Highlighter:        highlighter,
+		SyntaxHighlighting: settings.SyntaxHighlighting,
+		SyntaxMaxSize:      settings.SyntaxMaxBytes,
 	})
 	if err != nil {
 		return err

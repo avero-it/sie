@@ -3,6 +3,7 @@ module github.com/avero-it/sie
 go 1.26
 
 require (
+	github.com/alecthomas/chroma/v2 v2.27.0
 	github.com/gdamore/tcell/v2 v2.13.10
 	github.com/rivo/uniseg v0.4.7
 	github.com/spf13/cobra v1.10.2
@@ -11,6 +12,7 @@ require (
 )
 
 require (
+	github.com/dlclark/regexp2/v2 v2.2.1 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/gdamore/encoding v1.0.1 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect

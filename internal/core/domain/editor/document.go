@@ -47,6 +47,8 @@ type Document struct {
 	eol      buffer.LineEnding
 	bom      bool
 	tabWidth int
+	version  uint64   // see Version
+	changes  []Change // recent mutations, oldest first; see ChangesSince
 }
 
 // NewDocument creates a document from file content. A UTF-8 BOM is removed

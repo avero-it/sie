@@ -66,6 +66,20 @@ func builtins() []command {
 			Checked: func(e *Editor) bool { return e.showEmptyCells },
 			Run:     func(e *Editor, _ []string) error { return e.toggle(&e.showEmptyCells) }},
 
+		{ID: "view.toggleSyntax", Title: "Syntax highlighting",
+			Aliases: []string{"toggle syntax", "highlighting", "colors"},
+			Checked: func(e *Editor) bool { return e.showSyntax },
+			Run:     (*Editor).cmdToggleSyntax},
+		{ID: "view.setLanguage", Title: "Set language",
+			Aliases: []string{"language", "set syntax", "syntax", "filetype"},
+			Args: []arg{{Prompt: "Language", Default: func(e *Editor) string {
+				if e.hl.language == "" {
+					return "plain"
+				}
+				return e.hl.language
+			}}},
+			Run: (*Editor).cmdSetLanguage},
+
 		{ID: "ui.prompt", Title: "Command prompt", Silent: true, Run: (*Editor).cmdTogglePrompt},
 		{ID: "ui.menu", Title: "Menu", Silent: true, Run: (*Editor).cmdToggleMenu},
 		{ID: "help.about", Title: "About sie", Aliases: []string{"version"}, Run: (*Editor).cmdAbout},
@@ -145,7 +159,10 @@ func (e *Editor) write(path string) error {
 	if err := e.cfg.Files.Write(path, e.doc.Bytes()); err != nil {
 		return err
 	}
-	e.path = path
+	if path != e.path {
+		e.path = path
+		e.detectLanguage()
+	}
 	e.doc.MarkSaved()
 	e.note(fmt.Sprintf("wrote %s", plural(e.doc.LineCount(), "line")))
 	return nil

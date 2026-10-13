@@ -11,6 +11,16 @@ const (
 	StyleWhitespace // faint marker for spaces and tabs
 	StyleWhitespaceSelected
 	StyleEmptyCell // faint marker for cells holding no character
+	// Syntax classes (see TokenClass), in the same order.
+	StyleKeyword
+	StyleString
+	StyleNumber
+	StyleComment
+	StyleConstant
+	StyleKey
+	StyleType
+	StyleBuiltin
+	StyleMeta
 	StyleGutter
 	StyleGutterCurrent
 	StyleMenuBar

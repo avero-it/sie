@@ -38,7 +38,8 @@ func TestUserOverridesSystemPerKey(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := Settings{TabWidth: 2, ShowInvisibles: true, ShowEmptyCells: true, LineEnding: "crlf", JumpLines: 10}
+	want := Defaults()
+	want.TabWidth, want.ShowInvisibles, want.LineEnding, want.JumpLines = 2, true, "crlf", 10
 	if s != want {
 		t.Errorf("got %+v, want %+v", s, want)
 	}
@@ -71,6 +72,7 @@ func TestErrors(t *testing.T) {
 		{"tab width range", "tab_width: 0\n", "tab_width"},
 		{"line ending", "line_ending: cr\n", "line_ending"},
 		{"jump lines range", "jump_lines: 0\n", "jump_lines"},
+		{"syntax max size", "syntax_max_size: lots\n", "syntax_max_size"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -96,5 +98,20 @@ func TestSearchPaths(t *testing.T) {
 	}
 	if len(paths) == 2 && !strings.HasSuffix(filepath.ToSlash(paths[1]), "/.sie/config.yaml") {
 		t.Errorf("user path %q", paths[1])
+	}
+}
+
+func TestSyntaxSettings(t *testing.T) {
+	dir := t.TempDir()
+	path := write(t, dir, "c.yaml", "syntax_highlighting: false\nsyntax_max_size: 512KB\n")
+	s, _, err := load([]string{path}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.SyntaxHighlighting || s.SyntaxMaxBytes != 512<<10 {
+		t.Errorf("got %+v", s)
+	}
+	if d := Defaults(); !d.SyntaxHighlighting || d.SyntaxMaxBytes != 2<<20 {
+		t.Errorf("defaults %+v", d)
 	}
 }

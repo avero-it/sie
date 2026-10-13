@@ -91,6 +91,11 @@ func (e *Editor) HandleMouse(m ports.MouseEvent) {
 	if e.focus == focusEditor && m.Action == ports.MousePress {
 		e.clearMessage()
 	}
+	e.handleMouse(m)
+	e.syncHighlight()
+}
+
+func (e *Editor) handleMouse(m ports.MouseEvent) {
 	r := e.regions()
 	switch m.Button {
 	case ports.WheelUp, ports.WheelDown:
@@ -260,6 +265,7 @@ func (e *Editor) drawText(vm *viewBuilder, r regions) {
 
 		text := e.doc.Line(line)
 		start := e.doc.OffsetAt(line, 0)
+		tokens := e.cursorAt(start)
 		width := 0
 		for _, g := range editor.Layout(text, tw) {
 			width = g.Col + g.Width
@@ -271,7 +277,7 @@ func (e *Editor) drawText(vm *viewBuilder, r regions) {
 				break
 			}
 			selected := start+g.Off >= selStart && start+g.Off < selEnd
-			disp, style := e.glyphLook(g, text, selected)
+			disp, style := e.glyphLook(g, text, selected, tokens.class(start+g.Off))
 			if x < 0 || x+g.Width > cols {
 				// Glyph cut by the viewport edge: show the visible cells blank.
 				visible := min(x+g.Width, cols) - max(x, 0)
@@ -335,7 +341,7 @@ func (e *Editor) drawEmptyCells(vm *viewBuilder, r regions, y, x int) {
 }
 
 // glyphLook returns what to draw for g and in which style.
-func (e *Editor) glyphLook(g editor.Glyph, line []byte, selected bool) (string, ports.Style) {
+func (e *Editor) glyphLook(g editor.Glyph, line []byte, selected bool, class ports.TokenClass) (string, ports.Style) {
 	if e.showInvisibles {
 		marker := ""
 		switch g.Kind {
@@ -351,7 +357,11 @@ func (e *Editor) glyphLook(g editor.Glyph, line []byte, selected bool) (string, 
 			return marker, ports.StyleWhitespace
 		}
 	}
-	return g.Display(line), glyphStyle(g.Kind, selected)
+	style := glyphStyle(g.Kind, selected)
+	if style == ports.StyleDefault {
+		style = classStyle(class) // selection and special glyphs win over syntax
+	}
+	return g.Display(line), style
 }
 
 func glyphStyle(k editor.GlyphKind, selected bool) ports.Style {
@@ -381,7 +391,7 @@ func (e *Editor) drawStatus(vm *viewBuilder, r regions) {
 	if e.doc.HasBOM() {
 		enc += " BOM"
 	}
-	right := fmt.Sprintf("Ln %d, Col %d   %s   %s ", line+1, vcol+1, enc, e.doc.LineEnding())
+	right := fmt.Sprintf("Ln %d, Col %d   %s   %s   %s ", line+1, vcol+1, e.languageLabel(), enc, e.doc.LineEnding())
 	vm.row(r.statusY, " sie "+e.version()+" - "+name, right, ports.StyleStatus, ports.StyleStatus)
 }
 

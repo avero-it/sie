@@ -30,12 +30,13 @@ internal/core/app/              application layer (tcell-free, os-free)
   builtin.go the unique list of built-in commands
   menu.go / prompt.go / view.go  menus, prompt modes + completions, layout, hit-testing, ViewModel
 internal/core/ports/            interfaces only
-  driving:  EditorService (HandleKey, HandleMouse, HandlePaste, Resize, Dispatch, View, Done)
-  driven:   FileStore, Clipboard, Keymap   (settings are read once by cmd/sie and passed as plain app.Config values, so no config port)
-  values:   KeyEvent, MouseEvent, ViewModel{Runs, Cursor}, Style
+  driving:  EditorService (HandleKey, HandleMouse, HandlePaste, Resize, Dispatch, View, Done, Poll)
+  driven:   FileStore, Clipboard, Keymap, Highlighter (async: Highlight job → Result)   (settings are read once by cmd/sie and passed as plain app.Config values, so no config port)
+  values:   KeyEvent, MouseEvent, ViewModel{Runs, Cursor}, Style, Token/TokenClass, HighlightJob/Result
 internal/adapters/
   tui/        Terminal (owns the tcell screen; New, SetClipboard, Run), event loop, key/mouse/paste normalization, painter + Theme
   keymap/     default modeless keymap (later: loaded from config)
+  syntax/     chroma highlighter: background worker (newest job wins), chroma token types → core TokenClass
   fs/         os-based FileStore (atomic save: temp file + rename, preserves permissions)
   clipboard/  OSC52 (via Terminal.SetClipboard) + native: Win32 API on Windows, pbcopy / wl-copy / xclip / xsel elsewhere (optional)
   config/     viper: /etc/sie/config.yaml merged with ~/.sie/config.yaml (user wins per key), SIE_* env vars, --config overrides
@@ -92,6 +93,16 @@ internal/adapters/
 - **Prompt-only commands** are registered normally but have no key binding and no menu entry, e.g. `edit.deleteToLineEnd` ("Delete to end of line", aliases "delete till end of line" and "kill line"). To reach a command by another phrase, add an alias; never register a second command for the same action.
 - Menus are app data (`app.Menu{Title, Items []commandID}`, `"-"` is a separator). `app.New` rejects menus that reference unknown IDs. Commands that take arguments show `…` in menus.
 - Unbound rune keys are typed only with no modifiers, Shift only, or Ctrl+Alt together (AltGr on Windows). Plain Alt+letter is ignored.
+
+### Syntax highlighting
+
+- **Engine:** chroma (`internal/adapters/syntax`, the only package allowed to import it, enforced by archtest). It supports every chroma language. Go, JSON and YAML are tested.
+- **Detection:** by file name (`Highlighter.Detect`), redone on open and Save as. `go.mod`, `go.sum` and `go.work` stay plain, because chroma would call them AMPL. "Set language…" (`view.setLanguage`, aliases `language`, `syntax`, `filetype`) overrides detection; `plain` turns coloring off for this document, and the override survives Save as. The status line shows the language (`Go`, `Plain`, or `Go (too large)`).
+- **Asynchronous:** after every input event the app calls `syncHighlight`. If the document version changed, it sends a `HighlightJob` with a copy of the text. The worker tokenizes only the newest pending job, stores the result and calls `Terminal.Wake`. The loop then draws, and every draw calls `EditorService.Poll` first, which collects the result.
+  - Job IDs are `epoch<<40 | document version`. The epoch changes when the document or language changes, so late results for an older document are discarded.
+- **Between results:** the kept tokens are mapped through `Document.ChangesSince` (a change log covering edits, undo and redo). Tokens before an edit stay, tokens after it shift, and tokens touched by it are dropped and drawn plain until the next result. Typing latency doesn't depend on file size; colors settle about one scan later (about 50 ms for 130 KB of Go).
+- **Limits and toggle:** documents over `syntax_max_size` (default `2MB`) are never sent to the highlighter. "Syntax highlighting" (`view.toggleSyntax`, ✓ option, config `syntax_highlighting`, default on) turns it off.
+- **Classes and precedence:** keyword, string, number, comment, constant, key, type, builtin and meta, mapped in `syntax.classify`. Precedence: whitespace markers > selection > control/invalid glyphs > syntax class.
 
 ### Prompt line and status line
 
@@ -223,7 +234,7 @@ CGO_ENABLED=0 go list -deps -f '{{if .CgoFiles}}{{.ImportPath}}{{end}}' ./...
 - `context.Context` only at app/adapter boundaries (I/O), never in the domain.
 - Tests are table-driven. Use `testing/fstest` or in-memory fakes for ports. Fuzz the piece table against a naive `[]byte` model. Use `tcell.SimulationScreen` golden tests for rendering (`-update` flag regenerates goldens).
 - **Dependencies are vendored.** `vendor/` is committed, and the go command builds from it automatically, so builds need no network. After any change to `go.mod` (`go get`, version bumps), run `go mod tidy && go mod vendor` and commit `vendor/` in the same commit. `go mod verify` checks the module cache against `go.sum`. Never edit files under `vendor/`. archtest and gofmt checks skip it (`gofmt -l $(git ls-files '*.go' | grep -v '^vendor/')`).
-- **New dependencies need justification** in the PR/commit message: pure Go, maintained, and not trivially replaceable by the stdlib. Current allow-list: `github.com/gdamore/tcell/v2` v2.13.10 (adapters/tui only; `cmd/sie` gets the screen through `tui.New`), `github.com/rivo/uniseg`, `golang.org/x/sys` (adapters only, for the Windows clipboard; already a tcell dependency), `github.com/spf13/viper` v1.21.0 (adapters/config only; requested for config files), `github.com/spf13/cobra` v1.10.2 (cmd/sie only; requested for the CLI). archtest enforces where tcell, viper and cobra may be imported. Pin exact versions that are at least two weeks old.
+- **New dependencies need justification** in the PR/commit message: pure Go, maintained, and not trivially replaceable by the stdlib. Current allow-list: `github.com/gdamore/tcell/v2` v2.13.10 (adapters/tui only; `cmd/sie` gets the screen through `tui.New`), `github.com/rivo/uniseg`, `golang.org/x/sys` (adapters only, for the Windows clipboard; already a tcell dependency), `github.com/spf13/viper` v1.21.0 (adapters/config only; requested for config files), `github.com/spf13/cobra` v1.10.2 (cmd/sie only; requested for the CLI), `github.com/alecthomas/chroma/v2` v2.27.0 (adapters/syntax only; requested for syntax highlighting; adds about 4 MB, since all lexers are embedded). archtest enforces where tcell, viper, cobra and chroma may be imported. Pin exact versions that are at least two weeks old.
 
 ## Definition of done
 

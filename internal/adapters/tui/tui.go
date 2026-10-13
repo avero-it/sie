@@ -27,6 +27,12 @@ func New() (*Terminal, error) {
 	return &Terminal{screen: screen, theme: DefaultTheme()}, nil
 }
 
+// Wake makes the event loop run once, so the editor collects results of
+// background work (Poll) and redraws. Safe to call from any goroutine; a
+// wake-up that cannot be queued is dropped, since the loop polls before
+// every redraw anyway.
+func (t *Terminal) Wake() { _ = t.screen.PostEvent(tcell.NewEventInterrupt(nil)) }
+
 // SetClipboard sends data to the terminal clipboard via OSC52.
 func (t *Terminal) SetClipboard(data []byte) { t.screen.SetClipboard(data) }
 
@@ -120,6 +126,8 @@ func (l *loop) handle(ev tcell.Event) {
 		if m, ok := l.mouse.normalize(ev); ok {
 			l.svc.HandleMouse(m)
 		}
+	case *tcell.EventInterrupt:
+		// A Wake from background work: draw (which polls) follows.
 	}
 }
 
@@ -136,5 +144,6 @@ func (l *loop) collectPaste(ev *tcell.EventKey) {
 }
 
 func (l *loop) draw() {
+	l.svc.Poll()
 	paint(l.screen, l.svc.View(), l.theme)
 }

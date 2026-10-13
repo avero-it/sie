@@ -27,6 +27,8 @@ The adapter does three things only: **normalize → hand to the core → paint t
 
 ## Event loop
 
+- **Background work:** `Terminal.Wake()` posts a tcell `EventInterrupt`, which background adapters call from any goroutine (e.g. the highlighter when a result is ready). Every `draw()` calls `svc.Poll()` before `View()`, so a dropped wake-up is harmless.
+
 - One goroutine runs `screen.PollEvent()` and sends to a channel. The main goroutine owns all state and selects on events, timers and async results.
 - Drain all pending events before rendering once. Bracketed paste (`EnablePaste`) becomes a single insert.
 - `screen.Init()` with mouse and paste enabled. Always `defer screen.Fini()` and `recover()` → `Fini()` → re-panic, so the terminal is restored on crash.

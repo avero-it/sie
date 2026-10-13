@@ -32,6 +32,9 @@ func TestViolation(t *testing.T) {
 		{app, "github.com/spf13/viper", true},
 		{module + "/cmd/sie", "github.com/spf13/cobra", false},
 		{adapters + "tui", "github.com/spf13/cobra", true},
+		{adapters + "syntax", "github.com/alecthomas/chroma/v2/lexers", false},
+		{app, "github.com/alecthomas/chroma/v2", true},
+		{module + "/cmd/sie", "github.com/alecthomas/chroma/v2", true},
 	}
 	for _, tt := range tests {
 		if got := violation(tt.pkg, tt.imp) != ""; got != tt.bad {

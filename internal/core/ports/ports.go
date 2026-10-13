@@ -13,6 +13,9 @@ type EditorService interface {
 	View() ViewModel
 	// Done reports whether the user asked to quit.
 	Done() bool
+	// Poll collects results of background work (e.g. highlighting). The
+	// adapter calls it when woken up by such work.
+	Poll()
 }
 
 // FileStore reads and writes whole files. A missing file is reported with an

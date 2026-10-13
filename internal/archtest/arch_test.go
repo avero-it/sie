@@ -24,6 +24,7 @@ const (
 	uniseg   = "github.com/rivo/uniseg"
 	viper    = "github.com/spf13/viper"
 	cobra    = "github.com/spf13/cobra"
+	chroma   = "github.com/alecthomas/chroma"
 	cmd      = module + "/cmd/sie"
 )
 
@@ -85,6 +86,9 @@ func violation(pkg, imp string) string {
 	}
 	if within(imp, cobra) && !within(pkg, cmd) {
 		return "cobra is allowed only in cmd/sie"
+	}
+	if strings.HasPrefix(imp, chroma) && !within(pkg, adapters+"syntax") {
+		return "chroma is allowed only in internal/adapters/syntax"
 	}
 	switch {
 	case within(pkg, domain):

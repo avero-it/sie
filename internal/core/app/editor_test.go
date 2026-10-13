@@ -21,7 +21,7 @@ func TestInitialScreen(t *testing.T) {
 	h.wantRow(rowText, " 1")
 	h.Resize(80, 10) // room for the whole status line
 	h.wantRowPrefix(rowStatus, " sie test - [No Name]")
-	if !strings.HasSuffix(h.row(rowStatus), "Ln 1, Col 1   UTF-8   LF") {
+	if !strings.HasSuffix(h.row(rowStatus), "Ln 1, Col 1   Plain   UTF-8   LF") {
 		t.Errorf("status: %q", h.row(rowStatus))
 	}
 	if c := h.View().Cursor; !c.Visible || c.X != 3 || c.Y != rowText {
@@ -544,8 +544,8 @@ func TestPromptBarIdleAndClearing(t *testing.T) {
 
 func TestStatusShowsVersionAndTruncates(t *testing.T) {
 	h := newHarness(t, nil)
-	h.wantRowPrefix(rowStatus, " sie test - […") // 40 columns: left part cut before the right part
-	if !strings.HasSuffix(h.row(rowStatus), "Ln 1, Col 1   UTF-8   LF") {
+	h.wantRowPrefix(rowStatus, " sie …") // 40 columns: left part cut before the right part
+	if !strings.HasSuffix(h.row(rowStatus), "Ln 1, Col 1   Plain   UTF-8   LF") {
 		t.Errorf("right part damaged: %q", h.row(rowStatus))
 	}
 	_ = h.Dispatch("help.about")

@@ -22,11 +22,16 @@ type Settings struct {
 	ShowEmptyCells bool   `mapstructure:"show_empty_cells"` // mark cells holding no character
 	LineEnding     string `mapstructure:"line_ending"`      // for new files: "lf" or "crlf"
 	JumpLines      int    `mapstructure:"jump_lines"`       // lines moved by Alt+Up/Down
+
+	SyntaxHighlighting bool   `mapstructure:"syntax_highlighting"`
+	SyntaxMaxSize      string `mapstructure:"syntax_max_size"` // e.g. "2MB", "512KB"
+	SyntaxMaxBytes     int    `mapstructure:"-"`               // SyntaxMaxSize parsed
 }
 
 // Defaults returns the built-in settings.
 func Defaults() Settings {
-	return Settings{TabWidth: 4, ShowInvisibles: false, ShowEmptyCells: true, LineEnding: "lf", JumpLines: 5}
+	return Settings{TabWidth: 4, ShowInvisibles: false, ShowEmptyCells: true, LineEnding: "lf", JumpLines: 5,
+		SyntaxHighlighting: true, SyntaxMaxSize: "2MB", SyntaxMaxBytes: 2 << 20}
 }
 
 // SearchPaths returns the config files, lowest precedence first: the system
@@ -60,6 +65,8 @@ func load(paths []string, mustExist bool) (Settings, []string, error) {
 	v.SetDefault("show_empty_cells", d.ShowEmptyCells)
 	v.SetDefault("line_ending", d.LineEnding)
 	v.SetDefault("jump_lines", d.JumpLines)
+	v.SetDefault("syntax_highlighting", d.SyntaxHighlighting)
+	v.SetDefault("syntax_max_size", d.SyntaxMaxSize)
 	v.SetEnvPrefix("SIE")
 	v.AutomaticEnv()
 
@@ -81,6 +88,7 @@ func load(paths []string, mustExist bool) (Settings, []string, error) {
 	if err := v.UnmarshalExact(&s); err != nil {
 		return Settings{}, used, fmt.Errorf("config: %w", err)
 	}
+	s.SyntaxMaxBytes = int(v.GetSizeInBytes("syntax_max_size"))
 	if err := s.validate(); err != nil {
 		return Settings{}, used, fmt.Errorf("config: %w", err)
 	}
@@ -93,6 +101,9 @@ func (s *Settings) validate() error {
 	}
 	if s.JumpLines < 1 || s.JumpLines > 100 {
 		return fmt.Errorf("jump_lines must be between 1 and 100, got %d", s.JumpLines)
+	}
+	if s.SyntaxMaxBytes <= 0 {
+		return fmt.Errorf(`syntax_max_size must be a size like "2MB" or "512KB", got %q`, s.SyntaxMaxSize)
 	}
 	s.LineEnding = strings.ToLower(s.LineEnding)
 	if s.LineEnding != "lf" && s.LineEnding != "crlf" {

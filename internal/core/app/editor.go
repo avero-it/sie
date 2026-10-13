@@ -28,6 +28,10 @@ type Config struct {
 	ShowInvisibles bool // mark spaces and tabs
 	ShowEmptyCells bool // mark cells holding no character
 	JumpLines      int  // lines moved by Alt+Up/Down; <= 0 means defaultJumpLines
+
+	Highlighter        ports.Highlighter // optional; nil means plain text only
+	SyntaxHighlighting bool              // color known file types
+	SyntaxMaxSize      int               // bytes; larger documents stay plain; <= 0 means 2 MB
 }
 
 const defaultJumpLines = 5
@@ -84,6 +88,8 @@ type Editor struct {
 
 	showInvisibles bool
 	showEmptyCells bool
+	showSyntax     bool
+	hl             highlightState
 }
 
 var _ ports.EditorService = (*Editor)(nil)
@@ -101,6 +107,7 @@ func New(cfg Config) (*Editor, error) {
 
 		showInvisibles: cfg.ShowInvisibles,
 		showEmptyCells: cfg.ShowEmptyCells,
+		showSyntax:     cfg.SyntaxHighlighting,
 	}
 	if e.menus == nil {
 		e.menus = DefaultMenus()
@@ -142,6 +149,7 @@ func (e *Editor) HandleKey(k ports.KeyEvent) {
 		e.editorKey(k)
 	}
 	e.follow()
+	e.syncHighlight()
 }
 
 // HandlePaste inserts pasted text as one edit (one undo step).
@@ -158,12 +166,14 @@ func (e *Editor) HandlePaste(text string) {
 		e.check(e.doc.Insert(text))
 		e.follow()
 	}
+	e.syncHighlight()
 }
 
 // Dispatch runs a command; it is the single entry point for shortcuts,
 // menus and the prompt. Missing arguments are asked for in the prompt.
 // Non-silent commands are echoed in the prompt line and kept in history.
 func (e *Editor) Dispatch(id string, args ...string) error {
+	defer e.syncHighlight()
 	c, ok := e.reg.Get(id)
 	if !ok {
 		err := fmt.Errorf("unknown command %q", id)
@@ -340,6 +350,9 @@ func (e *Editor) newDoc(content []byte) *editor.Document {
 func (e *Editor) setDoc(d *editor.Document, path string) {
 	e.doc, e.path = d, path
 	e.view.Top, e.view.Left = 0, 0
+	e.hl.manual = false
+	e.resetHighlight()
+	e.detectLanguage()
 }
 
 // note appends a result to the current echo, or shows it on its own.
