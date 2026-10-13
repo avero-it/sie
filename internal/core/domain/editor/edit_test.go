@@ -102,6 +102,27 @@ func TestPasteIsSeparateUndoStep(t *testing.T) {
 	}
 }
 
+func TestTrimTrailingSpace(t *testing.T) {
+	tests := []struct{ in, want string }{
+		{"a  \nb\t\n|c ", "a\nb\n|c"},
+		{"a  \n^b  \nc| \nd  ", "a  \n^b\nc|\nd  "},
+		{"a \r\n|b", "a\r\n|b"},
+	}
+	for _, tt := range tests {
+		d := doc(t, tt.in)
+		if _, err := d.TrimTrailingSpace(); err != nil {
+			t.Fatal(err)
+		}
+		if got := show(d); got != tt.want {
+			t.Errorf("%q: got %q, want %q", tt.in, got, tt.want)
+		}
+		_, _ = d.Undo()
+		if got := show(d); got != tt.in {
+			t.Errorf("%q: one undo restores, got %q", tt.in, got)
+		}
+	}
+}
+
 func TestSelectLineExtends(t *testing.T) {
 	d := doc(t, "a\nb|b\nc\nd")
 	d.SelectLine()

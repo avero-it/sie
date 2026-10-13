@@ -74,18 +74,17 @@ func (d *Document) ReplaceAll(query, repl string, opts SearchOptions) (int, erro
 		return 0, nil
 	}
 	norm := d.normalizeEOL(repl)
-	before := d.sel
 	d.hist.Seal()
 	// Replace back to front so earlier offsets stay valid; the group is
 	// undone in reverse order, front to back, which is equally valid.
 	for i := len(hits) - 1; i >= 0; i-- {
 		at := hits[i]
-		if err := d.replace(at, at+len(q), norm, before, keyReplace); err != nil {
+		after := d.sel.mapReplace(at, at+len(q), len(norm))
+		if err := d.replace(at, at+len(q), norm, after, keyReplace); err != nil {
 			return len(hits) - 1 - i, fmt.Errorf("replace all: %w", err)
 		}
 	}
 	d.hist.Seal()
-	d.sel = Cursor(d.snap(before.Head))
 	return len(hits), nil
 }
 

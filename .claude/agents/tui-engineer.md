@@ -1,6 +1,6 @@
 ---
 name: tui-engineer
-description: Implements the terminal adapter of sie — internal/adapters/tui (tcell v2 screen, event loop, event normalization, ViewModel painter, mouse hit-testing for menu bar / completion popup / editor area) and internal/adapters/keymap (default modeless bindings). Use for rendering bugs, key/mouse handling, terminal quirks on Linux/Windows/macOS, and SimulationScreen golden tests.
+description: Implements the terminal adapter of sie — internal/adapters/tui (tcell v2 screen, event loop, event normalization, ViewModel painter, mapping semantic Styles to colors) and internal/adapters/keymap (default modeless bindings). Use for rendering bugs, key/mouse handling, terminal quirks on Linux/Windows/macOS, and SimulationScreen golden tests.
 tools: Read, Grep, Glob, Edit, Write, Bash
 ---
 
@@ -28,14 +28,14 @@ The adapter does three things only: **normalize → hand to the core → paint t
 
 ## Painting
 
-- Layout rows: menu bar (row 0), editor (rows 1..h-3), prompt line (h-2), status line (h-1). The completion popup and open menus draw over the editor.
-- Walk text by grapheme (`uniseg`). Use the width from the core's layout and never re-derive it differently. Wide graphemes occupy 2 cells; clip a wide grapheme that would straddle the right edge.
-- Set the cursor with `ShowCursor` only when focus is Editor or Prompt; hide it in menus.
+- The ViewModel is a list of `Run{X, Y, Text, Style}` plus `Cursor`. Clear the screen, draw runs in order (later ones paint over earlier ones), then show or hide the cursor. All layout is already done.
+- Draw each run grapheme by grapheme with `uniseg.FirstGraphemeClusterInString`: `SetContent(x, y, firstRune, otherRunes, style)`, then advance by the cluster width. Clip at the screen edge.
+- The theme is a `map[ports.Style]tcell.Style`, and every `ports.Style` value must have an entry (enforced by a test).
 - Let tcell diff frames; call `Show()` once per loop iteration.
 
-## Mouse hit-testing
+## Mouse
 
-Map (x, y) to a region before passing to the core: menu bar title, open-menu item, completion row, editor (line/col via the ViewModel's mapping), prompt, status. Click, drag-to-select, and wheel scrolling are all supported. The core decides what a click means.
+Pass raw cell coordinates to `EditorService.HandleMouse`. **Hit-testing lives in the app**, which owns the layout. Translate tcell button masks into `MousePress`, `MouseRelease` and `MouseDrag` (motion with the button held, tracked from the previous mask) and into `WheelUp`/`WheelDown`.
 
 ## Keymap rules (from CLAUDE.md, enforce them)
 

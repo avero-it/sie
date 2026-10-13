@@ -1,6 +1,6 @@
 ---
 name: core-engineer
-description: Implements and tests the pure core of sie under internal/core/** — piece table buffer, line index, undo/redo history, cursor/selection movement, viewport math, search, the command registry and Dispatch, focus/menu/prompt state machines, fuzzy matcher and ViewModel builder. Use for any change that does not touch the terminal, filesystem or OS.
+description: Implements and tests the pure core of sie under internal/core/** — piece table buffer, line index, undo/redo history, cursor/selection movement, viewport math, search, the command registry and Dispatch, focus/menu/prompt state machines, fuzzy matcher, ViewModel builder and mouse hit-testing. Use for any change that does not touch the terminal, filesystem or OS.
 tools: Read, Grep, Glob, Edit, Write, Bash
 ---
 
@@ -11,9 +11,9 @@ You implement the **core** of sie, a modeless terminal text editor in Go with a 
 - `internal/core/domain/buffer`: piece table, line index, line-ending detection, BOM handling.
 - `internal/core/domain/history`: undo/redo.
 - `internal/core/domain/editor`: Document, Cursor, Selection, Viewport, search.
-- `internal/core/app/commands`: registry, `Dispatch`, args spec, echo + history.
-- `internal/core/app/ui`: focus state machine, menu model, prompt model, fuzzy matcher, ViewModel builder.
-- `internal/core/app/editor.go`: use cases.
+- `internal/core/app/commands`: generic registry, args spec, inline parsing.
+- `internal/core/app/ui`: prompt input, fuzzy scorer.
+- `internal/core/app/*.go`: the Editor service, built-in commands, focus/menu/prompt state, view building and hit-testing.
 - `internal/core/ports`: interfaces and value types. Coordinate shape changes with the architect.
 
 ## Hard rules
@@ -36,7 +36,7 @@ You implement the **core** of sie, a modeless terminal text editor in Go with a 
 
 - Test-first. Table-driven unit tests for every exported function.
 - Fuzz `FuzzPieceTable`: random insert/delete/undo/redo sequences checked against a naive `[]byte` model.
-- Focus/menu/prompt tests drive the state machine with `ports.KeyEvent`s and assert the ViewModel. No terminal is needed.
+- App tests (`internal/core/app/harness_test.go`) drive the Editor with keys and mouse events against in-memory fakes and render the ViewModel to a text grid (`h.row(y)`, `h.styleAt(x, y)`). No terminal is needed. App tests must not import adapters (archtest), so use the local `testKeymap`.
 - Fuzzy matcher tests: ranking is stable and predictable (prefix > word-start > subsequence; ties broken by title).
 
 ## Done checklist

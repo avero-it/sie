@@ -23,14 +23,17 @@ internal/core/domain/           pure logic, stdlib only (+ github.com/rivo/unise
   history/  undo/redo as reversible piece-table edits, grouped per command / typing burst
   editor/   Document, Cursor, Selection, Viewport math, search
 internal/core/app/              application layer (tcell-free, os-free)
-  commands/ command registry, Dispatch, args spec, echo + history
-  ui/       focus state machine, menu model, prompt model, fuzzy matcher, ViewModel builder
-  editor.go use cases: Open, Save, Insert, Delete, Move, Select, Undo, Redo, Find, Copy/Paste, Quit
+  commands/ generic command registry (Command[E], Arg[E]), inline "name args" parsing
+  ui/       prompt Input (grapheme-aware line editing), fuzzy Score
+  editor.go Editor (implements EditorService): Dispatch + echo + history, editor-focus keys
+  builtin.go the unique list of built-in commands
+  menu.go / prompt.go / view.go  menus, prompt modes + completions, layout, hit-testing, ViewModel
 internal/core/ports/            interfaces only
-  driving:  EditorService (Dispatch, HandleKey, HandleMouse, Resize, View)
-  driven:   FileStore, Clipboard, Keymap, MenuLayout, ConfigStore
+  driving:  EditorService (HandleKey, HandleMouse, HandlePaste, Resize, Dispatch, View, Done)
+  driven:   FileStore, Clipboard, Keymap   (ConfigStore comes with the config adapter)
+  values:   KeyEvent, MouseEvent, ViewModel{Runs, Cursor}, Style
 internal/adapters/
-  tui/        tcell screen, event loop, event normalization, ViewModel painter
+  tui/        tcell screen, event loop, event normalization, ViewModel painter (draws Runs, maps Style → colors)
   keymap/     default modeless keymap (later: loaded from config)
   fs/         os-based FileStore (atomic save: temp file + rename, preserves permissions)
   clipboard/  OSC52 + platform fallback (pure Go)
@@ -78,10 +81,14 @@ internal/adapters/
 - Every invocation goes through one `Dispatch(id, args)`, whatever its source: shortcut, menu or prompt.
 - Dispatch **echoes** the canonical line into the prompt area (`> Save file   Ctrl+S`) and appends it to prompt history (↑ recalls). This teaches users the shortcuts.
 - Adapters never contain command logic. They translate input into a `Dispatch` call or a focus-handler event.
+- **Editing primitives are not commands**: arrows (Ctrl = by word, Shift = select), Home/End (Ctrl = document), PgUp/PgDn, Backspace/Del, Enter, Tab, Esc and typed text are handled directly in editor focus and are not echoed. Everything else is a registered command.
+- Echo format: `> Title args — result note`, with the shortcut right-aligned. Errors show as `Title args: error`. `Silent` commands (`ui.prompt`, `ui.menu`) are neither echoed nor listed in the prompt.
+- Menus are app data (`app.Menu{Title, Items []commandID}`, `"-"` is a separator). `app.New` rejects menus that reference unknown IDs. Commands that take arguments show `…` in menus.
+- Unbound rune keys are typed only with no modifiers, Shift only, or Ctrl+Alt together (AltGr on Windows). Plain Alt+letter is ignored.
 
 ### Prompt
 
-- **Fuzzy matching** over titles and aliases. A completion popup is drawn just above the prompt line, over the editor, and shows the top matches with their shortcuts. Enter runs the highlighted match.
+- **Fuzzy matching** (`ui.Score`) over titles and aliases. With empty input the list shows the 5 most recent invocations (with their args), then all commands by title. A completion popup is drawn just above the prompt line, over the editor, and shows the top matches with their shortcuts. Enter runs the highlighted match.
 - **Arguments**: typed inline (`goto 42`, `find foo`), or asked step by step (`Line:`) when missing. Invoking from a shortcut or menu without arguments leads to the same step-by-step prompts.
 - The prompt also handles confirmations (unsaved changes on quit, overwrite on save).
 
@@ -94,7 +101,8 @@ internal/adapters/
 1. `tcell.PollEvent` runs in its own goroutine and feeds a channel. **A single main goroutine owns all state**, so there are no locks in the core. That goroutine also selects on timers and async results.
 2. Each tcell event is normalized to `ports.KeyEvent` / `ports.MouseEvent` and passed to `EditorService`. tcell types never cross into the core.
 3. Pending events are drained before each render. A bracketed paste becomes a single `Insert`, which is one undo step.
-4. The app builds a **ViewModel**: menu state, visible lines already sliced to the viewport, gutter, cursor, selection spans, prompt and completions, and status fields. The painter draws it grapheme by grapheme (uniseg widths, tab expansion) and calls `Show()`; tcell diffs the frame.
+4. The app builds the **ViewModel**: a list of positioned text `Run`s with a semantic `Style`, plus the cursor. Every layout decision is made in the app (`view.go`): gutter, horizontal clipping of wide glyphs, the selection, the dropdown, completions and right-aligned hints. The painter clears the screen, draws the runs grapheme by grapheme (uniseg widths), places the cursor and calls `Show()`; tcell diffs the frame. App tests render the ViewModel to a text grid, with no terminal needed.
+   - **Mouse hit-testing is in the app as well** (`HandleMouse` gets raw cells). It uses the same geometry helpers as the view, so drawn and clickable areas can't drift apart.
 5. Viewport, scroll and column↔screen-x math live in the core. The adapter only reports `Resize(w, h)`.
 6. `defer screen.Fini()` plus `recover()` always restore the terminal, even on panic.
 

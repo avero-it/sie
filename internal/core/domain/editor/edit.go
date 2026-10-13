@@ -15,6 +15,7 @@ const (
 	keyBackspace = "backspace"
 	keyDelete    = "delete"
 	keyReplace   = "replace-all"
+	keyTrim      = "trim"
 )
 
 // Insert replaces the selection with text. Line breaks in text are
@@ -110,6 +111,33 @@ func (d *Document) DuplicateLine() error {
 	return d.replace(end, end, ins, after, "")
 }
 
+// TrimTrailingSpace removes spaces and tabs at the end of the lines touched
+// by the selection, or of all lines when nothing is selected, as one undo
+// step. It returns the number of lines changed.
+func (d *Document) TrimTrailingSpace() (int, error) {
+	first, last := 0, d.LineCount()-1
+	if !d.sel.Empty() {
+		first, last = d.selectedLines()
+	}
+	d.hist.Seal()
+	n := 0
+	for line := last; line >= first; line-- {
+		start, end := d.lineRange(line)
+		text := d.Line(line)
+		keep := len(strings.TrimRight(string(text), " \t"))
+		if keep == len(text) {
+			continue
+		}
+		after := d.sel.mapReplace(start+keep, end, 0)
+		if err := d.replace(start+keep, end, "", after, keyTrim); err != nil {
+			return n, fmt.Errorf("trim trailing space: %w", err)
+		}
+		n++
+	}
+	d.hist.Seal()
+	return n, nil
+}
+
 // SelectLine selects the cursor's line including its line break; repeated
 // calls extend the selection by one line.
 func (d *Document) SelectLine() {
@@ -164,6 +192,22 @@ func (d *Document) replace(start, end int, text string, after Selection, key str
 	d.goal = -1
 	d.hist.Record(history.Edit{Off: start, Removed: removed, Inserted: []byte(text)}, before, after, key)
 	return nil
+}
+
+// mapReplace returns s adjusted for replacing [start, end) with n bytes:
+// offsets after the range shift, offsets inside it move to its new end.
+func (s Selection) mapReplace(start, end, n int) Selection {
+	m := func(off int) int {
+		switch {
+		case off >= end:
+			return off + n - (end - start)
+		case off > start:
+			return start + n
+		default:
+			return off
+		}
+	}
+	return Selection{m(s.Anchor), m(s.Head)}
 }
 
 // selectedLines returns the first and last line touched by the selection. A
