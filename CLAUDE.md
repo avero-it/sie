@@ -83,6 +83,7 @@ internal/adapters/
 - Dispatch **echoes** the canonical line into the prompt area (`> Save file   Ctrl+S`) and appends it to prompt history (↑ recalls). This teaches users the shortcuts.
 - Adapters never contain command logic. They translate input into a `Dispatch` call or a focus-handler event.
 - **Editing primitives are not commands**: arrows (Ctrl = by word, Shift = select), Home/End (Ctrl = document), PgUp/PgDn, Backspace/Del, Enter, Tab, Esc and typed text are handled directly in editor focus and are not echoed. Everything else is a registered command.
+- Inline parsing (`Registry.ParseInline`): the longest matching name wins, and a whole-name match counts, so `replace all a b` is Replace all, not Replace with the arguments `all a b`.
 - Echo format: `> Title args — result note`, with the shortcut right-aligned. Errors show as `Title args: error`. `Silent` commands (`ui.prompt`, `ui.menu`) are neither echoed nor listed in the prompt.
 - **Prompt-only commands** are registered normally but have no key binding and no menu entry, e.g. `edit.deleteToLineEnd` ("Delete to end of line", aliases "delete till end of line" and "kill line"). To reach a command by another phrase, add an alias; never register a second command for the same action.
 - Menus are app data (`app.Menu{Title, Items []commandID}`, `"-"` is a separator). `app.New` rejects menus that reference unknown IDs. Commands that take arguments show `…` in menus.
@@ -118,9 +119,27 @@ internal/adapters/
 | Ctrl+Q | Quit | Ctrl+D | Duplicate line |
 | Ctrl+Z / Ctrl+Y | Undo / Redo | Ctrl+K | Delete line |
 | Ctrl+X / C / V | Cut / Copy / Paste | Ctrl+L | Select line |
-| Ctrl+A | Select all | Shift+arrows, Home/End, PgUp/PgDn | Move and select |
+| Ctrl+A | Select all | Ctrl+R | Replace… (interactive) |
 | **Ctrl+Alt+P** | Focus prompt | **Ctrl+Alt+M** | Open menus (also: mouse click) |
 | Esc | Back to editor (closes menu, prompt or popup) | | |
+
+**Navigation** (editing primitives in `app.navigate`, not commands, not echoed). **Shift** with any of them extends the selection.
+
+| Key | Moves | Key | Moves |
+|---|---|---|---|
+| ←/→ | character | ↑/↓ | line |
+| Ctrl+←/→, Alt+←/→, Alt+B/F | word (Alt+B/F is what macOS Terminal sends for Option+←/→) | Alt+↑/↓ | `jump_lines` lines (config, default 5) |
+| Cmd+←/→, Home/End | line start (smart: indent first) / end | Cmd+↑/↓, Ctrl+Home/End | document start/end |
+| PgUp/PgDn | one screen | | |
+
+**Cmd** (`ports.ModSuper`) only arrives from terminals that speak the kitty keyboard protocol. tcell enables it automatically on xterm-like terminals (`CSI > 1 u`), and reports Super as `tcell.ModMeta`, which `tui` maps to `ModSuper`, never to Alt. Cmd+letter never types text.
+
+**Interactive replace** (`search.replace`, "Replace…", Ctrl+R, aliases "find and replace" and "query replace"):
+- It asks for the search text and the replacement, starts at the selection or cursor, wraps once, and stops before the starting point.
+- Each match is selected, and the prompt line asks `y/n/a/q`.
+- The whole session is one undo step (`Document.BeginUndoGroup`/`EndUndoGroup`).
+- Closing the prompt in any way (Esc, q, a click, the prompt toggle) ends the session through `promptState.onClose`.
+- `search.replaceAll` ("Replace all…") has no key binding.
 
 **Convention: Ctrl+Alt+letter is reserved for editor-level functions** (prompt, menu, future ones). There are deliberately no F-key fallbacks.
 
@@ -137,6 +156,7 @@ internal/adapters/
 - Never bind Ctrl+M (Enter), Ctrl+I (Tab) or Ctrl+[ (Esc). Avoid Ctrl+H (Backspace on some terminals), Ctrl+J (LF) and Ctrl+Shift combinations.
 - Raw mode disables XON/XOFF, so Ctrl+S and Ctrl+Q are usable.
 - Free Ctrl keys for future commands: **B, E, P, T, U, W**.
+- Alt+B and Alt+F are taken by word moves (readline/macOS Terminal). Plain Alt+letter otherwise does nothing.
 
 ## Text model
 

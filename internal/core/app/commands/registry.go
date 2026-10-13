@@ -86,23 +86,24 @@ func (r *Registry[E]) All() []*Command[E] {
 	return out
 }
 
-// ParseInline matches prompt input of the form "<name> <args>" against
-// commands that take arguments, e.g. "goto 42" or "find foo bar". The longest
-// matching name wins. The last argument takes the rest of the line; earlier
-// ones are single words.
+// ParseInline matches prompt input against command names: either a whole
+// name ("replace all") or "<name> <args>" for commands that take arguments
+// ("goto 42", "find foo bar"). The longest matching name wins, so "replace
+// all x y" is Replace all, not Replace with args "all x y". The last argument
+// takes the rest of the line; earlier ones are single words.
 func (r *Registry[E]) ParseInline(input string) (cmd *Command[E], args []string, ok bool) {
 	input = strings.TrimSpace(input)
 	best := 0
 	for _, c := range r.cmds {
-		if len(c.Args) == 0 {
-			continue
-		}
 		for _, name := range c.Names() {
-			if len(name) <= best || len(input) <= len(name) || input[len(name)] != ' ' ||
-				!strings.EqualFold(input[:len(name)], name) {
+			if len(name) <= best || len(input) < len(name) || !strings.EqualFold(input[:len(name)], name) {
 				continue
 			}
-			best, cmd = len(name), c
+			whole := len(input) == len(name)
+			withArgs := len(c.Args) > 0 && len(input) > len(name) && input[len(name)] == ' '
+			if whole || withArgs {
+				best, cmd = len(name), c
+			}
 		}
 	}
 	if cmd == nil {

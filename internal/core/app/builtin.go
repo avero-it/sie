@@ -49,8 +49,10 @@ func builtins() []command {
 			Args: []arg{{Prompt: "Find", Default: (*Editor).findDefault}}, Run: (*Editor).cmdFind},
 		{ID: "search.next", Title: "Find next", Run: func(e *Editor, _ []string) error { return e.findAgain(true) }},
 		{ID: "search.prev", Title: "Find previous", Run: func(e *Editor, _ []string) error { return e.findAgain(false) }},
-		{ID: "search.replace", Title: "Replace all", Aliases: []string{"replace"},
+		{ID: "search.replace", Title: "Replace", Aliases: []string{"find and replace", "query replace"},
 			Args: []arg{{Prompt: "Replace", Default: (*Editor).findDefault}, {Prompt: "With"}}, Run: (*Editor).cmdReplace},
+		{ID: "search.replaceAll", Title: "Replace all",
+			Args: []arg{{Prompt: "Replace all", Default: (*Editor).findDefault}, {Prompt: "With"}}, Run: (*Editor).cmdReplaceAll},
 		{ID: "search.gotoLine", Title: "Go to line", Aliases: []string{"goto", "line"},
 			Args: []arg{{Prompt: "Line"}}, Run: (*Editor).cmdGotoLine},
 
@@ -239,7 +241,7 @@ func (e *Editor) findAgain(forward bool) error {
 	return nil
 }
 
-func (e *Editor) cmdReplace(args []string) error {
+func (e *Editor) cmdReplaceAll(args []string) error {
 	if args[0] == "" {
 		return errors.New("nothing to replace")
 	}

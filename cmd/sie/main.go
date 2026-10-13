@@ -86,8 +86,8 @@ func newConfigCmd(configPath *string) *cobra.Command {
 			for _, f := range used {
 				fmt.Fprintf(out, "# from %s\n", f)
 			}
-			fmt.Fprintf(out, "tab_width: %d\nshow_invisibles: %t\nshow_empty_cells: %t\nline_ending: %s\n",
-				s.TabWidth, s.ShowInvisibles, s.ShowEmptyCells, s.LineEnding)
+			fmt.Fprintf(out, "tab_width: %d\nshow_invisibles: %t\nshow_empty_cells: %t\nline_ending: %s\njump_lines: %d\n",
+				s.TabWidth, s.ShowInvisibles, s.ShowEmptyCells, s.LineEnding, s.JumpLines)
 			return nil
 		},
 	}
@@ -116,6 +116,7 @@ func runEditor(configPath string, args []string) error {
 		Version:        buildinfo.Get().Short(),
 		ShowInvisibles: settings.ShowInvisibles,
 		ShowEmptyCells: settings.ShowEmptyCells,
+		JumpLines:      settings.JumpLines,
 	})
 	if err != nil {
 		return err

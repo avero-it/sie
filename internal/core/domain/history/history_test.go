@@ -137,3 +137,28 @@ func TestLimit(t *testing.T) {
 		t.Fatal("initial (saved) state was dropped, must report modified")
 	}
 }
+
+func TestExplicitGroup(t *testing.T) {
+	doc := &text{}
+	h := New[int](0)
+	typeAt(doc, h, 0, "x", "type") // before the group: its own step
+	h.BeginGroup()
+	typeAt(doc, h, 1, "a", "")
+	h.Seal() // ignored inside a group
+	typeAt(doc, h, 2, "b", "other")
+	h.EndGroup()
+	typeAt(doc, h, 3, "c", "type") // after the group: must not merge into it
+	_, _, _ = h.Undo(doc)
+	if string(doc.b) != "xab" {
+		t.Fatalf("undo after group: %q", doc.b)
+	}
+	_, _, _ = h.Undo(doc)
+	if string(doc.b) != "x" {
+		t.Fatalf("group undone in one step: %q", doc.b)
+	}
+	h.BeginGroup()
+	h.EndGroup() // an empty group records nothing
+	if _, _, _ = h.Undo(doc); string(doc.b) != "" {
+		t.Fatalf("empty group changed history: %q", doc.b)
+	}
+}

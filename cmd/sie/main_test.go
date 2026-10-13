@@ -51,7 +51,7 @@ func TestConfigCommand(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("exit %d: %s", code, errOut)
 	}
-	for _, want := range []string{"# from " + path, "tab_width: 2", "show_invisibles: true", "show_empty_cells: true", "line_ending: lf"} {
+	for _, want := range []string{"# from " + path, "tab_width: 2", "show_invisibles: true", "show_empty_cells: true", "line_ending: lf", "jump_lines: 5"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q in:\n%s", want, out)
 		}

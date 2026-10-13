@@ -96,8 +96,12 @@ func normalizeMods(m tcell.ModMask) ports.Mod {
 	if m&tcell.ModCtrl != 0 {
 		mod |= ports.ModCtrl
 	}
-	if m&(tcell.ModAlt|tcell.ModMeta) != 0 {
+	if m&tcell.ModAlt != 0 {
 		mod |= ports.ModAlt
+	}
+	if m&tcell.ModMeta != 0 {
+		// tcell reports the kitty protocol's Super (macOS Cmd) as Meta.
+		mod |= ports.ModSuper
 	}
 	return mod
 }

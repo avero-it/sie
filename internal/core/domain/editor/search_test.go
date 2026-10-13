@@ -67,3 +67,34 @@ func TestReplaceCurrent(t *testing.T) {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }
+
+func TestFindNextAndReplaceRangeInGroup(t *testing.T) {
+	d := doc(t, "|a x a x a")
+	opts := SearchOptions{CaseSensitive: true}
+	if at, ok := d.FindNext("a", 1, opts); !ok || at != 4 {
+		t.Fatalf("FindNext = %d, %v", at, ok)
+	}
+	if _, ok := d.FindNext("a", 9, opts); ok {
+		t.Fatal("FindNext wrapped")
+	}
+	d.BeginUndoGroup()
+	n, err := d.ReplaceRange(0, 1, "bb\n")
+	if err != nil || n != 3 {
+		t.Fatalf("n=%d err=%v", n, err)
+	}
+	d.SetSelection(Cursor(6)) // selection changes must not split the group
+	if _, err := d.ReplaceRange(6, 7, "c"); err != nil {
+		t.Fatal(err)
+	}
+	d.EndUndoGroup()
+	if got := d.Text(); got != "bb\n x c x a" {
+		t.Fatalf("text %q", got)
+	}
+	_, _ = d.Undo()
+	if got := d.Text(); got != "a x a x a" {
+		t.Errorf("one undo should revert the group: %q", got)
+	}
+	if _, err := d.ReplaceRange(5, 99, ""); err == nil {
+		t.Error("out of range accepted")
+	}
+}

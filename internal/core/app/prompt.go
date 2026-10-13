@@ -16,6 +16,7 @@ const (
 	modeCommand promptMode = iota // fuzzy command search
 	modeArgs                      // asking for a command's missing arguments
 	modeConfirm                   // yes/no question
+	modeReplace                   // interactive replace: y/n/a/q
 )
 
 const (
@@ -39,8 +40,11 @@ type promptState struct {
 	cmd  *commands.Command[*Editor] // modeArgs: command waiting for args
 	args []string                   // modeArgs: arguments collected so far
 
-	question string       // modeConfirm
+	question string       // modeConfirm, modeReplace
 	onYes    func() error // modeConfirm
+
+	replace *replaceSession // modeReplace
+	onClose func()          // runs when the prompt closes for any reason
 
 	items    []completion // modeCommand
 	selected int
@@ -54,8 +58,12 @@ func (e *Editor) openPrompt() {
 }
 
 func (e *Editor) closePrompt() {
+	onClose := e.prompt.onClose
 	e.focus = focusEditor
 	e.prompt = promptState{}
+	if onClose != nil {
+		onClose()
+	}
 }
 
 func (e *Editor) askArgs(c *commands.Command[*Editor], args []string) {
@@ -77,6 +85,10 @@ func (e *Editor) promptKey(k ports.KeyEvent) {
 		return
 	}
 	p := &e.prompt
+	if p.mode == modeReplace {
+		e.replaceKey(k)
+		return
+	}
 	if p.mode == modeConfirm {
 		yes := k.Key == ports.KeyRune && (k.Rune == 'y' || k.Rune == 'Y')
 		onYes := p.onYes
@@ -197,8 +209,12 @@ func (e *Editor) refreshCompletions() {
 			}
 		}
 	} else {
+		inline := ""
 		if c, args, ok := e.reg.ParseInline(input); ok {
 			items = append(items, e.completion(c, args))
+			if len(args) == 0 {
+				inline = c.ID // a whole-name match; don't list it twice
+			}
 		}
 		type scored struct {
 			c     *commands.Command[*Editor]
@@ -206,7 +222,7 @@ func (e *Editor) refreshCompletions() {
 		}
 		var matches []scored
 		for _, c := range e.reg.All() {
-			if c.Silent {
+			if c.Silent || c.ID == inline {
 				continue
 			}
 			best, found := 0, false

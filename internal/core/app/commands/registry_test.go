@@ -46,6 +46,8 @@ func TestParseInline(t *testing.T) {
 		cmd("search.find", "Find", 1),
 		cmd("search.replace", "Replace", 2),
 		cmd("file.save", "Save", 0),
+		cmd("search.replaceAll", "Replace all", 2),
+		cmd("search.findReplace", "Find and replace", 2),
 	)
 	tests := []struct {
 		input  string
@@ -58,9 +60,14 @@ func TestParseInline(t *testing.T) {
 		{"find hello world", "search.find", []string{"hello world"}, true},
 		{"replace foo bar baz", "search.replace", []string{"foo", "bar baz"}, true},
 		{"replace foo", "search.replace", []string{"foo"}, true},
-		{"goto", "", nil, false},
+		{"goto", "search.gotoLine", nil, true}, // whole name: args asked later
+		{"save", "file.save", nil, true},
 		{"save x", "", nil, false},
 		{"gotox 4", "", nil, false},
+		{"replace all a b", "search.replaceAll", []string{"a", "b"}, true},
+		{"replace all", "search.replaceAll", nil, true},
+		{"find and replace", "search.findReplace", nil, true},
+		{"find and", "search.find", []string{"and"}, true},
 	}
 	for _, tt := range tests {
 		c, args, ok := r.ParseInline(tt.input)

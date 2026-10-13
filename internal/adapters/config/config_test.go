@@ -33,12 +33,12 @@ func TestDefaultsWhenNoFiles(t *testing.T) {
 func TestUserOverridesSystemPerKey(t *testing.T) {
 	dir := t.TempDir()
 	system := write(t, dir, "etc/sie/config.yaml", "tab_width: 8\nshow_invisibles: true\n")
-	user := write(t, dir, "home/.sie/config.yaml", "tab_width: 2\nline_ending: CRLF\n")
+	user := write(t, dir, "home/.sie/config.yaml", "tab_width: 2\nline_ending: CRLF\njump_lines: 10\n")
 	s, used, err := load([]string{system, user}, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := Settings{TabWidth: 2, ShowInvisibles: true, ShowEmptyCells: true, LineEnding: "crlf"}
+	want := Settings{TabWidth: 2, ShowInvisibles: true, ShowEmptyCells: true, LineEnding: "crlf", JumpLines: 10}
 	if s != want {
 		t.Errorf("got %+v, want %+v", s, want)
 	}
@@ -70,6 +70,7 @@ func TestErrors(t *testing.T) {
 		{"unknown key", "tab_widht: 4\n", "tab_widht"},
 		{"tab width range", "tab_width: 0\n", "tab_width"},
 		{"line ending", "line_ending: cr\n", "line_ending"},
+		{"jump lines range", "jump_lines: 0\n", "jump_lines"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

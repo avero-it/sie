@@ -43,6 +43,9 @@ const (
 	ModShift Mod = 1 << iota
 	ModCtrl
 	ModAlt
+	// ModSuper is Cmd on macOS (Super/Win elsewhere). Only terminals with
+	// extended key reporting (kitty protocol) deliver it.
+	ModSuper
 )
 
 // KeyEvent is a normalized key press. Adapters must deliver Ctrl/Alt
@@ -67,6 +70,9 @@ func CtrlAlt(r rune) KeyEvent {
 // String formats the key for display, e.g. "Ctrl+S", "Ctrl+Alt+P", "Shift+Left".
 func (k KeyEvent) String() string {
 	var b strings.Builder
+	if k.Mod&ModSuper != 0 {
+		b.WriteString("Cmd+")
+	}
 	if k.Mod&ModCtrl != 0 {
 		b.WriteString("Ctrl+")
 	}

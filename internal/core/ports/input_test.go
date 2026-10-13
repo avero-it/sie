@@ -13,6 +13,7 @@ func TestKeyEventString(t *testing.T) {
 		{KeyEvent{Key: KeyLeft, Mod: ModShift}, "Shift+Left"},
 		{KeyEvent{Key: KeyRune, Rune: ' ', Mod: ModCtrl}, "Ctrl+Space"},
 		{KeyEvent{Key: KeyEsc}, "Esc"},
+		{KeyEvent{Key: KeyLeft, Mod: ModSuper | ModShift}, "Cmd+Shift+Left"},
 	}
 	for _, tt := range tests {
 		if got := tt.k.String(); got != tt.want {

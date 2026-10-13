@@ -39,6 +39,10 @@ type History[S any] struct {
 	// saved: 0 means "empty undo stack", unreachable means the saved state
 	// can no longer be reached.
 	savedID uint64
+	// grouping is true between BeginGroup and EndGroup; groupID is the
+	// group created by the first edit recorded since BeginGroup (0 if none).
+	grouping bool
+	groupID  uint64
 }
 
 const unreachable = ^uint64(0)
@@ -60,15 +64,20 @@ func (h *History[S]) Record(e Edit, before, after S, key string) {
 		}
 		h.redo = nil
 	}
-	if n := len(h.undo); n > 0 && !h.sealed && key != "" {
+	if n := len(h.undo); n > 0 {
 		last := &h.undo[n-1]
-		if last.key == key && last.id != h.savedID {
+		inGroup := h.grouping && h.groupID == last.id
+		coalesce := !h.grouping && !h.sealed && key != "" && last.key == key && last.id != h.savedID
+		if inGroup || coalesce {
 			last.edits = append(last.edits, e)
 			last.after = after
 			return
 		}
 	}
 	h.undo = append(h.undo, group[S]{id: h.nextID, key: key, edits: []Edit{e}, before: before, after: after})
+	if h.grouping {
+		h.groupID = h.nextID
+	}
 	h.nextID++
 	h.sealed = false
 	if h.limit > 0 && len(h.undo) > h.limit {
@@ -81,6 +90,17 @@ func (h *History[S]) Record(e Edit, before, after S, key string) {
 			h.savedID = unreachable
 		}
 	}
+}
+
+// BeginGroup starts an explicit group: every edit recorded until EndGroup
+// forms one undo step, regardless of keys and Seal calls in between.
+func (h *History[S]) BeginGroup() {
+	h.grouping, h.groupID, h.sealed = true, 0, true
+}
+
+// EndGroup ends the explicit group started by BeginGroup.
+func (h *History[S]) EndGroup() {
+	h.grouping, h.groupID, h.sealed = false, 0, true
 }
 
 // Seal ends the current group: the next Record starts a new undo step.

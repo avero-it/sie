@@ -169,9 +169,9 @@ func TestPromptAsksForMissingArgs(t *testing.T) {
 	h := newHarness(t, nil)
 	h.typeText("foo bar foo")
 	h.keys(ports.CtrlAlt('p'))
-	h.typeText("replace")
+	h.typeText("replace all")
 	h.keys(key(ports.KeyEnter))
-	h.wantRow(rowPrompt, "Replace:")
+	h.wantRow(rowPrompt, "Replace all:")
 	h.typeText("foo")
 	h.keys(key(ports.KeyEnter))
 	h.wantRow(rowPrompt, "With:")
@@ -180,7 +180,7 @@ func TestPromptAsksForMissingArgs(t *testing.T) {
 	if got := h.doc.Text(); got != "x bar x" {
 		t.Errorf("text %q", got)
 	}
-	h.wantRowPrefix(rowPrompt, "> Replace all foo x — 2 matches…")
+	h.wantRow(rowPrompt, "> Replace all foo x — 2 matches replaced") // no shortcut, no hint
 }
 
 func TestFindPrefillsLastQuery(t *testing.T) {
@@ -454,5 +454,20 @@ func TestTrimEndingSpacesAlias(t *testing.T) {
 	h.keys(key(ports.KeyEnter))
 	if got := h.doc.Text(); got != "x" {
 		t.Errorf("text %q", got)
+	}
+}
+
+func TestWholeNameCompletionNotDuplicated(t *testing.T) {
+	h := newHarness(t, nil)
+	h.keys(ports.CtrlAlt('p'))
+	h.typeText("save")
+	n := 0
+	for _, it := range h.prompt.items {
+		if it.cmd.ID == "file.save" {
+			n++
+		}
+	}
+	if n != 1 || h.prompt.items[0].cmd.ID != "file.save" {
+		t.Errorf("file.save listed %d times; first %s", n, h.prompt.items[0].cmd.ID)
 	}
 }

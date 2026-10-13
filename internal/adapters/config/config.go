@@ -21,11 +21,12 @@ type Settings struct {
 	ShowInvisibles bool   `mapstructure:"show_invisibles"`  // mark spaces and tabs
 	ShowEmptyCells bool   `mapstructure:"show_empty_cells"` // mark cells holding no character
 	LineEnding     string `mapstructure:"line_ending"`      // for new files: "lf" or "crlf"
+	JumpLines      int    `mapstructure:"jump_lines"`       // lines moved by Alt+Up/Down
 }
 
 // Defaults returns the built-in settings.
 func Defaults() Settings {
-	return Settings{TabWidth: 4, ShowInvisibles: false, ShowEmptyCells: true, LineEnding: "lf"}
+	return Settings{TabWidth: 4, ShowInvisibles: false, ShowEmptyCells: true, LineEnding: "lf", JumpLines: 5}
 }
 
 // SearchPaths returns the config files, lowest precedence first: the system
@@ -58,6 +59,7 @@ func load(paths []string, mustExist bool) (Settings, []string, error) {
 	v.SetDefault("show_invisibles", d.ShowInvisibles)
 	v.SetDefault("show_empty_cells", d.ShowEmptyCells)
 	v.SetDefault("line_ending", d.LineEnding)
+	v.SetDefault("jump_lines", d.JumpLines)
 	v.SetEnvPrefix("SIE")
 	v.AutomaticEnv()
 
@@ -88,6 +90,9 @@ func load(paths []string, mustExist bool) (Settings, []string, error) {
 func (s *Settings) validate() error {
 	if s.TabWidth < 1 || s.TabWidth > 16 {
 		return fmt.Errorf("tab_width must be between 1 and 16, got %d", s.TabWidth)
+	}
+	if s.JumpLines < 1 || s.JumpLines > 100 {
+		return fmt.Errorf("jump_lines must be between 1 and 100, got %d", s.JumpLines)
 	}
 	s.LineEnding = strings.ToLower(s.LineEnding)
 	if s.LineEnding != "lf" && s.LineEnding != "crlf" {

@@ -406,6 +406,8 @@ func (e *Editor) drawPrompt(vm *viewBuilder, r regions) {
 		label = p.cmd.Args[len(p.args)].Prompt + ": "
 	case modeConfirm:
 		label = p.question + " (y/n) "
+	case modeReplace:
+		label = p.question + " (y/n/a/q) "
 	}
 	lw := uniseg.StringWidth(label)
 	vm.add(0, y, label, ports.StylePromptLabel)

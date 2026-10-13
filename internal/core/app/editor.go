@@ -27,7 +27,10 @@ type Config struct {
 
 	ShowInvisibles bool // mark spaces and tabs
 	ShowEmptyCells bool // mark cells holding no character
+	JumpLines      int  // lines moved by Alt+Up/Down; <= 0 means defaultJumpLines
 }
+
+const defaultJumpLines = 5
 
 type focus uint8
 
@@ -182,32 +185,10 @@ func (e *Editor) editorKey(k ports.KeyEvent) {
 		_ = e.Dispatch(id) // errors are shown in the prompt line
 		return
 	}
-	shift := k.Mod&ports.ModShift != 0
-	word := k.Mod&ports.ModCtrl != 0
-	move := func(plain, ctrl editor.Motion) {
-		if word {
-			e.doc.Move(ctrl, shift)
-		} else {
-			e.doc.Move(plain, shift)
-		}
+	if e.navigate(k) {
+		return
 	}
 	switch k.Key {
-	case ports.KeyLeft:
-		move(editor.MoveLeft, editor.MoveWordLeft)
-	case ports.KeyRight:
-		move(editor.MoveRight, editor.MoveWordRight)
-	case ports.KeyUp:
-		e.doc.Move(editor.MoveUp, shift)
-	case ports.KeyDown:
-		e.doc.Move(editor.MoveDown, shift)
-	case ports.KeyHome:
-		move(editor.MoveLineStart, editor.MoveDocStart)
-	case ports.KeyEnd:
-		move(editor.MoveLineEnd, editor.MoveDocEnd)
-	case ports.KeyPgUp:
-		e.doc.MovePage(-max(1, e.view.Rows-1), shift)
-	case ports.KeyPgDn:
-		e.doc.MovePage(max(1, e.view.Rows-1), shift)
 	case ports.KeyBackspace:
 		e.check(e.doc.Backspace())
 	case ports.KeyDelete:
@@ -225,9 +206,95 @@ func (e *Editor) editorKey(k ports.KeyEvent) {
 	}
 }
 
+// navigate handles cursor movement keys; Shift extends the selection with
+// every one of them. It reports whether k was a movement key.
+//
+//	←/→                 character    Ctrl or Alt: word    Cmd: line start/end
+//	Alt+B / Alt+F       word left/right (macOS Terminal sends these for Option+←/→)
+//	↑/↓                 line         Alt: JumpLines lines  Cmd: document start/end
+//	Home/End            line start/end                     Ctrl: document start/end
+//	PgUp/PgDn           one screen
+func (e *Editor) navigate(k ports.KeyEvent) bool {
+	shift := k.Mod&ports.ModShift != 0
+	cmd := k.Mod&ports.ModSuper != 0
+	word := k.Mod&(ports.ModCtrl|ports.ModAlt) != 0
+	move := func(m editor.Motion) bool {
+		e.doc.Move(m, shift)
+		return true
+	}
+	pick := func(plain, wordwise, withCmd editor.Motion) bool {
+		switch {
+		case cmd:
+			return move(withCmd)
+		case word:
+			return move(wordwise)
+		default:
+			return move(plain)
+		}
+	}
+	switch k.Key {
+	case ports.KeyLeft:
+		return pick(editor.MoveLeft, editor.MoveWordLeft, editor.MoveLineStart)
+	case ports.KeyRight:
+		return pick(editor.MoveRight, editor.MoveWordRight, editor.MoveLineEnd)
+	case ports.KeyUp, ports.KeyDown:
+		up := k.Key == ports.KeyUp
+		switch {
+		case cmd && up:
+			return move(editor.MoveDocStart)
+		case cmd:
+			return move(editor.MoveDocEnd)
+		case k.Mod&ports.ModAlt != 0:
+			n := e.jumpLines()
+			if up {
+				n = -n
+			}
+			e.doc.MovePage(n, shift)
+			return true
+		case up:
+			return move(editor.MoveUp)
+		default:
+			return move(editor.MoveDown)
+		}
+	case ports.KeyHome:
+		return pick(editor.MoveLineStart, editor.MoveDocStart, editor.MoveLineStart)
+	case ports.KeyEnd:
+		return pick(editor.MoveLineEnd, editor.MoveDocEnd, editor.MoveLineEnd)
+	case ports.KeyPgUp:
+		e.doc.MovePage(-max(1, e.view.Rows-1), shift)
+		return true
+	case ports.KeyPgDn:
+		e.doc.MovePage(max(1, e.view.Rows-1), shift)
+		return true
+	case ports.KeyRune:
+		// Readline word moves; Shift arrives as an upper-case rune.
+		if k.Mod&^ports.ModShift == ports.ModAlt {
+			switch k.Rune {
+			case 'b', 'B':
+				e.doc.Move(editor.MoveWordLeft, shift || k.Rune == 'B')
+				return true
+			case 'f', 'F':
+				e.doc.Move(editor.MoveWordRight, shift || k.Rune == 'F')
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (e *Editor) jumpLines() int {
+	if e.cfg.JumpLines > 0 {
+		return e.cfg.JumpLines
+	}
+	return defaultJumpLines
+}
+
 // isText reports whether an unbound rune key types text: no modifiers
-// except Shift, or Ctrl+Alt together (AltGr on Windows).
+// except Shift, or Ctrl+Alt together (AltGr on Windows). Cmd never types.
 func isText(k ports.KeyEvent) bool {
+	if k.Mod&ports.ModSuper != 0 {
+		return false
+	}
 	ctrlAlt := k.Mod & (ports.ModCtrl | ports.ModAlt)
 	return ctrlAlt == 0 || ctrlAlt == ports.ModCtrl|ports.ModAlt
 }

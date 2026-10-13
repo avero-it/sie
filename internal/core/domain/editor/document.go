@@ -110,6 +110,13 @@ func (d *Document) Modified() bool { return d.hist.Modified() }
 // MarkSaved records the current state as saved.
 func (d *Document) MarkSaved() { d.hist.MarkSaved() }
 
+// BeginUndoGroup makes all edits until EndUndoGroup one undo step, even
+// across selection changes (e.g. an interactive replace session).
+func (d *Document) BeginUndoGroup() { d.hist.BeginGroup() }
+
+// EndUndoGroup closes the group opened by BeginUndoGroup.
+func (d *Document) EndUndoGroup() { d.hist.EndGroup() }
+
 // CanUndo reports whether Undo would do something.
 func (d *Document) CanUndo() bool { return d.hist.CanUndo() }
 

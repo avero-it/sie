@@ -49,9 +49,16 @@ Whichever way you run a command, its name and shortcut appear in the prompt line
 | Ctrl+Q | Quit | Ctrl+D | Duplicate line |
 | Ctrl+Z / Ctrl+Y | Undo / Redo | Ctrl+K | Delete line |
 | Ctrl+X / C / V | Cut / Copy / Paste | Ctrl+L | Select line |
-| Ctrl+A | Select all | Shift + arrows/Home/End | Select |
+| Ctrl+A | Select all | Ctrl+R | Replace… (asks y/n/a/q per match) |
 | **Ctrl+Alt+P** | Command prompt | **Ctrl+Alt+M** | Menus |
-| Esc | Back to the editor | Ctrl + arrows | Move by word |
+| Esc | Back to the editor | | |
+
+Moving the cursor (hold **Shift** with any of these to select):
+
+| Key | Moves | Key | Moves |
+|---|---|---|---|
+| Alt+←/→ (or Ctrl+←/→) | by word | Alt+↑/↓ | 5 lines (`jump_lines`) |
+| Cmd+←/→ or Home/End | line start/end | Cmd+↑/↓ or Ctrl+Home/End | file start/end |
 
 The mouse works too: click to place the cursor, drag or Shift+click to select, and use the wheel to scroll.
 
@@ -71,6 +78,7 @@ tab_width: 4            # 1–16
 show_invisibles: false  # mark spaces (␣) and tabs (»)
 show_empty_cells: true  # mark cells holding no character (·)
 line_ending: lf         # for new files: lf or crlf
+jump_lines: 5           # lines moved by Alt+↑/↓ (1–100)
 ```
 
 `sie config` prints the effective settings and which files they came from. `sie version` prints the version, commit, commit and build time, Go version and platform.
@@ -78,6 +86,8 @@ line_ending: lf         # for new files: lf or crlf
 ### Terminal notes
 
 - **macOS:** `Ctrl+Alt` shortcuts need the Option key to act as Meta. In Terminal.app, go to *Settings → Profiles → Keyboard* and enable **Use Option as Meta key**. In iTerm2, go to *Settings → Profiles → Keys* and set the **Left Option key** to **Esc+**.
+- **Cmd (⌘) shortcuts** only work in terminals that report Cmd to programs through the kitty keyboard protocol, which sie turns on automatically: kitty, WezTerm, Ghostty and other terminals that implement it. **Terminal.app does not report Cmd**, so use Home/End there (Fn+←/→ on Mac keyboards). In iTerm2 **don't** use the "Natural Text Editing" key preset as-is: it sends ⌘← as Ctrl+A, which is *Select all* in sie.
+- **Option (⌥)+←/→** works out of the box in Terminal.app (it sends Alt+B/Alt+F, which sie treats as word moves). Shift+Option may not reach sie there without a custom key mapping.
 - **Windows:** `Ctrl+Alt` is AltGr on many keyboard layouts. If an `AltGr` combination types a character, sie inserts that character, unless that exact combination is bound to a command.
 - **Clipboard:** copy goes to the system clipboard through the terminal (OSC 52, which also works over SSH) and through the native clipboard: Win32 on Windows, `pbcopy` on macOS, and `wl-copy`, `xclip` or `xsel` on Linux. Pasting from other applications works through the native clipboard or through your terminal's own paste.
 

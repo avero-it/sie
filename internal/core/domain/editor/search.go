@@ -43,6 +43,30 @@ func (d *Document) Find(query string, forward bool, opts SearchOptions) bool {
 	return true
 }
 
+// FindNext returns the start of the first match of query at or after from,
+// without wrapping and without changing the selection.
+func (d *Document) FindNext(query string, from int, opts SearchOptions) (int, bool) {
+	if query == "" || from < 0 {
+		return 0, false
+	}
+	at := find(d.buf.Bytes(), []byte(query), from, d.buf.Len(), opts)
+	return at, at >= 0
+}
+
+// ReplaceRange replaces [start, end) with text (line breaks normalized to
+// the document's line ending), puts the cursor after it and returns the
+// inserted length. Inside BeginUndoGroup/EndUndoGroup it joins that step.
+func (d *Document) ReplaceRange(start, end int, text string) (int, error) {
+	if start < 0 || end < start || end > d.buf.Len() {
+		return 0, fmt.Errorf("replace [%d,%d) of %d: out of range", start, end, d.buf.Len())
+	}
+	norm := d.normalizeEOL(text)
+	if err := d.replace(start, end, norm, Cursor(start+len(norm)), ""); err != nil {
+		return 0, fmt.Errorf("replace: %w", err)
+	}
+	return len(norm), nil
+}
+
 // ReplaceCurrent replaces the selection with repl if it matches query, then
 // selects the next match. It reports whether a replacement happened.
 func (d *Document) ReplaceCurrent(query, repl string, opts SearchOptions) (bool, error) {

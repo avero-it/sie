@@ -20,7 +20,8 @@ func DefaultMenus() []Menu {
 		{"Edit", []string{"edit.undo", "edit.redo", separator, "edit.cut", "edit.copy", "edit.paste",
 			separator, "edit.duplicateLine", "edit.deleteLine"}},
 		{"Selection", []string{"selection.all", "selection.line", separator, "selection.trimTrailingSpaces"}},
-		{"Search", []string{"search.find", "search.next", "search.prev", "search.replace", separator, "search.gotoLine"}},
+		{"Search", []string{"search.find", "search.next", "search.prev", separator,
+			"search.replace", "search.replaceAll", separator, "search.gotoLine"}},
 		{"View", []string{"view.toggleInvisibles", "view.toggleEmptyCells"}},
 		{"Help", []string{"ui.prompt", "help.about"}},
 	}
