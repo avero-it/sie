@@ -19,7 +19,8 @@ func TestInitialScreen(t *testing.T) {
 	h := newHarness(t, nil)
 	h.wantRow(rowMenu, " File  Edit  Selection  Search  View  He") // clipped at 40 columns
 	h.wantRow(rowText, " 1")
-	h.wantRowPrefix(rowStatus, " [No Name]")
+	h.Resize(80, 10) // room for the whole status line
+	h.wantRowPrefix(rowStatus, " sie test - [No Name]")
 	if !strings.HasSuffix(h.row(rowStatus), "Ln 1, Col 1   UTF-8   LF") {
 		t.Errorf("status: %q", h.row(rowStatus))
 	}
@@ -33,7 +34,8 @@ func TestTypingAndStatus(t *testing.T) {
 	h.typeText("héllo\n  日本")
 	h.wantRow(rowText, " 1 héllo")
 	h.wantRow(rowText+1, " 2   日本")
-	h.wantRowPrefix(rowStatus, " [No Name] ●")
+	h.Resize(80, 10)
+	h.wantRowPrefix(rowStatus, " sie test - [No Name] ●")
 	if !strings.Contains(h.row(rowStatus), "Ln 2, Col 7") {
 		t.Errorf("status: %q", h.row(rowStatus))
 	}
@@ -54,7 +56,8 @@ func TestShortcutIsEchoedWithHint(t *testing.T) {
 	if got := string(h.fs.files["a.txt"]); got != "xone\ntwo\n" {
 		t.Errorf("saved %q", got)
 	}
-	h.wantRowPrefix(rowStatus, " a.txt   ") // no modified dot
+	h.Resize(80, 10)
+	h.wantRowPrefix(rowStatus, " sie test - a.txt   ") // no modified dot
 }
 
 func TestSaveWithoutNameAsksForPath(t *testing.T) {
@@ -99,7 +102,8 @@ func TestOpenMissingFileStartsNew(t *testing.T) {
 	h := newHarness(t, nil)
 	_ = h.Dispatch("file.open", "nope.go")
 	h.wantRowPrefix(rowPrompt, "> Open file nope.go — new file")
-	h.wantRowPrefix(rowStatus, " nope.go")
+	h.Resize(80, 10)
+	h.wantRowPrefix(rowStatus, " sie test - nope.go")
 }
 
 func TestQuitConfirmsUnsavedChanges(t *testing.T) {
@@ -503,4 +507,47 @@ func TestOptionsShowTicks(t *testing.T) {
 	if it := h.prompt.items; it[0].label != "  Empty cells" {
 		t.Errorf("completion after turning off: %q", it[0].label)
 	}
+}
+
+func TestPromptBarIdleAndClearing(t *testing.T) {
+	h := newHarness(t, map[string]string{"f": "x"})
+	// Idle: placeholder on the left, prompt shortcut on the right, gray bar.
+	h.wantRow(rowPrompt, " write a command…            Ctrl+Alt+P")
+	if h.styleAt(0, rowPrompt) != ports.StylePromptBar || h.styleAt(39, rowPrompt) != ports.StylePromptBar {
+		t.Error("prompt line not filled with the bar style")
+	}
+	if h.styleAt(1, rowPrompt) != ports.StylePromptIdle {
+		t.Error("idle text not styled")
+	}
+	// An echo stays until the next action in the editor, then idle returns.
+	_ = h.Dispatch("file.open", "f")
+	h.wantRowPrefix(rowPrompt, "> Open file f")
+	_ = h.View()
+	h.wantRowPrefix(rowPrompt, "> Open file f") // redraws alone don't clear it
+	h.keys(key(ports.KeyRight))
+	h.wantRowPrefix(rowPrompt, " write a command…")
+	// Errors clear the same way, also on a click or a paste.
+	h.fs.writeErr = errDisk
+	h.keys(ports.Ctrl('s'))
+	h.wantRowPrefix(rowPrompt, "Save file: disk full")
+	h.click(5, rowText, 0)
+	h.wantRowPrefix(rowPrompt, " write a command…")
+	_ = h.Dispatch("help.about")
+	h.HandlePaste("y")
+	h.wantRowPrefix(rowPrompt, " write a command…")
+	// The focused prompt is drawn on the same bar.
+	h.keys(ports.CtrlAlt('p'))
+	if h.styleAt(20, rowPrompt) != ports.StylePromptBar {
+		t.Error("focused prompt lost the bar background")
+	}
+}
+
+func TestStatusShowsVersionAndTruncates(t *testing.T) {
+	h := newHarness(t, nil)
+	h.wantRowPrefix(rowStatus, " sie test - […") // 40 columns: left part cut before the right part
+	if !strings.HasSuffix(h.row(rowStatus), "Ln 1, Col 1   UTF-8   LF") {
+		t.Errorf("right part damaged: %q", h.row(rowStatus))
+	}
+	_ = h.Dispatch("help.about")
+	h.wantRowPrefix(rowPrompt, "> About sie — sie test")
 }

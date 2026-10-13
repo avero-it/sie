@@ -15,6 +15,7 @@ func DefaultTheme() Theme {
 	bar := d.Reverse(true)
 	item := d.Background(tcell.ColorSilver).Foreground(tcell.ColorBlack)
 	active := d.Background(tcell.ColorTeal).Foreground(tcell.ColorBlack)
+	prompt := d.Background(tcell.ColorGray).Foreground(tcell.ColorWhite)
 	return Theme{
 		ports.StyleDefault:         d,
 		ports.StyleSelection:       d.Reverse(true),
@@ -31,12 +32,15 @@ func DefaultTheme() Theme {
 		ports.StyleMenuItem:           item,
 		ports.StyleMenuItemSelected:   active,
 		ports.StyleMenuHint:           item.Foreground(tcell.ColorNavy),
-		ports.StylePromptLabel:        d.Bold(true),
-		ports.StylePromptInput:        d,
-		ports.StyleEcho:               d,
-		ports.StyleEchoHint:           d.Dim(true),
-		ports.StyleError:              d.Foreground(tcell.ColorRed).Bold(true),
-		ports.StyleStatus:             bar,
+		// The prompt line is a gray bar (palette bright black) with white text.
+		ports.StylePromptBar:   prompt,
+		ports.StylePromptLabel: prompt.Bold(true),
+		ports.StylePromptInput: prompt,
+		ports.StylePromptIdle:  prompt.Foreground(tcell.ColorSilver),
+		ports.StyleEcho:        prompt,
+		ports.StyleEchoHint:    prompt.Foreground(tcell.ColorSilver),
+		ports.StyleError:       prompt.Foreground(tcell.ColorRed).Bold(true),
+		ports.StyleStatus:      bar,
 	}
 }
 

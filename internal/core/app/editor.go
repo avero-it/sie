@@ -130,6 +130,9 @@ func (e *Editor) Resize(width, height int) {
 
 // HandleKey routes a key to the focused component.
 func (e *Editor) HandleKey(k ports.KeyEvent) {
+	if e.focus == focusEditor {
+		e.clearMessage()
+	}
 	switch e.focus {
 	case focusMenu:
 		e.menuKey(k)
@@ -143,6 +146,9 @@ func (e *Editor) HandleKey(k ports.KeyEvent) {
 
 // HandlePaste inserts pasted text as one edit (one undo step).
 func (e *Editor) HandlePaste(text string) {
+	if e.focus == focusEditor {
+		e.clearMessage()
+	}
 	switch e.focus {
 	case focusPrompt:
 		line, _, _ := strings.Cut(strings.ReplaceAll(text, "\r\n", "\n"), "\n")
@@ -343,6 +349,19 @@ func (e *Editor) note(s string) {
 		return
 	}
 	e.msg = message{text: s, kind: msgInfo}
+}
+
+// clearMessage drops the echo or error, so the prompt line goes back to
+// idle. It runs before each editor-focus action, so a message stays visible
+// until the user does something else.
+func (e *Editor) clearMessage() { e.msg = message{} }
+
+// version is shown in the status line and by "About sie".
+func (e *Editor) version() string {
+	if e.cfg.Version == "" {
+		return "dev"
+	}
+	return e.cfg.Version
 }
 
 func (e *Editor) info(s string) { e.msg = message{text: s, kind: msgInfo} }

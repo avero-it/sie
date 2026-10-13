@@ -70,8 +70,8 @@ internal/adapters/
 │  12 │ func main() {                                     │
 │  13 │     fmt.Println("hi")█                            │  editor               (all remaining rows)
 │  14 │ }                                                 │
-│ > Save file                                    Ctrl+S   │  command/prompt line  (1 row)
-│ main.go  ●  Ln 13, Col 23   UTF-8  LF                    │  status line          (1 row)
+│ > Save file                                    Ctrl+S   │  command/prompt line  (1 row, gray bar)
+│ sie v0.2.1 - main.go ●      Ln 13, Col 23   UTF-8   LF  │  status line          (1 row)
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -92,6 +92,13 @@ internal/adapters/
 - **Prompt-only commands** are registered normally but have no key binding and no menu entry, e.g. `edit.deleteToLineEnd` ("Delete to end of line", aliases "delete till end of line" and "kill line"). To reach a command by another phrase, add an alias; never register a second command for the same action.
 - Menus are app data (`app.Menu{Title, Items []commandID}`, `"-"` is a separator). `app.New` rejects menus that reference unknown IDs. Commands that take arguments show `…` in menus.
 - Unbound rune keys are typed only with no modifiers, Shift only, or Ctrl+Alt together (AltGr on Windows). Plain Alt+letter is ignored.
+
+### Prompt line and status line
+
+- The prompt line is always a gray bar (`StylePromptBar`, palette bright black with white text), whether idle, showing a message or focused.
+- When there is no message it shows the idle text `write a command…`, with the prompt shortcut right-aligned (`StylePromptIdle`).
+- An echo, info or error stays until the next key, click or paste in editor focus (`clearMessage` in `HandleKey`/`HandleMouse`/`HandlePaste`), then the line goes back to idle. Redraws and resizes don't clear it, and there are no timers.
+- The status line starts with `sie <version> - `, where the version is `buildinfo.Info.Display()`: the release tag (`v0.2.1`) for tagged builds, otherwise `dev-<commit7>[+dirty]`. The left part is truncated with `…` so it never overlaps the right part.
 
 ### Prompt
 

@@ -88,6 +88,9 @@ func (e *Editor) showCompletions() bool {
 // HandleMouse implements clicks on menus, completions, the prompt line and
 // the text area (click, shift-click and drag select; wheel scrolls).
 func (e *Editor) HandleMouse(m ports.MouseEvent) {
+	if e.focus == focusEditor && m.Action == ports.MousePress {
+		e.clearMessage()
+	}
 	r := e.regions()
 	switch m.Button {
 	case ports.WheelUp, ports.WheelDown:
@@ -214,13 +217,17 @@ func (vm *viewBuilder) fill(y int, style ports.Style) {
 	vm.add(0, y, strings.Repeat(" ", vm.Width), style)
 }
 
-// row draws left- and right-aligned text on a filled row.
+// row draws left- and right-aligned text on a filled row; the left text is
+// truncated so it never runs under the right text.
 func (vm *viewBuilder) row(y int, left, right string, style, rightStyle ports.Style) {
 	vm.fill(y, style)
-	vm.add(0, y, left, style)
+	avail := vm.Width
 	if right != "" {
-		vm.add(vm.Width-uniseg.StringWidth(right), y, right, rightStyle)
+		rx := vm.Width - uniseg.StringWidth(right)
+		avail = rx - 1
+		vm.add(rx, y, right, rightStyle)
 	}
+	vm.add(0, y, truncate(left, avail), style)
 }
 
 func (e *Editor) drawMenuBar(vm *viewBuilder, r regions) {
@@ -375,13 +382,25 @@ func (e *Editor) drawStatus(vm *viewBuilder, r regions) {
 		enc += " BOM"
 	}
 	right := fmt.Sprintf("Ln %d, Col %d   %s   %s ", line+1, vcol+1, enc, e.doc.LineEnding())
-	vm.row(r.statusY, " "+name, right, ports.StyleStatus, ports.StyleStatus)
+	vm.row(r.statusY, " sie "+e.version()+" - "+name, right, ports.StyleStatus, ports.StyleStatus)
 }
+
+// idleText fills the prompt line when there is nothing else to show.
+const idleText = "write a command…"
 
 func (e *Editor) drawPrompt(vm *viewBuilder, r regions) {
 	y := r.promptY
+	vm.fill(y, ports.StylePromptBar)
 	if e.focus != focusPrompt {
 		switch e.msg.kind {
+		case msgNone:
+			avail := e.width
+			if hint := e.shortcut("ui.prompt"); hint != "" {
+				hx := e.width - uniseg.StringWidth(hint) - 1
+				avail = hx - 1
+				vm.add(hx, y, hint, ports.StyleEchoHint)
+			}
+			vm.add(1, y, truncate(idleText, avail-1), ports.StylePromptIdle)
 		case msgEcho:
 			avail := e.width
 			if e.msg.hint != "" {

@@ -294,11 +294,7 @@ func (e *Editor) cmdToggleMenu([]string) error {
 }
 
 func (e *Editor) cmdAbout([]string) error {
-	v := e.cfg.Version
-	if v == "" {
-		v = "dev"
-	}
-	e.note("sie " + v)
+	e.note("sie " + e.version())
 	return nil
 }
 

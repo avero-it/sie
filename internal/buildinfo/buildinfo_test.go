@@ -53,3 +53,23 @@ func TestShortPseudoVersion(t *testing.T) {
 		t.Errorf("Short = %q", got)
 	}
 }
+
+func TestDisplay(t *testing.T) {
+	commit := "0e81e7fe97fb71080b3087894053e012e8b5d631"
+	tests := []struct {
+		info Info
+		want string
+	}{
+		{Info{Version: "v0.2.1", Commit: commit}, "v0.2.1"},
+		{Info{Version: "v1.0.0-rc.1", Commit: commit}, "v1.0.0-rc.1"},
+		{Info{Version: "v0.2.2-0.20261013165545-0e81e7fe97fb", Commit: commit}, "dev-0e81e7f"},
+		{Info{Version: "v0.2.2-0.20261013165545-0e81e7fe97fb+dirty", Commit: commit, Modified: true}, "dev-0e81e7f+dirty"},
+		{Info{Version: "dev", Commit: commit}, "dev-0e81e7f"},
+		{Info{Version: "dev"}, "dev"},
+	}
+	for _, tt := range tests {
+		if got := tt.info.Display(); got != tt.want {
+			t.Errorf("%q: Display = %q, want %q", tt.info.Version, got, tt.want)
+		}
+	}
+}

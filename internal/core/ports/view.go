@@ -18,8 +18,10 @@ const (
 	StyleMenuItem
 	StyleMenuItemSelected
 	StyleMenuHint
+	StylePromptBar // background of the whole prompt line
 	StylePromptLabel
 	StylePromptInput
+	StylePromptIdle // "write a command…" when nothing else is shown
 	StyleEcho
 	StyleEchoHint // shortcut shown right of the echo
 	StyleError

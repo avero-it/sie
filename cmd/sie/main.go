@@ -113,7 +113,7 @@ func runEditor(configPath string, args []string) error {
 		Keymap:         keymap.Default(),
 		TabWidth:       settings.TabWidth,
 		DefaultEOL:     eol,
-		Version:        buildinfo.Get().Short(),
+		Version:        buildinfo.Get().Display(),
 		ShowInvisibles: settings.ShowInvisibles,
 		ShowEmptyCells: settings.ShowEmptyCells,
 		JumpLines:      settings.JumpLines,

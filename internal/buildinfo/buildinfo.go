@@ -11,6 +11,7 @@ package buildinfo
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"runtime"
 	"runtime/debug"
 	"strings"
@@ -81,6 +82,31 @@ func Get() Info {
 		}
 	}
 	return info
+}
+
+// releaseVersion matches a release tag such as v0.2.1 or v1.0.0-rc.1, but
+// not a pseudo-version (v0.2.2-0.20261013165545-0e81e7fe97fb), which the go
+// command stamps on untagged builds.
+var (
+	releaseVersion = regexp.MustCompile(`^v\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$`)
+	pseudoVersion  = regexp.MustCompile(`\d{14}-[0-9a-f]{12}`)
+)
+
+// Display is the compact version shown in the UI: the release tag for
+// tagged builds ("v0.2.1"), otherwise "dev-<commit>" with "+dirty" for
+// uncommitted changes, or just "dev".
+func (i Info) Display() string {
+	if releaseVersion.MatchString(i.Version) && !pseudoVersion.MatchString(i.Version) {
+		return i.Version
+	}
+	if i.Commit == "" {
+		return "dev"
+	}
+	v := "dev-" + i.Commit[:min(7, len(i.Commit))]
+	if i.Modified {
+		v += "+dirty"
+	}
+	return v
 }
 
 // Short is a one-line version, e.g. "v0.1.0 (3aea623)".
