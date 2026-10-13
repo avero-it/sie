@@ -38,7 +38,10 @@ func TestDependencyRules(t *testing.T) {
 			return err
 		}
 		if d.IsDir() {
-			if path != root && (strings.HasPrefix(d.Name(), ".") || d.Name() == "testdata") {
+			// vendor/ is third-party code; cgo in the build graph is checked
+			// with `go list -deps` instead (see CLAUDE.md).
+			if path != root && (strings.HasPrefix(d.Name(), ".") || d.Name() == "testdata" ||
+				path == filepath.Join(root, "vendor")) {
 				return filepath.SkipDir
 			}
 			return nil
