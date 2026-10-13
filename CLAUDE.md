@@ -31,11 +31,12 @@ internal/core/app/              application layer (tcell-free, os-free)
   menu.go / prompt.go / view.go  menus, prompt modes + completions, layout, hit-testing, ViewModel
 internal/core/ports/            interfaces only
   driving:  EditorService (HandleKey, HandleMouse, HandlePaste, Resize, Dispatch, View, Done, Poll)
-  driven:   FileStore (Read, Write, Exists, List), Clipboard, Keymap, Highlighter (async: Highlight job → Result)   (settings are read once by cmd/sie and passed as plain app.Config values, so no config port)
+  driven:   FileStore (Read, Write, Exists, List), RecentFiles, Clipboard, Keymap, Highlighter (async: Highlight job → Result)   (settings are read once by cmd/sie and passed as plain app.Config values, so no config port)
   values:   KeyEvent, MouseEvent, ViewModel{Runs, Cursor}, Style, Token/TokenClass, HighlightJob/Result
 internal/adapters/
   tui/        Terminal (owns the tcell screen; New, SetClipboard, Run), event loop, key/mouse/paste normalization, painter + Theme
   keymap/     default modeless keymap (later: loaded from config)
+  recent/     recent files in ~/.sie/recent.json (re-read and merged on every Add, atomic writes, 30 entries)
   syntax/     chroma highlighter: background worker (newest job wins), chroma token types → core TokenClass
   fs/         os-based FileStore (atomic save: temp file + rename, preserves permissions)
   clipboard/  OSC52 (via Terminal.SetClipboard) + native: Win32 API on Windows, pbcopy / wl-copy / xclip / xsel elsewhere (optional)
@@ -120,6 +121,12 @@ internal/adapters/
   - `~` is expanded in `cmdOpen`/`cmdSaveAs`, so it also works inline: `open ~/notes.txt`.
   - The core only uses `path/filepath`. Listing goes through `FileStore.List`, and `cmd/sie` supplies the working and home directories (`os.Getwd`, `os.UserHomeDir`).
 
+### Open recent
+
+- `file.openRecent` ("Open recent…", **Ctrl+E**, aliases `recent` and `recent files`) uses `commands.ArgRecent`. The prompt lists the recent files most recent first: the current file and files that no longer exist are hidden. Typing fuzzy-filters by the displayed path (`ui.Score`), and the best match is highlighted, so Enter opens it. Tab copies the highlighted path, and a click opens it.
+- Inline (`recent todo`) opens the best fuzzy match.
+- Every successful open of an existing file and every save records the file (`recordRecent`, absolute path). Failures to record are ignored, because the list must never get in the way of editing.
+
 ### Prompt line and status line
 
 - The prompt line is always a gray bar (`StylePromptBar`, palette bright black with white text), whether idle, showing a message or focused.
@@ -153,6 +160,7 @@ internal/adapters/
 |---|---|---|---|
 | Ctrl+N | New | Ctrl+F | Find |
 | Ctrl+O | Open | Ctrl+R | Replace |
+| Ctrl+E | Open recent | | |
 | Ctrl+S | Save | Ctrl+G | Go to line |
 | Ctrl+Q | Quit | Ctrl+D | Duplicate line |
 | Ctrl+Z / Ctrl+Y | Undo / Redo | Ctrl+K | Delete line |
@@ -193,7 +201,7 @@ internal/adapters/
 - Linux desktops grab some Ctrl+Alt combinations (T, L, Del, F-keys, arrows). Check new Ctrl+Alt bindings against them.
 - Never bind Ctrl+M (Enter), Ctrl+I (Tab) or Ctrl+[ (Esc). Avoid Ctrl+H (Backspace on some terminals), Ctrl+J (LF) and Ctrl+Shift combinations.
 - Raw mode disables XON/XOFF, so Ctrl+S and Ctrl+Q are usable.
-- Free Ctrl keys for future commands: **B, E, P, T, U, W**.
+- Free Ctrl keys for future commands: **B, P, T, U, W** (E is Open recent).
 - Alt+B and Alt+F are taken by word moves (readline/macOS Terminal). Plain Alt+letter otherwise does nothing.
 
 ## Text model

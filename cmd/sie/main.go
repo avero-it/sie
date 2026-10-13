@@ -15,11 +15,13 @@ import (
 	"github.com/avero-it/sie/internal/adapters/config"
 	fsadapter "github.com/avero-it/sie/internal/adapters/fs"
 	"github.com/avero-it/sie/internal/adapters/keymap"
+	"github.com/avero-it/sie/internal/adapters/recent"
 	"github.com/avero-it/sie/internal/adapters/syntax"
 	"github.com/avero-it/sie/internal/adapters/tui"
 	"github.com/avero-it/sie/internal/buildinfo"
 	"github.com/avero-it/sie/internal/core/app"
 	"github.com/avero-it/sie/internal/core/domain/buffer"
+	"github.com/avero-it/sie/internal/core/ports"
 	"github.com/spf13/cobra"
 )
 
@@ -107,6 +109,10 @@ func runEditor(configPath string, args []string) error {
 	}
 	workDir, _ := os.Getwd()       // "" falls back to "." in the app
 	homeDir, _ := os.UserHomeDir() // "" disables "~"
+	var recentFiles *recent.Store
+	if path, err := recent.DefaultPath(); err == nil {
+		recentFiles = recent.New(path) // ~/.sie/recent.json
+	}
 	highlighter := syntax.New(term.Wake)
 	defer highlighter.Close()
 	eol := buffer.LF
@@ -124,6 +130,7 @@ func runEditor(configPath string, args []string) error {
 		ShowEmptyCells: settings.ShowEmptyCells,
 		JumpLines:      settings.JumpLines,
 
+		Recent:  recentFilesPort(recentFiles),
 		WorkDir: workDir,
 		HomeDir: homeDir,
 
@@ -138,4 +145,12 @@ func runEditor(configPath string, args []string) error {
 		_ = editor.Dispatch("file.open", args[0]) // errors show in the prompt line
 	}
 	return term.Run(editor)
+}
+
+// recentFilesPort avoids a typed-nil interface when there is no home dir.
+func recentFilesPort(s *recent.Store) ports.RecentFiles {
+	if s == nil {
+		return nil
+	}
+	return s
 }

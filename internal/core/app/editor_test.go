@@ -238,7 +238,7 @@ func TestMenuKeyboard(t *testing.T) {
 func TestMenuSkipsSeparators(t *testing.T) {
 	h := newHarness(t, nil)
 	h.keys(ports.CtrlAlt('m'))
-	for range 4 { // New, Open, Save, Save as → (separator skipped) Quit
+	for range 5 { // New, Open, Open recent, Save, Save as → (separator skipped) Quit
 		h.keys(key(ports.KeyDown))
 	}
 	if id := h.menus[0].Items[h.menu.item]; id != "file.quit" {

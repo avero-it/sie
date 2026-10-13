@@ -26,6 +26,8 @@ func builtins() []command {
 			Args: []arg{{Prompt: "Open", Kind: commands.ArgPath,
 				Default: func(e *Editor) string { return e.dirInput(e.currentDir()) }}},
 			Run: (*Editor).cmdOpen},
+		{ID: "file.openRecent", Title: "Open recent", Aliases: []string{"recent", "recent files"},
+			Args: []arg{{Prompt: "Open recent", Kind: commands.ArgRecent}}, Run: (*Editor).cmdOpenRecent},
 		{ID: "file.save", Title: "Save file", Aliases: []string{"save", "write"}, Run: (*Editor).cmdSave},
 		{ID: "file.saveAs", Title: "Save as", Aliases: []string{"saveas"},
 			Args: []arg{{Prompt: "Save as", Kind: commands.ArgPath, Default: func(e *Editor) string {
@@ -133,6 +135,7 @@ func (e *Editor) load(path string) error {
 		return err
 	}
 	e.setDoc(e.newDoc(data), path)
+	e.recordRecent(path)
 	e.note(plural(e.doc.LineCount(), "line"))
 	return nil
 }
@@ -172,6 +175,7 @@ func (e *Editor) write(path string) error {
 		e.detectLanguage()
 	}
 	e.doc.MarkSaved()
+	e.recordRecent(path)
 	e.note(fmt.Sprintf("wrote %s", plural(e.doc.LineCount(), "line")))
 	return nil
 }

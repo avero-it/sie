@@ -15,8 +15,9 @@ import (
 type ArgKind uint8
 
 const (
-	ArgText ArgKind = iota // free text
-	ArgPath                // a file path: the prompt browses directories
+	ArgText   ArgKind = iota // free text
+	ArgPath                  // a file path: the prompt browses directories
+	ArgRecent                // a recently used file: the prompt lists them, fuzzy-filtered
 )
 
 // Arg describes one argument of a command. Missing arguments are asked for

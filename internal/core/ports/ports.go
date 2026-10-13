@@ -36,6 +36,14 @@ type DirEntry struct {
 	Dir  bool
 }
 
+// RecentFiles remembers recently used files across sessions.
+type RecentFiles interface {
+	// List returns absolute paths, most recent first.
+	List() ([]string, error)
+	// Add moves an absolute path to the top of the list.
+	Add(path string) error
+}
+
 // Clipboard is the system clipboard.
 type Clipboard interface {
 	Copy(text string) error

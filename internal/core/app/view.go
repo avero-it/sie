@@ -70,7 +70,7 @@ func (e *Editor) dropdownRect() (rect, int) {
 func (e *Editor) completionRows() int {
 	r := e.regions()
 	limit := maxCompletions
-	if e.prompt.browse {
+	if e.prompt.browse || e.prompt.recent {
 		limit = maxFileRows
 	}
 	return max(0, min(len(e.prompt.items), limit, r.promptY-r.textTop))
@@ -86,7 +86,8 @@ func (e *Editor) completionRect() rect {
 }
 
 func (e *Editor) showCompletions() bool {
-	return e.focus == focusPrompt && (e.prompt.mode == modeCommand || e.prompt.browse) && len(e.prompt.items) > 0
+	return e.focus == focusPrompt && (e.prompt.mode == modeCommand || e.prompt.browse || e.prompt.recent) &&
+		len(e.prompt.items) > 0
 }
 
 // HandleMouse implements clicks on menus, completions, the prompt line and

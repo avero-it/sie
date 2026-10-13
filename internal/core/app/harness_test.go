@@ -19,12 +19,26 @@ type memFS struct {
 	listErr  map[string]error // List errors by directory
 }
 
+// key finds the stored key for path; like the real filesystem, relative
+// paths also resolve against the working directory.
+func (m *memFS) key(path string) (string, bool) {
+	if _, ok := m.files[path]; ok {
+		return path, true
+	}
+	if m.work != "" && !filepath.IsAbs(path) {
+		if k := filepath.Join(m.work, path); m.files[k] != nil {
+			return k, true
+		}
+	}
+	return path, false
+}
+
 func (m *memFS) Read(path string) ([]byte, error) {
-	data, ok := m.files[path]
+	k, ok := m.key(path)
 	if !ok {
 		return nil, fmt.Errorf("read %s: %w", path, fs.ErrNotExist)
 	}
-	return data, nil
+	return m.files[k], nil
 }
 
 func (m *memFS) Write(path string, data []byte) error {
@@ -36,7 +50,7 @@ func (m *memFS) Write(path string, data []byte) error {
 }
 
 func (m *memFS) Exists(path string) (bool, error) {
-	_, ok := m.files[path]
+	_, ok := m.key(path)
 	return ok, nil
 }
 
@@ -110,6 +124,7 @@ var keys = testKeymap{
 	ports.Ctrl('k'):    "edit.deleteLine",
 	ports.Ctrl('l'):    "selection.line",
 	ports.Ctrl('o'):    "file.open",
+	ports.Ctrl('e'):    "file.openRecent",
 	ports.Ctrl('n'):    "file.new",
 	ports.Ctrl('y'):    "edit.redo",
 	ports.Ctrl('r'):    "search.replace",
@@ -232,4 +247,20 @@ func (h *harness) wantRowContains(y int, want string) {
 	if got := h.row(y); !strings.Contains(got, want) {
 		h.t.Errorf("row %d:\n got %q\nwant it to contain %q", y, got, want)
 	}
+}
+
+// memRecent is an in-memory ports.RecentFiles.
+type memRecent struct{ files []string }
+
+func (r *memRecent) List() ([]string, error) { return append([]string(nil), r.files...), nil }
+
+func (r *memRecent) Add(path string) error {
+	out := []string{path}
+	for _, f := range r.files {
+		if f != path {
+			out = append(out, f)
+		}
+	}
+	r.files = out
+	return nil
 }

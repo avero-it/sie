@@ -61,6 +61,10 @@ type promptState struct {
 	listDir string           // browsing: the directory listed
 	listErr error            // browsing: why listDir could not be read
 	listed  bool             // browsing: entries are valid
+
+	recent    bool         // modeArgs with an ArgRecent argument
+	recentAll []recentFile // candidates loaded when the prompt opened
+	recentErr error        // why the recent list could not be read
 }
 
 func (e *Editor) openPrompt() {
@@ -81,12 +85,17 @@ func (e *Editor) closePrompt() {
 func (e *Editor) askArgs(c *commands.Command[*Editor], args []string) {
 	e.focus = focusPrompt
 	arg := c.Args[len(args)]
-	e.prompt = promptState{mode: modeArgs, cmd: c, args: args, browse: arg.Kind == commands.ArgPath}
+	e.prompt = promptState{mode: modeArgs, cmd: c, args: args,
+		browse: arg.Kind == commands.ArgPath, recent: arg.Kind == commands.ArgRecent}
 	if arg.Default != nil {
 		e.prompt.input.Set(arg.Default(e))
 	}
-	if e.prompt.browse {
+	switch {
+	case e.prompt.browse:
 		e.refreshFiles()
+	case e.prompt.recent:
+		e.prompt.recentAll, e.prompt.recentErr = e.recentFiles()
+		e.refreshRecent()
 	}
 }
 
@@ -117,6 +126,14 @@ func (e *Editor) promptKey(k ports.KeyEvent) {
 		return
 	}
 	if p.browse && e.browseKey(k) {
+		return
+	}
+	if p.recent && (k.Key == ports.KeyTab || k.Key == ports.KeyEnter) {
+		action := recentChoose
+		if k.Key == ports.KeyTab {
+			action = recentComplete
+		}
+		e.recentKey(action)
 		return
 	}
 	switch k.Key {
@@ -168,6 +185,8 @@ func (e *Editor) promptChanged() {
 	switch {
 	case e.prompt.browse:
 		e.refreshFiles()
+	case e.prompt.recent:
+		e.refreshRecent()
 	case e.prompt.mode == modeCommand:
 		e.refreshCompletions()
 	}
@@ -186,6 +205,8 @@ func (e *Editor) submitPrompt() {
 	switch {
 	case p.browse:
 		e.browseEnter()
+	case p.recent:
+		e.recentKey(recentChoose)
 	case p.mode == modeArgs:
 		e.submitArg()
 	case p.mode == modeCommand:

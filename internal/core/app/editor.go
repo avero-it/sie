@@ -29,8 +29,9 @@ type Config struct {
 	ShowEmptyCells bool // mark cells holding no character
 	JumpLines      int  // lines moved by Alt+Up/Down; <= 0 means defaultJumpLines
 
-	WorkDir string // relative paths are resolved against it; "" means "."
-	HomeDir string // "~" expands to it; "" disables "~"
+	Recent  ports.RecentFiles // optional; nil disables "Open recent…"
+	WorkDir string            // relative paths are resolved against it; "" means "."
+	HomeDir string            // "~" expands to it; "" disables "~"
 
 	Highlighter        ports.Highlighter // optional; nil means plain text only
 	SyntaxHighlighting bool              // color known file types

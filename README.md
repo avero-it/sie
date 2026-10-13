@@ -44,6 +44,7 @@ Whichever way you run a command, its name and shortcut appear in the prompt line
 | Key | Command | Key | Command |
 |---|---|---|---|
 | Ctrl+N | New | Ctrl+F | Find |
+| Ctrl+E | Open recent (fuzzy search) | | |
 | Ctrl+O | Open | Ctrl+R | Replace all |
 | Ctrl+S | Save | Ctrl+G | Go to line |
 | Ctrl+Q | Quit | Ctrl+D | Duplicate line |
@@ -69,6 +70,8 @@ The mouse works too: click to place the cursor, drag or Shift+click to select, a
 - **Tab** completes. **↑/↓** or a click selects. **Enter** goes into a directory or opens a file. **Backspace** right after a `/` goes up a level.
 - `~` is your home directory.
 - If nothing is selected, Enter takes exactly what you typed, so a name that doesn't exist yet creates a new file.
+
+**Ctrl+E** (Open recent) lists the files you opened or saved most recently, newest first. They're kept in `~/.sie/recent.json` (30 files), shared by all sie windows. Type a few letters of the path to filter, then press Enter to open the top match.
 
 ### Showing whitespace
 

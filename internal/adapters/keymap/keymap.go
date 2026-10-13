@@ -55,6 +55,7 @@ func DefaultBindings() []Binding {
 	return []Binding{
 		{c('n'), "file.new"},
 		{c('o'), "file.open"},
+		{c('e'), "file.openRecent"},
 		{c('s'), "file.save"},
 		{c('q'), "file.quit"},
 		{c('z'), "edit.undo"},
