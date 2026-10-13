@@ -191,3 +191,10 @@ func (h *harness) wantRowPrefix(y int, want string) {
 }
 
 var errDisk = errors.New("disk full")
+
+func (h *harness) wantRowContains(y int, want string) {
+	h.t.Helper()
+	if got := h.row(y); !strings.Contains(got, want) {
+		h.t.Errorf("row %d:\n got %q\nwant it to contain %q", y, got, want)
+	}
+}

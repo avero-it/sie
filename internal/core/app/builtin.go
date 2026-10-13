@@ -56,11 +56,14 @@ func builtins() []command {
 		{ID: "search.gotoLine", Title: "Go to line", Aliases: []string{"goto", "line"},
 			Args: []arg{{Prompt: "Line"}}, Run: (*Editor).cmdGotoLine},
 
-		{ID: "view.toggleInvisibles", Title: "Show/hide invisible characters",
-			Aliases: []string{"toggle invisibles", "show invisible chars", "hide invisible chars", "whitespace"},
+		{ID: "view.toggleInvisibles", Title: "Invisible characters",
+			Aliases: []string{"show/hide invisible characters", "toggle invisibles", "show invisible chars",
+				"hide invisible chars", "whitespace"},
+			Checked: func(e *Editor) bool { return e.showInvisibles },
 			Run:     func(e *Editor, _ []string) error { return e.toggle(&e.showInvisibles) }},
-		{ID: "view.toggleEmptyCells", Title: "Show/hide empty cells",
-			Aliases: []string{"toggle empty cells", "show empty cells", "hide empty cells"},
+		{ID: "view.toggleEmptyCells", Title: "Empty cells",
+			Aliases: []string{"show/hide empty cells", "toggle empty cells", "show empty cells", "hide empty cells"},
+			Checked: func(e *Editor) bool { return e.showEmptyCells },
 			Run:     func(e *Editor, _ []string) error { return e.toggle(&e.showEmptyCells) }},
 
 		{ID: "ui.prompt", Title: "Command prompt", Silent: true, Run: (*Editor).cmdTogglePrompt},

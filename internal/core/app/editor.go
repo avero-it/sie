@@ -177,7 +177,28 @@ func (e *Editor) Dispatch(id string, args ...string) error {
 		e.msg = message{text: label + ": " + err.Error(), kind: msgError}
 		return err
 	}
+	if c.Checked != nil && !c.Silent && e.msg.kind == msgEcho {
+		e.msg.text = tickColumn(c.Checked(e)) + e.msg.text // reads like the menu item
+	}
 	return nil
+}
+
+// tickMark is shown before options that are on. It is one cell wide in
+// every terminal (East Asian width Neutral).
+const tickMark = "✓"
+
+// tickColumn is the 2-cell column in front of menu items and completions.
+func tickColumn(on bool) string {
+	if on {
+		return tickMark + " "
+	}
+	return "  "
+}
+
+// checked reports whether the command is an option that is currently on.
+func (e *Editor) checked(id string) bool {
+	c, ok := e.reg.Get(id)
+	return ok && c.Checked != nil && c.Checked(e)
 }
 
 func (e *Editor) editorKey(k ports.KeyEvent) {

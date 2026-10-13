@@ -80,15 +80,17 @@ func (e *Editor) runMenuItem(i int) {
 	_ = e.Dispatch(items[i])
 }
 
-// menuLabel is how a command appears in a menu: commands that ask for
-// arguments get an ellipsis.
+// menuLabel is how a command appears in a menu: a tick column (✓ for
+// options that are on), then the title; commands that ask for arguments get
+// an ellipsis.
 func (e *Editor) menuLabel(id string) string {
 	c, ok := e.reg.Get(id)
 	if !ok {
 		return id
 	}
+	label := tickColumn(e.checked(id)) + c.Title
 	if len(c.Args) > 0 {
-		return c.Title + "…"
+		label += "…"
 	}
-	return c.Title
+	return label
 }

@@ -26,7 +26,11 @@ type Command[E any] struct {
 	Args    []Arg[E]
 	// Silent commands are not echoed or kept in history (e.g. opening the prompt).
 	Silent bool
-	Run    func(env E, args []string) error
+	// Checked makes the command an on/off option and reports whether it is
+	// on; menus, completions and the echo show a tick for it. Nil for
+	// ordinary commands.
+	Checked func(env E) bool
+	Run     func(env E, args []string) error
 }
 
 // Names returns the lower-cased title and aliases used to match prompt input.

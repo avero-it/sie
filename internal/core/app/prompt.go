@@ -244,7 +244,7 @@ func (e *Editor) refreshCompletions() {
 }
 
 func (e *Editor) completion(c *commands.Command[*Editor], args []string) completion {
-	label := invocationLabel(c, args)
+	label := tickColumn(e.checked(c.ID)) + invocationLabel(c, args)
 	if len(args) < len(c.Args) {
 		label += "…"
 	}

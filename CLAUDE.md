@@ -84,6 +84,10 @@ internal/adapters/
 - Adapters never contain command logic. They translate input into a `Dispatch` call or a focus-handler event.
 - **Editing primitives are not commands**: arrows (Ctrl = by word, Shift = select), Home/End (Ctrl = document), PgUp/PgDn, Backspace/Del, Enter, Tab, Esc and typed text are handled directly in editor focus and are not echoed. Everything else is a registered command.
 - Inline parsing (`Registry.ParseInline`): the longest matching name wins, and a whole-name match counts, so `replace all a b` is Replace all, not Replace with the arguments `all a b`.
+- **On/off options** set `Command.Checked` (it reports whether the option is on); they are not separate show and hide commands.
+  - Title them after the thing they enable ("Empty cells", "Invisible characters"), and keep old phrasings as aliases.
+  - Every menu item and prompt completion has a 2-cell tick column: `✓ ` (U+2713, width Neutral) when the option is on, otherwise blank, so labels line up.
+  - The echo carries the same column: `> ✓ Empty cells — shown`, `>   Empty cells — hidden`.
 - Echo format: `> Title args — result note`, with the shortcut right-aligned. Errors show as `Title args: error`. `Silent` commands (`ui.prompt`, `ui.menu`) are neither echoed nor listed in the prompt.
 - **Prompt-only commands** are registered normally but have no key binding and no menu entry, e.g. `edit.deleteToLineEnd` ("Delete to end of line", aliases "delete till end of line" and "kill line"). To reach a command by another phrase, add an alias; never register a second command for the same action.
 - Menus are app data (`app.Menu{Title, Items []commandID}`, `"-"` is a separator). `app.New` rejects menus that reference unknown IDs. Commands that take arguments show `…` in menus.

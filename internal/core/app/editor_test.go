@@ -129,7 +129,7 @@ func TestPromptInlineArgsAndHistory(t *testing.T) {
 	h.keys(ports.CtrlAlt('p'))
 	h.wantRow(rowPrompt, ">")
 	h.typeText("goto 3")
-	h.wantRowPrefix(rowPrompt-1, " Go to line 3") // inline parse is the first completion
+	h.wantRowPrefix(rowPrompt-1, "   Go to line 3") // inline parse is the first completion
 	h.keys(key(ports.KeyEnter))
 	if line, _, _ := h.doc.CursorPos(); line != 2 {
 		t.Fatalf("cursor line %d, want 2", line)
@@ -139,7 +139,7 @@ func TestPromptInlineArgsAndHistory(t *testing.T) {
 	// Reopening with empty input lists recent invocations first.
 	h.keys(ports.CtrlAlt('p'))
 	rows := h.screen()
-	if !strings.HasPrefix(rows[rowPrompt-maxCompletionsOnScreen(h)], " Go to line 3") {
+	if !strings.HasPrefix(rows[rowPrompt-maxCompletionsOnScreen(h)], "   Go to line 3") {
 		t.Errorf("history not first:\n%s", strings.Join(rows, "\n"))
 	}
 	h.keys(ports.CtrlAlt('p')) // toggles closed
@@ -219,9 +219,9 @@ func TestMenuKeyboard(t *testing.T) {
 	if h.styleAt(1, rowMenu) != ports.StyleMenuTitleActive {
 		t.Error("File title not highlighted")
 	}
-	h.wantRowPrefix(1, " New file") // dropdown over the text
-	h.keys(key(ports.KeyRight))     // Edit
-	h.keys(key(ports.KeyEnter))     // Undo (first item)
+	h.wantRowPrefix(1, "   New file") // dropdown over the text, after the tick column
+	h.keys(key(ports.KeyRight))       // Edit
+	h.keys(key(ports.KeyEnter))       // Undo (first item)
 	if h.doc.Text() != "" {
 		t.Errorf("undo from menu: %q", h.doc.Text())
 	}
@@ -375,7 +375,7 @@ func TestWhitespaceMarkers(t *testing.T) {
 	h.typeText("a b\tc\n\tx")
 	h.wantRow(rowText, " 1 a b c")
 	_ = h.Dispatch("view.toggleInvisibles")
-	h.wantRowPrefix(rowPrompt, "> Show/hide invisible characters — shown")
+	h.wantRowPrefix(rowPrompt, "> ✓ Invisible characters — shown")
 	h.wantRow(rowText, " 1 a␣b»c")   // tab from col 3 to the stop at 4: one cell
 	h.wantRow(rowText+1, " 2 »   x") // full-width tab: marker then blanks
 	if h.styleAt(4, rowText) != ports.StyleWhitespace || h.styleAt(6, rowText) != ports.StyleWhitespace {
@@ -393,7 +393,7 @@ func TestEmptyCellMarkers(t *testing.T) {
 	h := newHarness(t, nil)
 	h.typeText("ab\ncd")
 	_ = h.Dispatch("view.toggleEmptyCells")
-	h.wantRowPrefix(rowPrompt, "> Show/hide empty cells — shown")
+	h.wantRowPrefix(rowPrompt, "> ✓ Empty cells — shown")
 	textCols := 40 - 3
 	h.wantRow(rowText, " 1 ab"+strings.Repeat("·", textCols-2))
 	h.wantRow(rowText+2, "   "+strings.Repeat("·", textCols)) // below the last line; gutter stays blank
@@ -469,5 +469,38 @@ func TestWholeNameCompletionNotDuplicated(t *testing.T) {
 	}
 	if n != 1 || h.prompt.items[0].cmd.ID != "file.save" {
 		t.Errorf("file.save listed %d times; first %s", n, h.prompt.items[0].cmd.ID)
+	}
+}
+
+func TestOptionsShowTicks(t *testing.T) {
+	h := newHarness(t, nil) // both options off
+	viewMenu := -1
+	for i, m := range h.menus {
+		if m.Title == "View" {
+			viewMenu = i
+		}
+	}
+	h.openMenu(viewMenu)
+	h.wantRowContains(1, "   Invisible characters")
+	h.wantRowContains(2, "   Empty cells")
+
+	h.keys(key(ports.KeyDown), key(ports.KeyEnter)) // turn empty cells on
+	h.wantRowPrefix(rowPrompt, "> ✓ Empty cells — shown")
+	h.openMenu(viewMenu)
+	h.wantRowContains(2, " ✓ Empty cells")
+	h.keys(key(ports.KeyEsc))
+
+	// Completions carry the same tick column.
+	h.keys(ports.CtrlAlt('p'))
+	h.typeText("empty cells")
+	if it := h.prompt.items; len(it) == 0 || it[0].label != "✓ Empty cells" {
+		t.Fatalf("completion %+v", it)
+	}
+	h.keys(key(ports.KeyEnter)) // and off again
+	h.wantRowPrefix(rowPrompt, ">   Empty cells — hidden")
+	h.keys(ports.CtrlAlt('p'))
+	h.typeText("empty cells")
+	if it := h.prompt.items; it[0].label != "  Empty cells" {
+		t.Errorf("completion after turning off: %q", it[0].label)
 	}
 }
