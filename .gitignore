@@ -13,6 +13,8 @@ coverage.*
 .vscode/
 .DS_Store
 
-# binaries built next to the package (e.g. by an IDE)
+# binaries built next to the package (e.g. by an IDE or plain `go build`)
 /cmd/sie/main
 /cmd/sie/main.exe
+/cmd/sie/sie
+/cmd/sie/sie.exe
