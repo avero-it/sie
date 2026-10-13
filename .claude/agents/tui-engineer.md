@@ -19,6 +19,12 @@ The adapter does three things only: **normalize → hand to the core → paint t
 - No command logic, no viewport/scroll math, no menu/prompt state. Those live in `internal/core/app`. If you need new data to draw, add it to the ViewModel; don't compute it here.
 - The keymap maps keys to **command IDs**, never to closures.
 
+## Package shape
+
+- `tui.New()` returns a `*Terminal` that owns the tcell screen. `cmd/sie` only calls `New`, `SetClipboard` (OSC52, passed to the clipboard adapter as a func) and `Run(svc)`. **`cmd/sie` must not import tcell**; archtest enforces this.
+- `run(screen, svc, theme)` is the testable loop. Tests use `tcell.NewSimulationScreen`. Never inject events before `Init`, because a simulation screen blocks; wait until the service has been resized.
+- `normalizeKey` handles Ctrl+letter both as control bytes (`KeySOH..KeySUB`) and as `KeyCtrlA..KeyCtrlZ`, and treats ESC-prefixed control bytes as Ctrl+Alt. Keep `TestNormalizeKey` covering every wire form.
+
 ## Event loop
 
 - One goroutine runs `screen.PollEvent()` and sends to a channel. The main goroutine owns all state and selects on events, timers and async results.

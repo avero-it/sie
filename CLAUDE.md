@@ -33,10 +33,10 @@ internal/core/ports/            interfaces only
   driven:   FileStore, Clipboard, Keymap   (ConfigStore comes with the config adapter)
   values:   KeyEvent, MouseEvent, ViewModel{Runs, Cursor}, Style
 internal/adapters/
-  tui/        tcell screen, event loop, event normalization, ViewModel painter (draws Runs, maps Style → colors)
+  tui/        Terminal (owns the tcell screen; New, SetClipboard, Run), event loop, key/mouse/paste normalization, painter + Theme
   keymap/     default modeless keymap (later: loaded from config)
   fs/         os-based FileStore (atomic save: temp file + rename, preserves permissions)
-  clipboard/  OSC52 + platform fallback (pure Go)
+  clipboard/  OSC52 (via Terminal.SetClipboard) + native: Win32 API on Windows, pbcopy / wl-copy / xclip / xsel elsewhere (optional)
   config/     config file, XDG / %AppData% / ~/Library paths
 ```
 
@@ -124,6 +124,9 @@ internal/adapters/
 
 ### Terminal key facts (read before touching the keymap)
 
+- tcell (v2.13) delivers Ctrl+letter in two forms: as control-byte keys `KeySOH..KeySUB` (legacy input) or as `KeyCtrlA..KeyCtrlZ` (numbered from 65; extended key reporting). `tui.normalizeKey` maps both to `ports.Ctrl(letter)`. Ctrl+M/J/I/H are folded to Enter/Enter/Tab/Backspace so every terminal behaves the same way.
+- Bracketed paste arrives as `EventPaste` start, key events, `EventPaste` end. The adapter collects these into a single `HandlePaste`.
+
 - Ctrl+Alt+X arrives as ESC + Ctrl byte, which tcell decodes as `KeyCtrlX` with `ModAlt`.
 - **Ctrl+Alt+M is the same byte sequence as Alt+Enter**, so never bind Alt+Enter to anything else.
 - macOS: Alt reaches the terminal only with "Use Option as Meta" enabled (Terminal.app / iTerm2). The README must say so.
@@ -161,6 +164,9 @@ go test -run='^$' -fuzz=FuzzDocument -fuzztime=30s ./internal/core/domain/editor
 go vet ./...
 golangci-lint run
 
+# release build of one target
+CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=v0.1.0" -o sie ./cmd/sie
+
 # cross-compile matrix — must all pass, cgo off
 for os in linux windows darwin; do for arch in amd64 arm64; do
   CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -o /dev/null ./cmd/sie || echo "FAIL $os/$arch"
@@ -178,7 +184,7 @@ CGO_ENABLED=0 go list -deps -f '{{if .CgoFiles}}{{.ImportPath}}{{end}}' ./...
 - No global mutable state. Everything is constructed in `cmd/sie` and passed in.
 - `context.Context` only at app/adapter boundaries (I/O), never in the domain.
 - Tests are table-driven. Use `testing/fstest` or in-memory fakes for ports. Fuzz the piece table against a naive `[]byte` model. Use `tcell.SimulationScreen` golden tests for rendering (`-update` flag regenerates goldens).
-- **New dependencies need justification** in the PR/commit message: pure Go, maintained, and not trivially replaceable by the stdlib. Current allow-list: `github.com/gdamore/tcell/v2` (adapters/tui only), `github.com/rivo/uniseg`, `golang.org/x/sys` (adapters only, already a tcell dependency).
+- **New dependencies need justification** in the PR/commit message: pure Go, maintained, and not trivially replaceable by the stdlib. Current allow-list: `github.com/gdamore/tcell/v2` v2.13.10 (adapters/tui only; `cmd/sie` gets the screen through `tui.New`), `github.com/rivo/uniseg`, `golang.org/x/sys` (adapters only, for the Windows clipboard; already a tcell dependency). Pin exact versions that are at least two weeks old.
 
 ## Definition of done
 

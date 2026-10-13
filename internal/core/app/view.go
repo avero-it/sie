@@ -348,7 +348,7 @@ func (e *Editor) drawPrompt(vm *viewBuilder, r regions) {
 			if e.msg.hint != "" {
 				hx := e.width - uniseg.StringWidth(e.msg.hint) - 1
 				avail = hx - 1
-				vm.add(hx, y, e.msg.hint, ports.StyleMenuHint)
+				vm.add(hx, y, e.msg.hint, ports.StyleEchoHint)
 			}
 			vm.add(0, y, truncate("> "+e.msg.text, avail), ports.StyleEcho)
 		case msgInfo:

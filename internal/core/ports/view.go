@@ -18,8 +18,12 @@ const (
 	StylePromptLabel
 	StylePromptInput
 	StyleEcho
+	StyleEchoHint // shortcut shown right of the echo
 	StyleError
 	StyleStatus
+
+	// StyleCount is the number of styles (not a style); themes must cover all.
+	StyleCount
 )
 
 // Run is text drawn at a screen position. The painter lays it out grapheme
