@@ -23,7 +23,8 @@ func TestLayout(t *testing.T) {
 		{"del", "\x7f", []g{{0, 2, "^?"}}},
 		{"lone cr", "a\r", []g{{0, 1, "a"}, {1, 2, "^M"}}},
 		{"invalid utf8", "a\xffb", []g{{0, 1, "a"}, {1, 1, "�"}, {2, 1, "b"}}},
-		{"zero width space", "a​b", []g{{0, 1, "a"}, {1, 1, "·"}, {2, 1, "b"}}},
+		{"zero width space", "a\u200bb", []g{{0, 1, "a"}, {1, 1, "¤"}, {2, 1, "b"}}},
+		{"space is a faint dot", "a b", []g{{0, 1, "a"}, {1, 1, "·"}, {2, 1, "b"}}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

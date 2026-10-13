@@ -12,3 +12,7 @@ coverage.*
 .idea/
 .vscode/
 .DS_Store
+
+# binaries built next to the package (e.g. by an IDE)
+/cmd/sie/main
+/cmd/sie/main.exe

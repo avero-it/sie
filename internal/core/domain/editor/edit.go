@@ -78,6 +78,22 @@ func (d *Document) DeleteSelection() error {
 	return d.replace(start, end, "", Cursor(start), "")
 }
 
+// DeleteToLineEnd deletes from the cursor to the end of its line; at the end
+// of a line it deletes the line break instead, joining the next line. The
+// selection is ignored and collapses to the cursor.
+func (d *Document) DeleteToLineEnd() error {
+	off := d.sel.Head
+	_, end := d.lineRange(d.lineOf(off))
+	if off >= end {
+		end = d.nextPos(off) // the line break, or nothing on the last line
+	}
+	if end == off {
+		d.sel = Cursor(off)
+		return nil
+	}
+	return d.replace(off, end, "", Cursor(off), "")
+}
+
 // DeleteLine deletes the lines touched by the selection, including their
 // line break, and puts the cursor at the start of the following line.
 func (d *Document) DeleteLine() error {

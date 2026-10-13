@@ -41,3 +41,11 @@ func TestDuplicateKeyRejected(t *testing.T) {
 		t.Error("duplicate key accepted")
 	}
 }
+
+func TestPromptOnlyCommandsAreUnbound(t *testing.T) {
+	for _, id := range []string{"edit.deleteToLineEnd"} {
+		if k, ok := Default().Binding(id); ok {
+			t.Errorf("%s is prompt-only but bound to %s", id, k)
+		}
+	}
+}

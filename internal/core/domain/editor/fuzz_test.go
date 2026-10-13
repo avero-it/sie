@@ -26,10 +26,13 @@ func FuzzDocument(f *testing.F) {
 			case 13:
 				err = d.DeleteForward()
 			case 14:
-				if op&0x10 != 0 {
+				switch (op >> 4) % 3 {
+				case 0:
 					err = d.DeleteLine()
-				} else {
+				case 1:
 					err = d.DuplicateLine()
+				default:
+					err = d.DeleteToLineEnd()
 				}
 			case 15:
 				d.SetSelection(Selection{int(op) * 7 % (d.Len() + 1), i % (d.Len() + 1)})

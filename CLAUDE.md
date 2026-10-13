@@ -83,6 +83,7 @@ internal/adapters/
 - Adapters never contain command logic. They translate input into a `Dispatch` call or a focus-handler event.
 - **Editing primitives are not commands**: arrows (Ctrl = by word, Shift = select), Home/End (Ctrl = document), PgUp/PgDn, Backspace/Del, Enter, Tab, Esc and typed text are handled directly in editor focus and are not echoed. Everything else is a registered command.
 - Echo format: `> Title args — result note`, with the shortcut right-aligned. Errors show as `Title args: error`. `Silent` commands (`ui.prompt`, `ui.menu`) are neither echoed nor listed in the prompt.
+- **Prompt-only commands** are registered normally but have no key binding and no menu entry, e.g. `edit.deleteToLineEnd` ("Delete to end of line", aliases "delete till end of line" and "kill line"). To reach a command by another phrase, add an alias; never register a second command for the same action.
 - Menus are app data (`app.Menu{Title, Items []commandID}`, `"-"` is a separator). `app.New` rejects menus that reference unknown IDs. Commands that take arguments show `…` in menus.
 - Unbound rune keys are typed only with no modifiers, Shift only, or Ctrl+Alt together (AltGr on Windows). Plain Alt+letter is ignored.
 
@@ -145,7 +146,7 @@ internal/adapters/
   - **Cursor invariant:** a selection end is never inside a grapheme cluster or between `\r` and `\n`. `SetSelection` snaps backward. Edits snap forward, because an insert can fuse clusters, e.g. "x" typed before a combining mark. `FuzzDocument` checks this.
   - Inserted text has its line breaks normalized to the document's line ending. Enter auto-indents.
   - Undo keys: typing single graphemes coalesces into one step, and so do backspace runs and delete runs. Pastes, newlines, line operations and replace-all are each one step. Any `Move`/`SetSelection` seals the group.
-  - `Layout(line, tabWidth)` is the single source of screen geometry: it returns glyphs with column, width and kind (text/tab/control/invalid), and the painter must use it. Controls display as `^X` (2 cells), zero-width characters as `·`, invalid UTF-8 as U+FFFD.
+  - `Layout(line, tabWidth)` is the single source of screen geometry: it returns glyphs with column, width and kind (text/tab/control/invalid), and the painter must use it. Spaces display as a faint `·` (`SpaceMarker`, styled `StyleWhitespace`: bright black + dim) so they differ from empty cells. Tabs stay blank. Controls display as `^X` (2 cells), zero-width characters as `¤`, invalid UTF-8 as U+FFFD. All markers are Latin-1, so every font has them.
   - Movement and layout scan the whole line (O(line length)), which is fine for v0. Very long lines (minified files) are a known future optimization.
   - Case-insensitive search uses simple folding over `len(query)` bytes, so matches whose folded form has a different byte length are missed.
 - Undo (`domain/history`) stores reversible `Edit{Off, Removed, Inserted}` groups with caller state (cursor and selection). The caller groups typing with a coalescing key and calls `Seal()` on cursor moves. `Modified()` is derived from the saved position in the undo stack.

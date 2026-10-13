@@ -311,6 +311,10 @@ func truncate(s string, cells int) string {
 func glyphStyle(k editor.GlyphKind, selected bool) ports.Style {
 	special := k == editor.GlyphControl || k == editor.GlyphInvalid
 	switch {
+	case k == editor.GlyphSpace && selected:
+		return ports.StyleWhitespaceSelected
+	case k == editor.GlyphSpace:
+		return ports.StyleWhitespace
 	case special && selected:
 		return ports.StyleSpecialSelected
 	case special:

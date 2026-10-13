@@ -8,6 +8,8 @@ const (
 	StyleSelection
 	StyleSpecial // visible controls, invalid bytes, zero-width marks
 	StyleSpecialSelected
+	StyleWhitespace // faint marker for spaces
+	StyleWhitespaceSelected
 	StyleGutter
 	StyleGutterCurrent
 	StyleMenuBar

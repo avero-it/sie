@@ -36,11 +36,14 @@ func builtins() []command {
 		{ID: "edit.paste", Title: "Paste", Run: (*Editor).cmdPaste},
 		{ID: "edit.duplicateLine", Title: "Duplicate line", Run: docOp((*editor.Document).DuplicateLine)},
 		{ID: "edit.deleteLine", Title: "Delete line", Run: docOp((*editor.Document).DeleteLine)},
+		// Prompt-only: no default key binding, not in any menu.
+		{ID: "edit.deleteToLineEnd", Title: "Delete to end of line",
+			Aliases: []string{"delete till end of line", "kill line"}, Run: docOp((*editor.Document).DeleteToLineEnd)},
 
 		{ID: "selection.all", Title: "Select all", Run: func(e *Editor, _ []string) error { e.doc.SelectAll(); return nil }},
 		{ID: "selection.line", Title: "Select line", Run: func(e *Editor, _ []string) error { e.doc.SelectLine(); return nil }},
 		{ID: "selection.trimTrailingSpaces", Title: "Trim trailing spaces",
-			Aliases: []string{"trim spaces from selection", "trim"}, Run: (*Editor).cmdTrim},
+			Aliases: []string{"trim ending spaces", "trim spaces from selection", "trim"}, Run: (*Editor).cmdTrim},
 
 		{ID: "search.find", Title: "Find", Aliases: []string{"search"},
 			Args: []arg{{Prompt: "Find", Default: (*Editor).findDefault}}, Run: (*Editor).cmdFind},

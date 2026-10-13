@@ -32,7 +32,7 @@ func TestTypingAndStatus(t *testing.T) {
 	h := newHarness(t, nil)
 	h.typeText("héllo\n  日本")
 	h.wantRow(rowText, " 1 héllo")
-	h.wantRow(rowText+1, " 2   日本")
+	h.wantRow(rowText+1, " 2 ··日本")
 	h.wantRowPrefix(rowStatus, " [No Name] ●")
 	if !strings.Contains(h.row(rowStatus), "Ln 2, Col 7") {
 		t.Errorf("status: %q", h.row(rowStatus))
@@ -367,5 +367,60 @@ func TestMenusReferenceKnownCommands(t *testing.T) {
 	_, err := New(Config{Files: &memFS{}, Keymap: keys, Menus: []Menu{{"X", []string{"no.such"}}}})
 	if err == nil {
 		t.Error("unknown menu command accepted")
+	}
+}
+
+func TestSpacesShowFaintDots(t *testing.T) {
+	h := newHarness(t, nil)
+	h.typeText("a b\tc")
+	h.wantRow(rowText, " 1 a·b c") // the tab (1 cell, to the next stop) stays blank
+	if h.styleAt(4, rowText) != ports.StyleWhitespace {
+		t.Error("space not styled as whitespace")
+	}
+	h.keys(ports.Ctrl('a'))
+	if h.styleAt(4, rowText) != ports.StyleWhitespaceSelected {
+		t.Error("selected space not styled as selected whitespace")
+	}
+	if h.styleAt(3, rowText) != ports.StyleSelection {
+		t.Error("selected letter not styled as selection")
+	}
+}
+
+func TestPromptOnlyDeleteToLineEnd(t *testing.T) {
+	h := newHarness(t, nil)
+	h.typeText("keep this\nnext")
+	h.keys(ports.KeyEvent{Key: ports.KeyHome, Mod: ports.ModCtrl})
+	h.keys(ports.KeyEvent{Key: ports.KeyRight, Mod: ports.ModCtrl}) // after "keep"
+	h.keys(ports.CtrlAlt('p'))
+	h.typeText("delete till end")
+	if len(h.prompt.items) == 0 || h.prompt.items[0].cmd.ID != "edit.deleteToLineEnd" {
+		t.Fatalf("first completion: %+v", h.prompt.items)
+	}
+	h.keys(key(ports.KeyEnter))
+	if got := h.doc.Text(); got != "keep\nnext" {
+		t.Errorf("text %q", got)
+	}
+	h.wantRow(rowPrompt, "> Delete to end of line") // no shortcut hint
+
+	for _, m := range DefaultMenus() {
+		for _, id := range m.Items {
+			if id == "edit.deleteToLineEnd" {
+				t.Errorf("prompt-only command is in menu %q", m.Title)
+			}
+		}
+	}
+}
+
+func TestTrimEndingSpacesAlias(t *testing.T) {
+	h := newHarness(t, nil)
+	h.typeText("x  ")
+	h.keys(ports.CtrlAlt('p'))
+	h.typeText("trim ending spaces")
+	if len(h.prompt.items) == 0 || h.prompt.items[0].cmd.ID != "selection.trimTrailingSpaces" {
+		t.Fatalf("first completion: %+v", h.prompt.items)
+	}
+	h.keys(key(ports.KeyEnter))
+	if got := h.doc.Text(); got != "x" {
+		t.Errorf("text %q", got)
 	}
 }
