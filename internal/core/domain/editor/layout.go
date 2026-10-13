@@ -14,10 +14,11 @@ type GlyphKind uint8
 const (
 	// GlyphText is a grapheme cluster drawn as its own bytes.
 	GlyphText GlyphKind = iota
-	// GlyphSpace is an ASCII space, drawn as a faint centered dot so it
-	// differs from empty cells.
+	// GlyphSpace is an ASCII space. Display returns a blank; the app may
+	// draw a whitespace marker instead.
 	GlyphSpace
-	// GlyphTab is a tab expanded to the next tab stop.
+	// GlyphTab is a tab expanded to the next tab stop. Display returns
+	// blanks; the app may draw a whitespace marker instead.
 	GlyphTab
 	// GlyphControl is a control or zero-width character drawn visibly
 	// ("^A" for ASCII controls, "¤" otherwise).
@@ -25,9 +26,6 @@ const (
 	// GlyphInvalid is a byte sequence that is not valid UTF-8, drawn as U+FFFD.
 	GlyphInvalid
 )
-
-// SpaceMarker is drawn for a space; it is one cell wide.
-const SpaceMarker = "·"
 
 // Glyph is one grapheme cluster of a line laid out on screen cells.
 type Glyph struct {
@@ -39,9 +37,7 @@ type Glyph struct {
 // Display returns the text the painter draws for g; it occupies g.Width cells.
 func (g Glyph) Display(line []byte) string {
 	switch g.Kind {
-	case GlyphSpace:
-		return SpaceMarker
-	case GlyphTab:
+	case GlyphSpace, GlyphTab:
 		return strings.Repeat(" ", g.Width)
 	case GlyphControl:
 		if b := line[g.Off]; g.Len == 1 && b < utf8.RuneSelf {

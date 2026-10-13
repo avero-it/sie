@@ -17,7 +17,8 @@ This file is the source of truth for humans and agents. If code and this file di
 ## Architecture
 
 ```
-cmd/sie/main.go                 composition root: wires adapters to ports, parses flags. Only place that knows concrete adapters.
+cmd/sie/                        composition root (cobra CLI: `sie [file]`, `sie version`, `sie config`): loads settings, wires adapters to ports. Only place that knows concrete adapters.
+internal/buildinfo/             version, commit, commit/build time, Go version (ldflags first, then embedded VCS info)
 internal/core/domain/           pure logic, stdlib only (+ github.com/rivo/uniseg)
   buffer/   piece table, line index, UTF-8/grapheme-aware positions, line-ending detection (LF/CRLF preserved)
   history/  undo/redo as reversible piece-table edits, grouped per command / typing burst
@@ -30,14 +31,14 @@ internal/core/app/              application layer (tcell-free, os-free)
   menu.go / prompt.go / view.go  menus, prompt modes + completions, layout, hit-testing, ViewModel
 internal/core/ports/            interfaces only
   driving:  EditorService (HandleKey, HandleMouse, HandlePaste, Resize, Dispatch, View, Done)
-  driven:   FileStore, Clipboard, Keymap   (ConfigStore comes with the config adapter)
+  driven:   FileStore, Clipboard, Keymap   (settings are read once by cmd/sie and passed as plain app.Config values, so no config port)
   values:   KeyEvent, MouseEvent, ViewModel{Runs, Cursor}, Style
 internal/adapters/
   tui/        Terminal (owns the tcell screen; New, SetClipboard, Run), event loop, key/mouse/paste normalization, painter + Theme
   keymap/     default modeless keymap (later: loaded from config)
   fs/         os-based FileStore (atomic save: temp file + rename, preserves permissions)
   clipboard/  OSC52 (via Terminal.SetClipboard) + native: Win32 API on Windows, pbcopy / wl-copy / xclip / xsel elsewhere (optional)
-  config/     config file, XDG / %AppData% / ~/Library paths
+  config/     viper: /etc/sie/config.yaml merged with ~/.sie/config.yaml (user wins per key), SIE_* env vars, --config overrides
 ```
 
 ### Dependency rules (non-negotiable)
@@ -146,7 +147,11 @@ internal/adapters/
   - **Cursor invariant:** a selection end is never inside a grapheme cluster or between `\r` and `\n`. `SetSelection` snaps backward. Edits snap forward, because an insert can fuse clusters, e.g. "x" typed before a combining mark. `FuzzDocument` checks this.
   - Inserted text has its line breaks normalized to the document's line ending. Enter auto-indents.
   - Undo keys: typing single graphemes coalesces into one step, and so do backspace runs and delete runs. Pastes, newlines, line operations and replace-all are each one step. Any `Move`/`SetSelection` seals the group.
-  - `Layout(line, tabWidth)` is the single source of screen geometry: it returns glyphs with column, width and kind (text/tab/control/invalid), and the painter must use it. Spaces display as a faint `·` (`SpaceMarker`, styled `StyleWhitespace`: bright black + dim) so they differ from empty cells. Tabs stay blank. Controls display as `^X` (2 cells), zero-width characters as `¤`, invalid UTF-8 as U+FFFD. All markers are Latin-1, so every font has them.
+  - `Layout(line, tabWidth)` is the single source of screen geometry: it returns glyphs with column, width and kind (text/tab/control/invalid), and the painter must use it. `Glyph.Display` draws spaces and tabs as blanks. Whitespace and empty-cell markers are view options decided in `app/view.go`:
+    - **Invisible characters** (`view.toggleInvisibles`, config `show_invisibles`, default off): a space shows as a faint `␣`, and a tab shows a faint `»` in its first cell, the rest blank. Style: `StyleWhitespace`.
+    - **Empty cells** (`view.toggleEmptyCells`, config `show_empty_cells`, default on): every text-area cell holding no character (past the end of the line, and rows below the last line) shows a faint `·`. Style: `StyleEmptyCell`. The gutter stays blank. A selected line break keeps its one selected cell, and the dots start after it.
+    - The default theme draws both as bright black + dim. Markers must be one cell wide; prefer East Asian width Neutral, or Latin-1 for font coverage.
+    - Control characters (`^X`, 2 cells), zero-width characters (`¤`) and invalid UTF-8 (U+FFFD) are always visible, whatever the toggles.
   - Movement and layout scan the whole line (O(line length)), which is fine for v0. Very long lines (minified files) are a known future optimization.
   - Case-insensitive search uses simple folding over `len(query)` bytes, so matches whose folded form has a different byte length are missed.
 - Undo (`domain/history`) stores reversible `Edit{Off, Removed, Inserted}` groups with caller state (cursor and selection). The caller groups typing with a coalescing key and calls `Seal()` on cursor moves. `Modified()` is derived from the saved position in the undo stack.
@@ -165,8 +170,9 @@ go test -run='^$' -fuzz=FuzzDocument -fuzztime=30s ./internal/core/domain/editor
 go vet ./...
 golangci-lint run
 
-# release build of one target
-CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=v0.1.0" -o sie ./cmd/sie
+# release build of one target (build info: see internal/buildinfo)
+P=github.com/avero-it/sie/internal/buildinfo
+CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X $P.version=v0.1.0 -X $P.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" -o sie ./cmd/sie
 
 # cross-compile matrix — must all pass, cgo off
 for os in linux windows darwin; do for arch in amd64 arm64; do
@@ -185,7 +191,7 @@ CGO_ENABLED=0 go list -deps -f '{{if .CgoFiles}}{{.ImportPath}}{{end}}' ./...
 - No global mutable state. Everything is constructed in `cmd/sie` and passed in.
 - `context.Context` only at app/adapter boundaries (I/O), never in the domain.
 - Tests are table-driven. Use `testing/fstest` or in-memory fakes for ports. Fuzz the piece table against a naive `[]byte` model. Use `tcell.SimulationScreen` golden tests for rendering (`-update` flag regenerates goldens).
-- **New dependencies need justification** in the PR/commit message: pure Go, maintained, and not trivially replaceable by the stdlib. Current allow-list: `github.com/gdamore/tcell/v2` v2.13.10 (adapters/tui only; `cmd/sie` gets the screen through `tui.New`), `github.com/rivo/uniseg`, `golang.org/x/sys` (adapters only, for the Windows clipboard; already a tcell dependency). Pin exact versions that are at least two weeks old.
+- **New dependencies need justification** in the PR/commit message: pure Go, maintained, and not trivially replaceable by the stdlib. Current allow-list: `github.com/gdamore/tcell/v2` v2.13.10 (adapters/tui only; `cmd/sie` gets the screen through `tui.New`), `github.com/rivo/uniseg`, `golang.org/x/sys` (adapters only, for the Windows clipboard; already a tcell dependency), `github.com/spf13/viper` v1.21.0 (adapters/config only; requested for config files), `github.com/spf13/cobra` v1.10.2 (cmd/sie only; requested for the CLI). archtest enforces where tcell, viper and cobra may be imported. Pin exact versions that are at least two weeks old.
 
 ## Definition of done
 

@@ -40,8 +40,9 @@ CGO_ENABLED=0 go list -deps -f '{{if .CgoFiles}}{{.ImportPath}}{{end}}' ./...   
 
 ## Config
 
-- Paths: `$XDG_CONFIG_HOME/sie` (or `~/.config/sie`) on Linux, `%AppData%\sie` on Windows, `~/Library/Application Support/sie` on macOS. Use `os.UserConfigDir()`.
-- A missing config means defaults. A malformed config gives a clear error in the prompt line, and the editor still starts.
+- viper, in `internal/adapters/config` only. The files are `/etc/sie/config.yaml`, then `~/.sie/config.yaml` (`os.UserHomeDir()`), merged so the user file wins key by key. `SIE_<KEY>` environment variables override both. `--config <file>` replaces the search, and that file must exist.
+- Missing files mean defaults. A malformed file, an unknown key (`UnmarshalExact`) or an invalid value makes `sie` exit with `sie: config: …` **before** the terminal is initialized. `sie config` prints the effective settings and their source files.
+- Keys: `tab_width` (1–16), `show_invisibles`, `show_empty_cells`, `line_ending` (`lf`/`crlf`, for new files). A new key must be added to `Settings`, the defaults, validation, `sie config` output, `app.Config` wiring, README and tests.
 
 ## Testing
 

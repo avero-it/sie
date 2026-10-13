@@ -3,7 +3,7 @@
 A small, modeless terminal text editor written in Go. It ships as a single static binary for Linux, Windows and macOS, with no C dependencies.
 
 ```
-┌ File  Edit  Selection  Search  Help ────────────────────┐
+┌ File  Edit  Selection  Search  View  Help ──────────────┐
 │  1 package main                                         │
 │  2                                                      │
 │  3 func main() {█                                       │
@@ -18,10 +18,13 @@ A small, modeless terminal text editor written in Go. It ships as a single stati
 go install github.com/avero-it/sie/cmd/sie@latest
 ```
 
-Or build it yourself:
+Or build it yourself. The `-X` flags record the version and build time that `sie version` shows:
 
 ```sh
-CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o sie ./cmd/sie
+P=github.com/avero-it/sie/internal/buildinfo
+CGO_ENABLED=0 go build -trimpath \
+  -ldflags="-s -w -X $P.version=v0.1.0 -X $P.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  -o sie ./cmd/sie
 ```
 
 ## Use
@@ -51,6 +54,26 @@ Whichever way you run a command, its name and shortcut appear in the prompt line
 | Esc | Back to the editor | Ctrl + arrows | Move by word |
 
 The mouse works too: click to place the cursor, drag or Shift+click to select, and use the wheel to scroll.
+
+### Showing whitespace
+
+- **Empty cells** (cells after the end of a line, and rows below the last line) show a faint `·` by default.
+- **Invisible characters** can be shown too: spaces as a faint `␣`, and tabs as a faint `»`.
+
+Toggle either one from the **View** menu or the prompt (`whitespace`, `empty cells`), or set it in the config file.
+
+## Configuration
+
+sie reads `/etc/sie/config.yaml` and then `~/.sie/config.yaml`. Each key in the user file overrides the same key in the system file. `SIE_*` environment variables override both, and `--config <file>` reads only that file.
+
+```yaml
+tab_width: 4            # 1–16
+show_invisibles: false  # mark spaces (␣) and tabs (»)
+show_empty_cells: true  # mark cells holding no character (·)
+line_ending: lf         # for new files: lf or crlf
+```
+
+`sie config` prints the effective settings and which files they came from. `sie version` prints the version, commit, commit and build time, Go version and platform.
 
 ### Terminal notes
 

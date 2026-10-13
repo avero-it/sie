@@ -17,7 +17,7 @@ const (
 
 func TestInitialScreen(t *testing.T) {
 	h := newHarness(t, nil)
-	h.wantRow(rowMenu, " File  Edit  Selection  Search  Help")
+	h.wantRow(rowMenu, " File  Edit  Selection  Search  View  He") // clipped at 40 columns
 	h.wantRow(rowText, " 1")
 	h.wantRowPrefix(rowStatus, " [No Name]")
 	if !strings.HasSuffix(h.row(rowStatus), "Ln 1, Col 1   UTF-8   LF") {
@@ -32,7 +32,7 @@ func TestTypingAndStatus(t *testing.T) {
 	h := newHarness(t, nil)
 	h.typeText("héllo\n  日本")
 	h.wantRow(rowText, " 1 héllo")
-	h.wantRow(rowText+1, " 2 ··日本")
+	h.wantRow(rowText+1, " 2   日本")
 	h.wantRowPrefix(rowStatus, " [No Name] ●")
 	if !strings.Contains(h.row(rowStatus), "Ln 2, Col 7") {
 		t.Errorf("status: %q", h.row(rowStatus))
@@ -370,19 +370,51 @@ func TestMenusReferenceKnownCommands(t *testing.T) {
 	}
 }
 
-func TestSpacesShowFaintDots(t *testing.T) {
-	h := newHarness(t, nil)
-	h.typeText("a b\tc")
-	h.wantRow(rowText, " 1 a·b c") // the tab (1 cell, to the next stop) stays blank
-	if h.styleAt(4, rowText) != ports.StyleWhitespace {
-		t.Error("space not styled as whitespace")
+func TestWhitespaceMarkers(t *testing.T) {
+	h := newHarness(t, nil) // markers are off unless configured
+	h.typeText("a b\tc\n\tx")
+	h.wantRow(rowText, " 1 a b c")
+	_ = h.Dispatch("view.toggleInvisibles")
+	h.wantRowPrefix(rowPrompt, "> Show/hide invisible characters — shown")
+	h.wantRow(rowText, " 1 a␣b»c")   // tab from col 3 to the stop at 4: one cell
+	h.wantRow(rowText+1, " 2 »   x") // full-width tab: marker then blanks
+	if h.styleAt(4, rowText) != ports.StyleWhitespace || h.styleAt(6, rowText) != ports.StyleWhitespace {
+		t.Error("space/tab markers not styled as whitespace")
 	}
 	h.keys(ports.Ctrl('a'))
-	if h.styleAt(4, rowText) != ports.StyleWhitespaceSelected {
-		t.Error("selected space not styled as selected whitespace")
+	if h.styleAt(4, rowText) != ports.StyleWhitespaceSelected || h.styleAt(3, rowText) != ports.StyleSelection {
+		t.Error("selected markers not styled as selected")
 	}
-	if h.styleAt(3, rowText) != ports.StyleSelection {
-		t.Error("selected letter not styled as selection")
+	_ = h.Dispatch("view.toggleInvisibles")
+	h.wantRow(rowText, " 1 a b c")
+}
+
+func TestEmptyCellMarkers(t *testing.T) {
+	h := newHarness(t, nil)
+	h.typeText("ab\ncd")
+	_ = h.Dispatch("view.toggleEmptyCells")
+	h.wantRowPrefix(rowPrompt, "> Show/hide empty cells — shown")
+	textCols := 40 - 3
+	h.wantRow(rowText, " 1 ab"+strings.Repeat("·", textCols-2))
+	h.wantRow(rowText+2, "   "+strings.Repeat("·", textCols)) // below the last line; gutter stays blank
+	if h.styleAt(5, rowText) != ports.StyleEmptyCell {
+		t.Error("empty cell not styled")
+	}
+	// A selected line break keeps its selected cell; dots start after it.
+	h.keys(ports.Ctrl('a'))
+	h.wantRow(rowText, " 1 ab "+strings.Repeat("·", textCols-3))
+	if h.styleAt(5, rowText) != ports.StyleSelection {
+		t.Error("selected line break lost its cell")
+	}
+}
+
+func TestMarkersFromConfig(t *testing.T) {
+	e, err := New(Config{Files: &memFS{}, Keymap: keys, ShowInvisibles: true, ShowEmptyCells: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !e.showInvisibles || !e.showEmptyCells {
+		t.Error("config options not applied")
 	}
 }
 

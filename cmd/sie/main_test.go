@@ -2,26 +2,69 @@ package main
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
 
-func TestVersionFlag(t *testing.T) {
+func runCLI(t *testing.T, args ...string) (code int, stdout, stderr string) {
+	t.Helper()
 	var out, errOut bytes.Buffer
-	if code := run([]string{"-version"}, &out, &errOut); code != 0 {
-		t.Fatalf("exit %d: %s", code, errOut.String())
+	code = run(args, &out, &errOut)
+	return code, out.String(), errOut.String()
+}
+
+func TestVersionCommand(t *testing.T) {
+	code, out, errOut := runCLI(t, "version")
+	if code != 0 {
+		t.Fatalf("exit %d: %s", code, errOut)
 	}
-	if !strings.HasPrefix(out.String(), "sie ") {
-		t.Errorf("output %q", out.String())
+	for _, want := range []string{"sie ", "commit:", "commit time:", "built:", "go:          " + runtime.Version(), "platform:"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q in:\n%s", want, out)
+		}
+	}
+}
+
+func TestVersionFlag(t *testing.T) {
+	code, out, _ := runCLI(t, "--version")
+	if code != 0 || !strings.HasPrefix(out, "sie version ") {
+		t.Errorf("exit %d, output %q", code, out)
 	}
 }
 
 func TestTooManyArgs(t *testing.T) {
-	var out, errOut bytes.Buffer
-	if code := run([]string{"a", "b"}, &out, &errOut); code != 2 {
-		t.Errorf("exit %d", code)
+	code, _, errOut := runCLI(t, "a", "b")
+	if code != 1 || !strings.Contains(errOut, "sie: accepts at most 1 arg") {
+		t.Errorf("exit %d, stderr %q", code, errOut)
 	}
-	if !strings.Contains(errOut.String(), "usage: sie") {
-		t.Errorf("stderr %q", errOut.String())
+}
+
+func TestConfigCommand(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "c.yaml")
+	if err := os.WriteFile(path, []byte("tab_width: 2\nshow_invisibles: true\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	code, out, errOut := runCLI(t, "--config", path, "config")
+	if code != 0 {
+		t.Fatalf("exit %d: %s", code, errOut)
+	}
+	for _, want := range []string{"# from " + path, "tab_width: 2", "show_invisibles: true", "show_empty_cells: true", "line_ending: lf"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q in:\n%s", want, out)
+		}
+	}
+}
+
+func TestBadConfigFailsBeforeTerminal(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "c.yaml")
+	if err := os.WriteFile(path, []byte("tab_width: 99\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	code, _, errOut := runCLI(t, "--config", path, "file.txt")
+	if code != 1 || !strings.Contains(errOut, "sie: config: tab_width") {
+		t.Errorf("exit %d, stderr %q", code, errOut)
 	}
 }

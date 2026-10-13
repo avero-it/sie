@@ -23,7 +23,10 @@ type Config struct {
 	Menus      []Menu // nil means DefaultMenus()
 	TabWidth   int
 	DefaultEOL buffer.LineEnding
-	Version    string
+	Version    string // shown by "About sie"
+
+	ShowInvisibles bool // mark spaces and tabs
+	ShowEmptyCells bool // mark cells holding no character
 }
 
 type focus uint8
@@ -75,6 +78,9 @@ type Editor struct {
 	lastQuery     string
 	dragging      bool
 	done          bool
+
+	showInvisibles bool
+	showEmptyCells bool
 }
 
 var _ ports.EditorService = (*Editor)(nil)
@@ -89,6 +95,9 @@ func New(cfg Config) (*Editor, error) {
 		reg:   commands.NewRegistry[*Editor](),
 		menus: cfg.Menus,
 		view:  editor.Viewport{ScrollOff: 2, SideScrollOff: 4},
+
+		showInvisibles: cfg.ShowInvisibles,
+		showEmptyCells: cfg.ShowEmptyCells,
 	}
 	if e.menus == nil {
 		e.menus = DefaultMenus()

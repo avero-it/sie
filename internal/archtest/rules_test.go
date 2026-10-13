@@ -27,6 +27,11 @@ func TestViolation(t *testing.T) {
 		{adapters + "fs", tcell + "/v2", true},
 		{module + "/cmd/sie", adapters + "tui", false},
 		{module + "/cmd/sie", "C", true},
+		{adapters + "config", "github.com/spf13/viper", false},
+		{module + "/cmd/sie", "github.com/spf13/viper", true},
+		{app, "github.com/spf13/viper", true},
+		{module + "/cmd/sie", "github.com/spf13/cobra", false},
+		{adapters + "tui", "github.com/spf13/cobra", true},
 	}
 	for _, tt := range tests {
 		if got := violation(tt.pkg, tt.imp) != ""; got != tt.bad {

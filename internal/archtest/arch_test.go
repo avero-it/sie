@@ -22,6 +22,9 @@ const (
 	adapters = module + "/internal/adapters/"
 	tcell    = "github.com/gdamore/tcell"
 	uniseg   = "github.com/rivo/uniseg"
+	viper    = "github.com/spf13/viper"
+	cobra    = "github.com/spf13/cobra"
+	cmd      = module + "/cmd/sie"
 )
 
 // osBound are stdlib packages that reach the OS; the core must use ports instead.
@@ -73,6 +76,12 @@ func violation(pkg, imp string) string {
 	}
 	if strings.HasPrefix(imp, tcell) && !within(pkg, adapters+"tui") {
 		return "tcell is allowed only in internal/adapters/tui"
+	}
+	if within(imp, viper) && !within(pkg, adapters+"config") {
+		return "viper is allowed only in internal/adapters/config"
+	}
+	if within(imp, cobra) && !within(pkg, cmd) {
+		return "cobra is allowed only in cmd/sie"
 	}
 	switch {
 	case within(pkg, domain):

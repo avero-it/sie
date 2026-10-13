@@ -242,7 +242,8 @@ func (e *Editor) drawText(vm *viewBuilder, r regions) {
 	for row := 0; row < r.textRows; row++ {
 		line, y := e.view.Top+row, r.textTop+row
 		if line >= e.doc.LineCount() {
-			break
+			e.drawEmptyCells(vm, r, y, 0)
+			continue
 		}
 		gutterStyle := ports.StyleGutter
 		if line == curLine {
@@ -263,21 +264,24 @@ func (e *Editor) drawText(vm *viewBuilder, r regions) {
 				break
 			}
 			selected := start+g.Off >= selStart && start+g.Off < selEnd
-			disp := g.Display(text)
+			disp, style := e.glyphLook(g, text, selected)
 			if x < 0 || x+g.Width > cols {
-				// Wide glyph cut by the viewport edge: show the visible cells blank.
+				// Glyph cut by the viewport edge: show the visible cells blank.
 				visible := min(x+g.Width, cols) - max(x, 0)
 				disp, x = strings.Repeat(" ", visible), max(x, 0)
 			}
-			vm.add(r.gutter+x, y, disp, glyphStyle(g.Kind, selected))
+			vm.add(r.gutter+x, y, disp, style)
 		}
 		// A selected line break shows as one selected cell after the text.
 		end := start + len(text)
+		fill := max(0, width-e.view.Left)
 		if line < e.doc.LineCount()-1 && selStart <= end && selEnd > end {
-			if x := width - e.view.Left; x >= 0 && x < cols {
-				vm.add(r.gutter+x, y, " ", ports.StyleSelection)
+			if fill < cols {
+				vm.add(r.gutter+fill, y, " ", ports.StyleSelection)
 			}
+			fill++
 		}
+		e.drawEmptyCells(vm, r, y, fill)
 	}
 	if e.focus == focusEditor {
 		x, y := r.gutter+curVcol-e.view.Left, r.textTop+curLine-e.view.Top
@@ -308,13 +312,44 @@ func truncate(s string, cells int) string {
 	return b.String() + "…"
 }
 
+// Faint markers (all one cell wide, East Asian width neutral or Latin-1).
+const (
+	emptyCellMarker = "·" // a cell holding no character
+	spaceMarker     = "␣"
+	tabMarker       = "»" // first cell of a tab; the rest stay blank
+)
+
+// drawEmptyCells marks the text-area cells of row y from column x (relative
+// to the text area) to the right edge, if empty cells are shown.
+func (e *Editor) drawEmptyCells(vm *viewBuilder, r regions, y, x int) {
+	if cols := e.width - r.gutter; e.showEmptyCells && x < cols {
+		vm.add(r.gutter+x, y, strings.Repeat(emptyCellMarker, cols-x), ports.StyleEmptyCell)
+	}
+}
+
+// glyphLook returns what to draw for g and in which style.
+func (e *Editor) glyphLook(g editor.Glyph, line []byte, selected bool) (string, ports.Style) {
+	if e.showInvisibles {
+		marker := ""
+		switch g.Kind {
+		case editor.GlyphSpace:
+			marker = spaceMarker
+		case editor.GlyphTab:
+			marker = tabMarker + strings.Repeat(" ", g.Width-1)
+		}
+		if marker != "" {
+			if selected {
+				return marker, ports.StyleWhitespaceSelected
+			}
+			return marker, ports.StyleWhitespace
+		}
+	}
+	return g.Display(line), glyphStyle(g.Kind, selected)
+}
+
 func glyphStyle(k editor.GlyphKind, selected bool) ports.Style {
 	special := k == editor.GlyphControl || k == editor.GlyphInvalid
 	switch {
-	case k == editor.GlyphSpace && selected:
-		return ports.StyleWhitespaceSelected
-	case k == editor.GlyphSpace:
-		return ports.StyleWhitespace
 	case special && selected:
 		return ports.StyleSpecialSelected
 	case special:

@@ -23,6 +23,7 @@ func DefaultTheme() Theme {
 		// Bright black + dim: a barely visible dot on dark and light palettes.
 		ports.StyleWhitespace:         d.Foreground(tcell.ColorGray).Dim(true),
 		ports.StyleWhitespaceSelected: d.Reverse(true).Dim(true),
+		ports.StyleEmptyCell:          d.Foreground(tcell.ColorGray).Dim(true),
 		ports.StyleGutter:             d.Foreground(tcell.ColorGray),
 		ports.StyleGutterCurrent:      d.Bold(true),
 		ports.StyleMenuBar:            bar,
