@@ -130,6 +130,13 @@ internal/adapters/
 - Text is stored as UTF-8 bytes in a piece table: original file buffer (read-only) + add buffer + piece list (`domain/buffer`). Each piece caches its `\n` count, which drives `LineStart`/`LineOf`. The flat piece slice is O(pieces) per operation; swap in a balanced tree behind the same API if profiling demands it.
 - Only `\n` terminates a line. In CRLF files the `\r` is part of the line's bytes; `Line()` strips it, and the cursor layer treats `\r\n` as one grapheme (uniseg does too).
 - The BOM is not stored in the buffer: `SplitBOM` on load, and the document remembers it and re-adds it on save.
+- `domain/editor.Document` owns buffer, history, the single `Selection{Anchor, Head}`, line ending, BOM and tab width.
+  - **Cursor invariant:** a selection end is never inside a grapheme cluster or between `\r` and `\n`. `SetSelection` snaps backward. Edits snap forward, because an insert can fuse clusters, e.g. "x" typed before a combining mark. `FuzzDocument` checks this.
+  - Inserted text has its line breaks normalized to the document's line ending. Enter auto-indents.
+  - Undo keys: typing single graphemes coalesces into one step, and so do backspace runs and delete runs. Pastes, newlines, line operations and replace-all are each one step. Any `Move`/`SetSelection` seals the group.
+  - `Layout(line, tabWidth)` is the single source of screen geometry: it returns glyphs with column, width and kind (text/tab/control/invalid), and the painter must use it. Controls display as `^X` (2 cells), zero-width characters as `·`, invalid UTF-8 as U+FFFD.
+  - Movement and layout scan the whole line (O(line length)), which is fine for v0. Very long lines (minified files) are a known future optimization.
+  - Case-insensitive search uses simple folding over `len(query)` bytes, so matches whose folded form has a different byte length are missed.
 - Undo (`domain/history`) stores reversible `Edit{Off, Removed, Inserted}` groups with caller state (cursor and selection). The caller groups typing with a coalescing key and calls `Seal()` on cursor moves. `Modified()` is derived from the saved position in the undo stack.
 - Positions in the domain are byte offsets. The cursor moves by **grapheme cluster** (uniseg). Layout uses **display width**: CJK and emoji take 2 cells, combining marks take 0, and tabs expand to the configured width.
 - Line endings are detected on load (LF / CRLF) and preserved on save. Mixed files keep the majority style for new lines.
@@ -141,7 +148,8 @@ internal/adapters/
 go build ./...
 go test ./...
 go test -race ./...
-go test -fuzz=FuzzPieceTable -fuzztime=30s ./internal/core/domain/buffer
+go test -run='^$' -fuzz=FuzzPieceTable -fuzztime=30s ./internal/core/domain/buffer
+go test -run='^$' -fuzz=FuzzDocument -fuzztime=30s ./internal/core/domain/editor
 go vet ./...
 golangci-lint run
 

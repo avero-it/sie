@@ -233,7 +233,8 @@ func (b *Buffer) LineOf(off int) (int, error) {
 	return line, nil
 }
 
-// Line returns a copy of line's content without its terminator ("\n" or "\r\n").
+// Line returns a copy of line's content without its terminator ("\n" or
+// "\r\n"). A '\r' on the last line has no '\n' after it and is content.
 func (b *Buffer) Line(line int) ([]byte, error) {
 	start, end, err := b.LineBounds(line)
 	if err != nil {
@@ -243,7 +244,10 @@ func (b *Buffer) Line(line int) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return bytes.TrimSuffix(data, []byte{'\r'}), nil
+	if line < b.newlines {
+		data = bytes.TrimSuffix(data, []byte{'\r'})
+	}
+	return data, nil
 }
 
 // LineBounds returns [start, end) of line, where end excludes the '\n'

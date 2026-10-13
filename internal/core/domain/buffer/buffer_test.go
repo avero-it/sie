@@ -105,6 +105,7 @@ func TestLines(t *testing.T) {
 		{"a\nbb\n\nccc", []string{"a", "bb", "", "ccc"}},
 		{"a\r\nb\r\n", []string{"a", "b", ""}},
 		{"lone\rcr", []string{"lone\rcr"}},
+		{"a\r\nb\r", []string{"a", "b\r"}},
 	}
 	for _, tt := range tests {
 		b := New([]byte(tt.content))
