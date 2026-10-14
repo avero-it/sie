@@ -25,6 +25,11 @@ func (m *memFS) key(path string) (string, bool) {
 	if _, ok := m.files[path]; ok {
 		return path, true
 	}
+	// Keys are written with "/"; the editor builds native paths
+	// (cmd\sie\main.go on Windows), like the real filesystem accepts.
+	if k := filepath.ToSlash(path); m.files[k] != nil {
+		return k, true
+	}
 	if m.work != "" && !filepath.IsAbs(path) {
 		if k := filepath.Join(m.work, path); m.files[k] != nil {
 			return k, true
