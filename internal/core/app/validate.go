@@ -18,17 +18,13 @@ func (e *Editor) cmdValidate([]string) error {
 	if v == nil {
 		return errors.New("validation is not available")
 	}
-	lang, supported := e.hl.language, v.Languages()
-	known := false
-	for _, s := range supported {
-		known = known || strings.EqualFold(s, lang)
-	}
-	if !known {
+	lang := e.hl.language
+	if !supports(v, lang) {
 		what := lang
 		if what == "" {
 			what = "plain text"
 		}
-		return fmt.Errorf("cannot validate %s (supported: %s)", what, strings.Join(supported, ", "))
+		return fmt.Errorf("cannot validate %s (supported: %s)", what, strings.Join(v.Languages(), ", "))
 	}
 	p, err := v.Validate(lang, []byte(e.doc.Text()))
 	switch {
@@ -37,14 +33,10 @@ func (e *Editor) cmdValidate([]string) error {
 	case p == nil:
 		e.note("✓ valid " + lang)
 		return nil
-	case p.Line == 0:
-		return fmt.Errorf("%s (position unknown)", p.Message)
+	case p.Line > 0:
+		e.doc.SetSelection(editor.Cursor(e.problemOffset(p)))
 	}
-	e.doc.SetSelection(editor.Cursor(e.problemOffset(p)))
-	if p.Col == 0 {
-		return fmt.Errorf("line %d: %s", p.Line, p.Message)
-	}
-	return fmt.Errorf("line %d, col %d: %s", p.Line, p.Col, p.Message)
+	return errors.New(problemText(p))
 }
 
 // problemOffset converts a problem's line and character column to a

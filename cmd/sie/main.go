@@ -92,7 +92,8 @@ func newConfigCmd(configPath *string) *cobra.Command {
 			}
 			fmt.Fprintf(out, "tab_width: %d\nshow_invisibles: %t\nshow_empty_cells: %t\nline_ending: %s\njump_lines: %d\n",
 				s.TabWidth, s.ShowInvisibles, s.ShowEmptyCells, s.LineEnding, s.JumpLines)
-			fmt.Fprintf(out, "syntax_highlighting: %t\nsyntax_max_size: %s\n", s.SyntaxHighlighting, s.SyntaxMaxSize)
+			fmt.Fprintf(out, "syntax_highlighting: %t\nsyntax_max_size: %s\nvalidate_on_save: %t\n",
+				s.SyntaxHighlighting, s.SyntaxMaxSize, s.ValidateOnSave)
 			return nil
 		},
 	}
@@ -131,10 +132,11 @@ func runEditor(configPath string, args []string) error {
 		ShowEmptyCells: settings.ShowEmptyCells,
 		JumpLines:      settings.JumpLines,
 
-		Recent:    recentFilesPort(recentFiles),
-		Validator: validate.Validator{},
-		WorkDir:   workDir,
-		HomeDir:   homeDir,
+		Recent:         recentFilesPort(recentFiles),
+		Validator:      validate.Validator{},
+		ValidateOnSave: settings.ValidateOnSave,
+		WorkDir:        workDir,
+		HomeDir:        homeDir,
 
 		Highlighter:        highlighter,
 		SyntaxHighlighting: settings.SyntaxHighlighting,

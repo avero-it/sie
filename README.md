@@ -81,6 +81,8 @@ The mouse works too: click to place the cursor, drag or Shift+click to select, a
 - **A problem** moves the cursor onto it, with a description like `Validate: line 3, col 21: invalid character ']' looking for beginning of value`.
 - **YAML** also reports duplicate keys.
 
+Saving also validates these file types. If the file has a problem, sie asks before writing: **v** shows the problem, **s** saves anyway, and **Esc** cancels. Turn this off with *View → Validate on save* or `validate_on_save: false`.
+
 ### Showing whitespace
 
 - **Empty cells** (cells after the end of a line, and rows below the last line) show a faint `·` by default.
@@ -109,6 +111,7 @@ line_ending: lf         # for new files: lf or crlf
 jump_lines: 5           # lines moved by Alt+↑/↓ (1–100)
 syntax_highlighting: true
 syntax_max_size: 2MB    # larger files are not colored
+validate_on_save: true  # check JSON/YAML/TOML/XML before saving
 ```
 
 `sie config` prints the effective settings and which files they came from. `sie version` prints the version, commit, commit and build time, Go version and platform.

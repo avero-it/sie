@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"unicode"
 
 	"github.com/avero-it/sie/internal/core/app/commands"
 	"github.com/avero-it/sie/internal/core/app/ui"
@@ -17,7 +18,15 @@ const (
 	modeArgs                      // asking for a command's missing arguments
 	modeConfirm                   // yes/no question
 	modeReplace                   // interactive replace: y/n/a/q
+	modeChoice                    // question with several one-key answers
 )
+
+// choice is one answer of a modeChoice question.
+type choice struct {
+	key   rune   // lower-case; the upper-case key works too
+	label string // e.g. "[v]alidate"
+	run   func() error
+}
 
 const (
 	maxCompletions   = 8
@@ -46,8 +55,9 @@ type promptState struct {
 	cmd  *commands.Command[*Editor] // modeArgs: command waiting for args
 	args []string                   // modeArgs: arguments collected so far
 
-	question string       // modeConfirm, modeReplace
+	question string       // modeConfirm, modeReplace, modeChoice
 	onYes    func() error // modeConfirm
+	choices  []choice     // modeChoice
 
 	replace *replaceSession // modeReplace
 	onClose func()          // runs when the prompt closes for any reason
@@ -99,6 +109,12 @@ func (e *Editor) askArgs(c *commands.Command[*Editor], args []string) {
 	}
 }
 
+// choose asks question with one-key answers; Esc or any other key cancels.
+func (e *Editor) choose(question string, choices ...choice) {
+	e.focus = focusPrompt
+	e.prompt = promptState{mode: modeChoice, question: question, choices: choices}
+}
+
 func (e *Editor) confirm(question string, onYes func() error) {
 	e.focus = focusPrompt
 	e.prompt = promptState{mode: modeConfirm, question: question, onYes: onYes}
@@ -112,6 +128,20 @@ func (e *Editor) promptKey(k ports.KeyEvent) {
 	p := &e.prompt
 	if p.mode == modeReplace {
 		e.replaceKey(k)
+		return
+	}
+	if p.mode == modeChoice {
+		choices := p.choices
+		e.closePrompt()
+		if k.Key == ports.KeyRune && k.Mod&^ports.ModShift == 0 {
+			for _, c := range choices {
+				if unicode.ToLower(k.Rune) == c.key {
+					e.check(c.run())
+					return
+				}
+			}
+		}
+		e.info("Cancelled")
 		return
 	}
 	if p.mode == modeConfirm {

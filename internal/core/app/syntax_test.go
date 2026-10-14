@@ -26,6 +26,8 @@ func (f *fakeHighlighter) Detect(name string) string {
 		return "Go"
 	case ".yaml", ".yml":
 		return "YAML"
+	case ".json":
+		return "JSON"
 	}
 	return ""
 }

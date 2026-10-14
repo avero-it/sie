@@ -93,6 +93,11 @@ func builtins() []command {
 			}}},
 			Run: (*Editor).cmdSetLanguage},
 
+		{ID: "view.toggleValidateOnSave", Title: "Validate on save",
+			Aliases: []string{"toggle validate on save", "validate on save"},
+			Checked: func(e *Editor) bool { return e.validateOnSave },
+			Run:     func(e *Editor, _ []string) error { return e.toggleOption(&e.validateOnSave) }},
+
 		{ID: "ui.prompt", Title: "Command prompt", Silent: true, Run: (*Editor).cmdTogglePrompt},
 		{ID: "ui.menu", Title: "Menu", Silent: true, Run: (*Editor).cmdToggleMenu},
 		{ID: "help.about", Title: "About sie", Aliases: []string{"version"}, Run: (*Editor).cmdAbout},
@@ -148,7 +153,7 @@ func (e *Editor) cmdSave([]string) error {
 		_ = e.Dispatch("file.saveAs")
 		return nil
 	}
-	return e.write(e.path)
+	return e.saveValidated(e.path)
 }
 
 func (e *Editor) cmdSaveAs(args []string) error {
@@ -162,11 +167,11 @@ func (e *Editor) cmdSaveAs(args []string) error {
 			return err
 		}
 		if exists {
-			e.confirm(fmt.Sprintf("Overwrite %s?", path), func() error { return e.write(path) })
+			e.confirm(fmt.Sprintf("Overwrite %s?", path), func() error { return e.saveValidated(path) })
 			return nil
 		}
 	}
-	return e.write(path)
+	return e.saveValidated(path)
 }
 
 func (e *Editor) write(path string) error {
@@ -293,6 +298,17 @@ func (e *Editor) cmdGotoLine(args []string) error {
 	}
 	n = max(1, min(n, e.doc.LineCount()))
 	e.doc.SetSelection(editor.Cursor(e.doc.OffsetAt(n-1, 0)))
+	return nil
+}
+
+// toggleOption flips a behavior option and reports it as on/off.
+func (e *Editor) toggleOption(opt *bool) error {
+	*opt = !*opt
+	if *opt {
+		e.note("on")
+	} else {
+		e.note("off")
+	}
 	return nil
 }
 

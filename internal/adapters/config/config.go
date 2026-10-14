@@ -23,6 +23,7 @@ type Settings struct {
 	LineEnding     string `mapstructure:"line_ending"`      // for new files: "lf" or "crlf"
 	JumpLines      int    `mapstructure:"jump_lines"`       // lines moved by Alt+Up/Down
 
+	ValidateOnSave     bool   `mapstructure:"validate_on_save"`
 	SyntaxHighlighting bool   `mapstructure:"syntax_highlighting"`
 	SyntaxMaxSize      string `mapstructure:"syntax_max_size"` // e.g. "2MB", "512KB"
 	SyntaxMaxBytes     int    `mapstructure:"-"`               // SyntaxMaxSize parsed
@@ -31,7 +32,7 @@ type Settings struct {
 // Defaults returns the built-in settings.
 func Defaults() Settings {
 	return Settings{TabWidth: 4, ShowInvisibles: false, ShowEmptyCells: true, LineEnding: "lf", JumpLines: 5,
-		SyntaxHighlighting: true, SyntaxMaxSize: "2MB", SyntaxMaxBytes: 2 << 20}
+		SyntaxHighlighting: true, SyntaxMaxSize: "2MB", SyntaxMaxBytes: 2 << 20, ValidateOnSave: true}
 }
 
 // SearchPaths returns the config files, lowest precedence first: the system
@@ -66,6 +67,7 @@ func load(paths []string, mustExist bool) (Settings, []string, error) {
 	v.SetDefault("line_ending", d.LineEnding)
 	v.SetDefault("jump_lines", d.JumpLines)
 	v.SetDefault("syntax_highlighting", d.SyntaxHighlighting)
+	v.SetDefault("validate_on_save", d.ValidateOnSave)
 	v.SetDefault("syntax_max_size", d.SyntaxMaxSize)
 	v.SetEnvPrefix("SIE")
 	v.AutomaticEnv()

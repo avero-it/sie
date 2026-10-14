@@ -136,6 +136,15 @@ internal/adapters/
   - On a problem, the cursor jumps there and the prompt line shows the error `Validate: line 3, col 7: <message>`.
   - Unsupported languages show the list of supported ones.
   - Positions are verified per parser: encoding/json byte offsets and XML/TOML byte columns are converted to characters, and goccy gives line:col directly. go-toml reports duplicate keys without a position, so the adapter points at the key's second assignment.
+- **Validate on save** (`validate_on_save`, default on; ✓ option `view.toggleValidateOnSave` in the View menu):
+  - Every Save and Save as goes through `saveValidated`. It validates as the language the file will have after saving: a hand-picked language wins, else the one detected from the target path.
+  - A valid or unsupported file is written directly, and so is a file the validator can't check.
+  - An invalid file is not written. A `choose` prompt asks `Fails validation (<problem>)  [v]alidate  [s]ave anyway  Esc`:
+    - `v` shows the problem exactly like Ctrl+T, with the cursor moved onto it.
+    - `s` writes the file.
+    - Esc or any other key cancels.
+  - It asks on every save; there's no exemption after "save anyway".
+- **Choice prompt:** `Editor.choose(question, choice{key, label, run}...)` is the generic one-key question (modeChoice). The question is truncated so the answers stay visible.
 - **Close file** (`file.close`, **Ctrl+W**) leaves an empty untitled buffer and asks first if there are unsaved changes.
 - archtest: goccy/go-yaml and go-toml may only be imported by `adapters/validate`.
 

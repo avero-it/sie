@@ -115,3 +115,14 @@ func TestSyntaxSettings(t *testing.T) {
 		t.Errorf("defaults %+v", d)
 	}
 }
+
+func TestValidateOnSaveSetting(t *testing.T) {
+	if !Defaults().ValidateOnSave {
+		t.Error("validate_on_save should default to true")
+	}
+	path := write(t, t.TempDir(), "c.yaml", "validate_on_save: false\n")
+	s, _, err := load([]string{path}, false)
+	if err != nil || s.ValidateOnSave {
+		t.Errorf("got %+v, %v", s, err)
+	}
+}

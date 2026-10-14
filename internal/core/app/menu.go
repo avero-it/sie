@@ -24,7 +24,7 @@ func DefaultMenus() []Menu {
 		{"Search", []string{"search.find", "search.next", "search.prev", separator,
 			"search.replace", "search.replaceAll", separator, "search.gotoLine"}},
 		{"View", []string{"view.toggleInvisibles", "view.toggleEmptyCells", separator,
-			"view.toggleSyntax", "view.setLanguage"}},
+			"view.toggleSyntax", "view.setLanguage", separator, "view.toggleValidateOnSave"}},
 		{"Help", []string{"ui.prompt", "help.about"}},
 	}
 }

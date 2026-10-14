@@ -442,6 +442,14 @@ func (e *Editor) drawPrompt(vm *viewBuilder, r regions) {
 		label = p.question + " (y/n) "
 	case modeReplace:
 		label = p.question + " (y/n/a/q) "
+	case modeChoice:
+		// The answers must stay visible: shorten the question instead.
+		answers := ""
+		for _, c := range p.choices {
+			answers += "  " + c.label
+		}
+		answers += "  Esc "
+		label = truncate(p.question, e.width-uniseg.StringWidth(answers)) + answers
 	}
 	lw := uniseg.StringWidth(label)
 	vm.add(0, y, label, ports.StylePromptLabel)

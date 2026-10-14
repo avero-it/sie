@@ -31,8 +31,10 @@ type Config struct {
 
 	Recent    ports.RecentFiles // optional; nil disables "Open recent…"
 	Validator ports.Validator   // optional; nil disables "Validate"
-	WorkDir   string            // relative paths are resolved against it; "" means "."
-	HomeDir   string            // "~" expands to it; "" disables "~"
+
+	ValidateOnSave bool   // check supported file types before writing them
+	WorkDir        string // relative paths are resolved against it; "" means "."
+	HomeDir        string // "~" expands to it; "" disables "~"
 
 	Highlighter        ports.Highlighter // optional; nil means plain text only
 	SyntaxHighlighting bool              // color known file types
@@ -95,6 +97,7 @@ type Editor struct {
 	showEmptyCells bool
 	showSyntax     bool
 	hl             highlightState
+	validateOnSave bool
 }
 
 var _ ports.EditorService = (*Editor)(nil)
@@ -113,6 +116,7 @@ func New(cfg Config) (*Editor, error) {
 		showInvisibles: cfg.ShowInvisibles,
 		showEmptyCells: cfg.ShowEmptyCells,
 		showSyntax:     cfg.SyntaxHighlighting,
+		validateOnSave: cfg.ValidateOnSave,
 	}
 	if e.menus == nil {
 		e.menus = DefaultMenus()
