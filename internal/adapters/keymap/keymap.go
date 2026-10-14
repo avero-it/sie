@@ -57,6 +57,7 @@ func DefaultBindings() []Binding {
 		{c('o'), "file.open"},
 		{c('e'), "file.openRecent"},
 		{c('s'), "file.save"},
+		{c('w'), "file.close"},
 		{c('q'), "file.quit"},
 		{c('z'), "edit.undo"},
 		{c('y'), "edit.redo"},
@@ -70,6 +71,7 @@ func DefaultBindings() []Binding {
 		{c('f'), "search.find"},
 		{c('r'), "search.replace"},
 		{c('g'), "search.gotoLine"},
+		{c('t'), "edit.validate"},
 		{ports.CtrlAlt('p'), "ui.prompt"},
 		{ports.CtrlAlt('m'), "ui.menu"},
 	}

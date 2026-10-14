@@ -18,6 +18,7 @@ import (
 	"github.com/avero-it/sie/internal/adapters/recent"
 	"github.com/avero-it/sie/internal/adapters/syntax"
 	"github.com/avero-it/sie/internal/adapters/tui"
+	"github.com/avero-it/sie/internal/adapters/validate"
 	"github.com/avero-it/sie/internal/buildinfo"
 	"github.com/avero-it/sie/internal/core/app"
 	"github.com/avero-it/sie/internal/core/domain/buffer"
@@ -130,9 +131,10 @@ func runEditor(configPath string, args []string) error {
 		ShowEmptyCells: settings.ShowEmptyCells,
 		JumpLines:      settings.JumpLines,
 
-		Recent:  recentFilesPort(recentFiles),
-		WorkDir: workDir,
-		HomeDir: homeDir,
+		Recent:    recentFilesPort(recentFiles),
+		Validator: validate.Validator{},
+		WorkDir:   workDir,
+		HomeDir:   homeDir,
 
 		Highlighter:        highlighter,
 		SyntaxHighlighting: settings.SyntaxHighlighting,

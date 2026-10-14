@@ -44,6 +44,24 @@ type RecentFiles interface {
 	Add(path string) error
 }
 
+// Problem is the first error found by a Validator. Line and Col are
+// 1-based; Col counts characters (runes). Line 0 means the position is
+// unknown; Col 0 means only the line is known.
+type Problem struct {
+	Line, Col int
+	Message   string
+}
+
+// Validator checks that a document is well-formed for its language.
+type Validator interface {
+	// Languages lists the canonical language names it can check (as
+	// reported by Highlighter.Detect, e.g. "JSON", "YAML").
+	Languages() []string
+	// Validate returns nil when text is valid, or its first problem. An
+	// error means the text could not be checked at all.
+	Validate(language string, text []byte) (*Problem, error)
+}
+
 // Clipboard is the system clipboard.
 type Clipboard interface {
 	Copy(text string) error

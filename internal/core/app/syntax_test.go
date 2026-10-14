@@ -15,6 +15,7 @@ import (
 type fakeHighlighter struct {
 	jobs    []ports.HighlightJob
 	results []ports.HighlightResult
+	known   map[string]bool // extra languages accepted by Language
 	// lex classifies every occurrence of these words.
 	words map[string]ports.TokenClass
 }
@@ -30,6 +31,9 @@ func (f *fakeHighlighter) Detect(name string) string {
 }
 
 func (f *fakeHighlighter) Language(name string) (string, bool) {
+	if f.known[strings.ToUpper(name)] {
+		return strings.ToUpper(name), true
+	}
 	switch strings.ToLower(name) {
 	case "go", "golang":
 		return "Go", true

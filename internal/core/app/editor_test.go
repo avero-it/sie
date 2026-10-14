@@ -238,7 +238,13 @@ func TestMenuKeyboard(t *testing.T) {
 func TestMenuSkipsSeparators(t *testing.T) {
 	h := newHarness(t, nil)
 	h.keys(ports.CtrlAlt('m'))
-	for range 5 { // New, Open, Open recent, Save, Save as → (separator skipped) Quit
+	// Quit is the last File item, after a separator: one Down per real
+	// item before it reaches it.
+	items := h.menus[0].Items
+	if items[len(items)-1] != "file.quit" || items[len(items)-2] != separator {
+		t.Fatalf("File menu layout changed: %v", items)
+	}
+	for range len(items) - 2 {
 		h.keys(key(ports.KeyDown))
 	}
 	if id := h.menus[0].Items[h.menu.item]; id != "file.quit" {

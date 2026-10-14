@@ -16,9 +16,10 @@ type Menu struct {
 // DefaultMenus is the v0 menu bar.
 func DefaultMenus() []Menu {
 	return []Menu{
-		{"File", []string{"file.new", "file.open", "file.openRecent", "file.save", "file.saveAs", separator, "file.quit"}},
+		{"File", []string{"file.new", "file.open", "file.openRecent", "file.save", "file.saveAs", "file.close", separator,
+			"file.quit"}},
 		{"Edit", []string{"edit.undo", "edit.redo", separator, "edit.cut", "edit.copy", "edit.paste",
-			separator, "edit.duplicateLine", "edit.deleteLine"}},
+			separator, "edit.duplicateLine", "edit.deleteLine", separator, "edit.validate"}},
 		{"Selection", []string{"selection.all", "selection.line", separator, "selection.trimTrailingSpaces"}},
 		{"Search", []string{"search.find", "search.next", "search.prev", separator,
 			"search.replace", "search.replaceAll", separator, "search.gotoLine"}},

@@ -35,6 +35,9 @@ func TestViolation(t *testing.T) {
 		{adapters + "syntax", "github.com/alecthomas/chroma/v2/lexers", false},
 		{app, "github.com/alecthomas/chroma/v2", true},
 		{module + "/cmd/sie", "github.com/alecthomas/chroma/v2", true},
+		{adapters + "validate", "github.com/goccy/go-yaml", false},
+		{app, "github.com/goccy/go-yaml", true},
+		{adapters + "config", "github.com/pelletier/go-toml/v2", true},
 	}
 	for _, tt := range tests {
 		if got := violation(tt.pkg, tt.imp) != ""; got != tt.bad {

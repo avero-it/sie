@@ -37,6 +37,7 @@ func builtins() []command {
 				return e.displayPath(e.resolvePath(e.path))
 			}}},
 			Run: (*Editor).cmdSaveAs},
+		{ID: "file.close", Title: "Close file", Aliases: []string{"close"}, Run: (*Editor).cmdClose},
 		{ID: "file.quit", Title: "Quit", Aliases: []string{"exit"}, Run: (*Editor).cmdQuit},
 
 		{ID: "edit.undo", Title: "Undo", Run: (*Editor).cmdUndo},
@@ -44,6 +45,8 @@ func builtins() []command {
 		{ID: "edit.cut", Title: "Cut", Run: (*Editor).cmdCut},
 		{ID: "edit.copy", Title: "Copy", Run: (*Editor).cmdCopy},
 		{ID: "edit.paste", Title: "Paste", Run: (*Editor).cmdPaste},
+		{ID: "edit.validate", Title: "Validate", Aliases: []string{"check", "lint", "validate file"},
+			Run: (*Editor).cmdValidate},
 		{ID: "edit.duplicateLine", Title: "Duplicate line", Run: docOp((*editor.Document).DuplicateLine)},
 		{ID: "edit.deleteLine", Title: "Delete line", Run: docOp((*editor.Document).DeleteLine)},
 		// Prompt-only: no default key binding, not in any menu.

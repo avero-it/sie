@@ -125,6 +125,8 @@ var keys = testKeymap{
 	ports.Ctrl('l'):    "selection.line",
 	ports.Ctrl('o'):    "file.open",
 	ports.Ctrl('e'):    "file.openRecent",
+	ports.Ctrl('w'):    "file.close",
+	ports.Ctrl('t'):    "edit.validate",
 	ports.Ctrl('n'):    "file.new",
 	ports.Ctrl('y'):    "edit.redo",
 	ports.Ctrl('r'):    "search.replace",

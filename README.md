@@ -44,7 +44,8 @@ Whichever way you run a command, its name and shortcut appear in the prompt line
 | Key | Command | Key | Command |
 |---|---|---|---|
 | Ctrl+N | New | Ctrl+F | Find |
-| Ctrl+E | Open recent (fuzzy search) | | |
+| Ctrl+E | Open recent (fuzzy search) | Ctrl+W | Close file |
+| Ctrl+T | Validate (JSON, YAML, TOML, XML) | | |
 | Ctrl+O | Open | Ctrl+R | Replace all |
 | Ctrl+S | Save | Ctrl+G | Go to line |
 | Ctrl+Q | Quit | Ctrl+D | Duplicate line |
@@ -72,6 +73,13 @@ The mouse works too: click to place the cursor, drag or Shift+click to select, a
 - If nothing is selected, Enter takes exactly what you typed, so a name that doesn't exist yet creates a new file.
 
 **Ctrl+E** (Open recent) lists the files you opened or saved most recently, newest first. They're kept in `~/.sie/recent.json` (30 files), shared by all sie windows. Type a few letters of the path to filter, then press Enter to open the top match.
+
+### Validating files
+
+**Ctrl+T** (Validate) checks JSON, YAML, TOML and XML files. The type is taken from the file name or from *Set language…*.
+- **A valid file** shows `✓ valid YAML`.
+- **A problem** moves the cursor onto it, with a description like `Validate: line 3, col 21: invalid character ']' looking for beginning of value`.
+- **YAML** also reports duplicate keys.
 
 ### Showing whitespace
 

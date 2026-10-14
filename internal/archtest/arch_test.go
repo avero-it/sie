@@ -25,6 +25,8 @@ const (
 	viper    = "github.com/spf13/viper"
 	cobra    = "github.com/spf13/cobra"
 	chroma   = "github.com/alecthomas/chroma"
+	goyaml   = "github.com/goccy/go-yaml"
+	gotoml   = "github.com/pelletier/go-toml"
 	cmd      = module + "/cmd/sie"
 )
 
@@ -89,6 +91,9 @@ func violation(pkg, imp string) string {
 	}
 	if strings.HasPrefix(imp, chroma) && !within(pkg, adapters+"syntax") {
 		return "chroma is allowed only in internal/adapters/syntax"
+	}
+	if (strings.HasPrefix(imp, goyaml) || strings.HasPrefix(imp, gotoml)) && !within(pkg, adapters+"validate") {
+		return "goccy/go-yaml and go-toml are allowed only in internal/adapters/validate"
 	}
 	switch {
 	case within(pkg, domain):

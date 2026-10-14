@@ -104,7 +104,7 @@ func TestDetectAndLanguage(t *testing.T) {
 	c := New(nil)
 	defer c.Close()
 	for file, want := range map[string]string{
-		"main.go": "Go", "/x/y/c.json": "JSON", "a.yml": "YAML", "b.yaml": "YAML",
+		"main.go": "Go", "/x/y/c.json": "JSON", "a.yml": "YAML", "b.yaml": "YAML", "c.toml": "TOML", "d.xml": "XML",
 		"README": "", "notes.txt": "", "go.mod": "", "go.sum": "",
 	} {
 		if got := c.Detect(file); got != want {

@@ -31,12 +31,13 @@ internal/core/app/              application layer (tcell-free, os-free)
   menu.go / prompt.go / view.go  menus, prompt modes + completions, layout, hit-testing, ViewModel
 internal/core/ports/            interfaces only
   driving:  EditorService (HandleKey, HandleMouse, HandlePaste, Resize, Dispatch, View, Done, Poll)
-  driven:   FileStore (Read, Write, Exists, List), RecentFiles, Clipboard, Keymap, Highlighter (async: Highlight job → Result)   (settings are read once by cmd/sie and passed as plain app.Config values, so no config port)
+  driven:   FileStore (Read, Write, Exists, List), RecentFiles, Validator, Clipboard, Keymap, Highlighter (async: Highlight job → Result)   (settings are read once by cmd/sie and passed as plain app.Config values, so no config port)
   values:   KeyEvent, MouseEvent, ViewModel{Runs, Cursor}, Style, Token/TokenClass, HighlightJob/Result
 internal/adapters/
   tui/        Terminal (owns the tcell screen; New, SetClipboard, Run), event loop, key/mouse/paste normalization, painter + Theme
   keymap/     default modeless keymap (later: loaded from config)
   recent/     recent files in ~/.sie/recent.json (re-read and merged on every Add, atomic writes, 30 entries)
+  validate/   Validator: JSON (encoding/json), YAML (goccy/go-yaml), TOML (go-toml/v2), XML (encoding/xml)
   syntax/     chroma highlighter: background worker (newest job wins), chroma token types → core TokenClass
   fs/         os-based FileStore (atomic save: temp file + rename, preserves permissions)
   clipboard/  OSC52 (via Terminal.SetClipboard) + native: Win32 API on Windows, pbcopy / wl-copy / xclip / xsel elsewhere (optional)
@@ -127,6 +128,17 @@ internal/adapters/
 - Inline (`recent todo`) opens the best fuzzy match.
 - Every successful open of an existing file and every save records the file (`recordRecent`, absolute path). Failures to record are ignored, because the list must never get in the way of editing.
 
+### Validate and Close file
+
+- **Validate** (`edit.validate`, **Ctrl+T**, Edit menu, aliases `check` and `lint`):
+  - It checks the document as its language: the detected one, or the one chosen with "Set language…". The `ports.Validator` reports the first problem with a 1-based line and a character column (`Col 0` means line only, `Line 0` means position unknown).
+  - When valid, the echo shows `> Validate — ✓ valid YAML`.
+  - On a problem, the cursor jumps there and the prompt line shows the error `Validate: line 3, col 7: <message>`.
+  - Unsupported languages show the list of supported ones.
+  - Positions are verified per parser: encoding/json byte offsets and XML/TOML byte columns are converted to characters, and goccy gives line:col directly. go-toml reports duplicate keys without a position, so the adapter points at the key's second assignment.
+- **Close file** (`file.close`, **Ctrl+W**) leaves an empty untitled buffer and asks first if there are unsaved changes.
+- archtest: goccy/go-yaml and go-toml may only be imported by `adapters/validate`.
+
 ### Prompt line and status line
 
 - The prompt line is always a gray bar (`StylePromptBar`, palette bright black with white text), whether idle, showing a message or focused.
@@ -160,7 +172,8 @@ internal/adapters/
 |---|---|---|---|
 | Ctrl+N | New | Ctrl+F | Find |
 | Ctrl+O | Open | Ctrl+R | Replace |
-| Ctrl+E | Open recent | | |
+| Ctrl+E | Open recent | Ctrl+W | Close file |
+| Ctrl+T | Validate | | |
 | Ctrl+S | Save | Ctrl+G | Go to line |
 | Ctrl+Q | Quit | Ctrl+D | Duplicate line |
 | Ctrl+Z / Ctrl+Y | Undo / Redo | Ctrl+K | Delete line |
@@ -201,7 +214,7 @@ internal/adapters/
 - Linux desktops grab some Ctrl+Alt combinations (T, L, Del, F-keys, arrows). Check new Ctrl+Alt bindings against them.
 - Never bind Ctrl+M (Enter), Ctrl+I (Tab) or Ctrl+[ (Esc). Avoid Ctrl+H (Backspace on some terminals), Ctrl+J (LF) and Ctrl+Shift combinations.
 - Raw mode disables XON/XOFF, so Ctrl+S and Ctrl+Q are usable.
-- Free Ctrl keys for future commands: **B, P, T, U, W** (E is Open recent).
+- Free Ctrl keys for future commands: **B, P, U** (E Open recent, T Validate, W Close file).
 - Alt+B and Alt+F are taken by word moves (readline/macOS Terminal). Plain Alt+letter otherwise does nothing.
 
 ## Text model
@@ -258,7 +271,7 @@ CGO_ENABLED=0 go list -deps -f '{{if .CgoFiles}}{{.ImportPath}}{{end}}' ./...
 - `context.Context` only at app/adapter boundaries (I/O), never in the domain.
 - Tests are table-driven. Use `testing/fstest` or in-memory fakes for ports. Fuzz the piece table against a naive `[]byte` model. Use `tcell.SimulationScreen` golden tests for rendering (`-update` flag regenerates goldens).
 - **Dependencies are vendored.** `vendor/` is committed, and the go command builds from it automatically, so builds need no network. After any change to `go.mod` (`go get`, version bumps), run `go mod tidy && go mod vendor` and commit `vendor/` in the same commit. `go mod verify` checks the module cache against `go.sum`. Never edit files under `vendor/`. archtest and gofmt checks skip it (`gofmt -l $(git ls-files '*.go' | grep -v '^vendor/')`).
-- **New dependencies need justification** in the PR/commit message: pure Go, maintained, and not trivially replaceable by the stdlib. Current allow-list: `github.com/gdamore/tcell/v2` v2.13.10 (adapters/tui only; `cmd/sie` gets the screen through `tui.New`), `github.com/rivo/uniseg`, `golang.org/x/sys` (adapters only, for the Windows clipboard; already a tcell dependency), `github.com/spf13/viper` v1.21.0 (adapters/config only; requested for config files), `github.com/spf13/cobra` v1.10.2 (cmd/sie only; requested for the CLI), `github.com/alecthomas/chroma/v2` v2.27.0 (adapters/syntax only; requested for syntax highlighting; adds about 4 MB, since all lexers are embedded). archtest enforces where tcell, viper, cobra and chroma may be imported. Pin exact versions that are at least two weeks old.
+- **New dependencies need justification** in the PR/commit message: pure Go, maintained, and not trivially replaceable by the stdlib. Current allow-list: `github.com/gdamore/tcell/v2` v2.13.10 (adapters/tui only; `cmd/sie` gets the screen through `tui.New`), `github.com/rivo/uniseg`, `golang.org/x/sys` (adapters only, for the Windows clipboard; already a tcell dependency), `github.com/spf13/viper` v1.21.0 (adapters/config only; requested for config files), `github.com/spf13/cobra` v1.10.2 (cmd/sie only; requested for the CLI), `github.com/alecthomas/chroma/v2` v2.27.0 (adapters/syntax only; requested for syntax highlighting; adds about 4 MB, since all lexers are embedded), `github.com/goccy/go-yaml` v1.19.2 (adapters/validate only; YAML errors with line and column), `github.com/pelletier/go-toml/v2` (adapters/validate; already a viper dependency). archtest enforces where tcell, viper, cobra and chroma may be imported. Pin exact versions that are at least two weeks old.
 
 ## Definition of done
 
