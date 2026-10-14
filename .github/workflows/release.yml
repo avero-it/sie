@@ -42,7 +42,8 @@ jobs:
           distribution: goreleaser
           version: v2.18.2
           workdir: src
-          args: release --clean --config ../cfg/.goreleaser.yaml
+          args: release --clean --config ${{ github.workspace }}/cfg/.goreleaser.yaml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          LICENSE_DIR: ../cfg
+          # Absolute: GoReleaser cannot archive files given by a relative "../" path.
+          LICENSE_DIR: ${{ github.workspace }}/cfg
