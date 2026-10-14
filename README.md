@@ -16,6 +16,16 @@ A small, modeless terminal text editor written in Go. It ships as a single stati
 
 ## Install
 
+Download the archive for your platform from the [releases page](https://github.com/avero-it/sie/releases), unpack it and put `sie` (`sie.exe` on Windows) somewhere on your `PATH`. Each release lists SHA-256 checksums in `checksums.txt`.
+
+On macOS, a binary downloaded with a browser is quarantined. Allow it once with:
+
+```sh
+xattr -d com.apple.quarantine ./sie
+```
+
+With Go installed:
+
 ```sh
 go install github.com/avero-it/sie/cmd/sie@latest
 ```
@@ -125,6 +135,10 @@ validate_on_save: true  # check JSON/YAML/TOML/XML before saving
 - **Option (⌥)+←/→** works out of the box in Terminal.app (it sends Alt+B/Alt+F, which sie treats as word moves). Shift+Option may not reach sie there without a custom key mapping.
 - **Windows:** `Ctrl+Alt` is AltGr on many keyboard layouts. If an `AltGr` combination types a character, sie inserts that character, unless that exact combination is bound to a command.
 - **Clipboard:** copy goes to the system clipboard through the terminal (OSC 52, which also works over SSH) and through the native clipboard: Win32 on Windows, `pbcopy` on macOS, and `wl-copy`, `xclip` or `xsel` on Linux. Pasting from other applications works through the native clipboard or through your terminal's own paste.
+
+## License
+
+[MIT](LICENSE) © 2026 Simone Baglioni
 
 ## Development
 

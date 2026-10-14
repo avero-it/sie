@@ -1,0 +1,3 @@
+# Check out text files with LF everywhere (also on Windows runners), so
+# gofmt checks and Go fuzz corpora behave the same on every OS.
+* text=auto eol=lf

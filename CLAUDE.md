@@ -271,6 +271,23 @@ done; done
 CGO_ENABLED=0 go list -deps -f '{{if .CgoFiles}}{{.ImportPath}}{{end}}' ./...
 ```
 
+## CI and releases
+
+- **`.github/workflows/ci.yml`** runs on pushes to `main`, on pull requests, and before every release:
+  - vet and tests on Linux, macOS and Windows (`-race` except on Windows);
+  - gofmt;
+  - `go mod tidy` and `go mod vendor` must produce no diff;
+  - `go mod verify`;
+  - the six-target `CGO_ENABLED=0` build;
+  - the no-cgo check.
+- **`.github/workflows/release.yml`** runs on a pushed `v*` tag, or by hand (`workflow_dispatch`, with an existing tag, e.g. `gh workflow run release.yml -f tag=v0.5.1`). It runs CI, then GoReleaser **v2.18.2** with `.goreleaser.yaml`.
+  - GoReleaser builds six static binaries with `-trimpath -mod=vendor`. buildinfo is set through ldflags: `version={{.Tag}}`, `commit`, `date`.
+  - It produces `tar.gz` archives (`zip` on Windows) containing the binary, README and LICENSE, plus `checksums.txt`, a changelog from git, and the GitHub release.
+  - The tag's sources are checked out in `src`, while the config and LICENSE come from the workflow's own ref in `cfg` (`--config ../cfg/.goreleaser.yaml`, `LICENSE_DIR`). That way older tags, which have neither, still build with a clean tree.
+- **To release:** `git tag -a vX.Y.Z -m … && git push origin vX.Y.Z`. To try the release locally: `goreleaser release --snapshot --clean` (output in `dist/`, which is git-ignored).
+- **Pins:** actions are pinned to exact versions at least two weeks old (checkout v7.0.1, setup-go v7.0.0, goreleaser-action v7.2.3). Bump them deliberately.
+- `.gitattributes` forces LF checkouts, so the Windows runners see the same bytes (gofmt, fuzz corpora).
+
 ## Conventions
 
 - Go 1.26, standard `gofmt`/`goimports`. Packages are small and named for what they hold, not `utils`.

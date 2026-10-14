@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call: # used by release.yml before building a release
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Vet
+        run: go vet ./...
+      - name: Test with the race detector
+        if: runner.os != 'Windows'
+        run: go test -race ./...
+      - name: Test
+        # -race needs cgo and a C toolchain; keep Windows simple.
+        if: runner.os == 'Windows'
+        run: go test ./...
+
+  checks:
+    name: Formatting, modules, cross-compile, no cgo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: gofmt
+        run: |
+          out=$(gofmt -l $(git ls-files '*.go' | grep -v '^vendor/'))
+          if [ -n "$out" ]; then echo "Not gofmt'ed:"; echo "$out"; exit 1; fi
+      - name: go.mod tidy and vendor/ in sync
+        run: |
+          go mod tidy
+          go mod vendor
+          git diff --exit-code -- go.mod go.sum vendor
+      - name: Verify module checksums
+        run: go mod verify
+      - name: Cross-compile (CGO_ENABLED=0)
+        run: |
+          for os in linux windows darwin; do for arch in amd64 arm64; do
+            echo "build $os/$arch"
+            CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -o /dev/null ./cmd/sie
+          done; done
+      - name: No cgo in the dependency graph
+        run: |
+          out=$(CGO_ENABLED=0 go list -deps -f '{{if .CgoFiles}}{{.ImportPath}}{{end}}' ./...)
+          if [ -n "$out" ]; then echo "cgo packages:"; echo "$out"; exit 1; fi

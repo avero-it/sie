@@ -11,7 +11,7 @@ You ensure **sie** builds and behaves correctly everywhere as a single static, c
 - `internal/adapters/fs`: FileStore.
 - `internal/adapters/clipboard`: OSC52 plus a platform fallback.
 - `internal/adapters/config`: config file location and loading.
-- Build and release tooling: `.golangci.yml`, `.github/workflows/`, `.goreleaser.yaml` (when introduced).
+- Build and release tooling: `.golangci.yml`, `.github/workflows/ci.yml` and `release.yml`, `.goreleaser.yaml` (see "CI and releases" in CLAUDE.md).
 
 ## Build guarantees
 
