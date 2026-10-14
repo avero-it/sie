@@ -91,7 +91,8 @@ func (e *Editor) showCompletions() bool {
 }
 
 // HandleMouse implements clicks on menus, completions, the prompt line and
-// the text area (click, shift-click and drag select; wheel scrolls).
+// the text area (click, shift-click and drag select; Alt+click adds a
+// cursor; wheel scrolls).
 func (e *Editor) HandleMouse(m ports.MouseEvent) {
 	if e.focus == focusEditor && m.Action == ports.MousePress {
 		e.clearMessage()
@@ -169,6 +170,11 @@ func (e *Editor) handleMouse(m ports.MouseEvent) {
 			e.closePrompt()
 		}
 		off := e.textOffsetAt(m.X, m.Y, r)
+		if m.Mod&ports.ModAlt != 0 {
+			e.doc.AddCursor(off) // Alt+click adds a cursor, or removes one
+			e.follow()
+			return
+		}
 		if m.Mod&ports.ModShift != 0 {
 			e.doc.SetSelection(editor.Selection{Anchor: e.doc.Selection().Anchor, Head: off})
 		} else {
@@ -253,7 +259,19 @@ func (e *Editor) drawMenuBar(vm *viewBuilder, r regions) {
 
 func (e *Editor) drawText(vm *viewBuilder, r regions) {
 	cols := e.width - r.gutter
-	selStart, selEnd := e.doc.Selection().Range()
+	sels := e.doc.Selections()
+	selected := func(off int) bool {
+		for _, s := range sels {
+			if start, end := s.Range(); off >= start && off < end {
+				return true
+			}
+		}
+		return false
+	}
+	secondary := map[int]bool{} // heads of the secondary cursors
+	for _, s := range sels[1:] {
+		secondary[s.Head] = true
+	}
 	curLine, _, curVcol := e.doc.CursorPos()
 	tw := e.doc.TabWidth()
 	for row := 0; row < r.textRows; row++ {
@@ -281,8 +299,10 @@ func (e *Editor) drawText(vm *viewBuilder, r regions) {
 			if x >= cols {
 				break
 			}
-			selected := start+g.Off >= selStart && start+g.Off < selEnd
-			disp, style := e.glyphLook(g, text, selected, tokens.class(start+g.Off))
+			disp, style := e.glyphLook(g, text, selected(start+g.Off), tokens.class(start+g.Off))
+			if secondary[start+g.Off] {
+				style = ports.StyleCursorSecondary
+			}
 			if x < 0 || x+g.Width > cols {
 				// Glyph cut by the viewport edge: show the visible cells blank.
 				visible := min(x+g.Width, cols) - max(x, 0)
@@ -293,7 +313,12 @@ func (e *Editor) drawText(vm *viewBuilder, r regions) {
 		// A selected line break shows as one selected cell after the text.
 		end := start + len(text)
 		fill := max(0, width-e.view.Left)
-		if line < e.doc.LineCount()-1 && selStart <= end && selEnd > end {
+		breakCell := line < e.doc.LineCount()-1 && selected(end)
+		switch {
+		case secondary[end] && width >= e.view.Left && fill < cols:
+			vm.add(r.gutter+fill, y, " ", ports.StyleCursorSecondary)
+			fill++
+		case breakCell:
 			if fill < cols {
 				vm.add(r.gutter+fill, y, " ", ports.StyleSelection)
 			}
@@ -396,7 +421,11 @@ func (e *Editor) drawStatus(vm *viewBuilder, r regions) {
 	if e.doc.HasBOM() {
 		enc += " BOM"
 	}
-	right := fmt.Sprintf("Ln %d, Col %d   %s   %s   %s ", line+1, vcol+1, e.languageLabel(), enc, e.doc.LineEnding())
+	cursors := ""
+	if n := e.doc.CursorCount(); n > 1 {
+		cursors = fmt.Sprintf(" (%d cursors)", n)
+	}
+	right := fmt.Sprintf("Ln %d, Col %d%s   %s   %s   %s ", line+1, vcol+1, cursors, e.languageLabel(), enc, e.doc.LineEnding())
 	vm.row(r.statusY, " sie "+e.version()+" - "+name, right, ports.StyleStatus, ports.StyleStatus)
 }
 

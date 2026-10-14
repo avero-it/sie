@@ -10,7 +10,8 @@ const (
 	StyleSpecialSelected
 	StyleWhitespace // faint marker for spaces and tabs
 	StyleWhitespaceSelected
-	StyleEmptyCell // faint marker for cells holding no character
+	StyleEmptyCell       // faint marker for cells holding no character
+	StyleCursorSecondary // the cell under a secondary cursor (multiple cursors)
 	// Syntax classes (see TokenClass), in the same order.
 	StyleKeyword
 	StyleString

@@ -25,6 +25,7 @@ func DefaultTheme() Theme {
 		ports.StyleWhitespace:         d.Foreground(tcell.ColorGray).Dim(true),
 		ports.StyleWhitespaceSelected: d.Reverse(true).Dim(true),
 		ports.StyleEmptyCell:          d.Foreground(tcell.ColorGray).Dim(true),
+		ports.StyleCursorSecondary:    d.Background(tcell.ColorSilver).Foreground(tcell.ColorBlack),
 		// Syntax: ANSI colors, so they follow the terminal palette.
 		ports.StyleKeyword:          d.Foreground(tcell.ColorPurple).Bold(true),
 		ports.StyleString:           d.Foreground(tcell.ColorGreen),

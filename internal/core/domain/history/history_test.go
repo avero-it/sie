@@ -162,3 +162,18 @@ func TestExplicitGroup(t *testing.T) {
 		t.Fatalf("empty group changed history: %q", doc.b)
 	}
 }
+
+func TestAmend(t *testing.T) {
+	doc := &text{}
+	h := New[int](0)
+	h.Amend(7) // no group yet: nothing to amend
+	typeAt(doc, h, 0, "a", "")
+	h.Amend(9)
+	if _, _, err := h.Undo(doc); err != nil {
+		t.Fatal(err)
+	}
+	cur, ok, err := h.Redo(doc)
+	if err != nil || !ok || cur != 9 {
+		t.Fatalf("redo: cur=%d ok=%v err=%v, want 9", cur, ok, err)
+	}
+}

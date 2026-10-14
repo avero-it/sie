@@ -38,12 +38,16 @@ func (s Selection) Range() (start, end int) {
 // Cursor returns a collapsed selection at off.
 func Cursor(off int) Selection { return Selection{off, off} }
 
-// Document is an editable text document with undo and a single selection.
+// Document is an editable text document with undo, a primary selection
+// and optional secondary cursors (see AddCursor).
 type Document struct {
 	buf      *buffer.Buffer
-	hist     *history.History[Selection]
+	hist     *history.History[cursors]
 	sel      Selection
-	goal     int // preferred screen column for vertical moves; -1 if unset
+	extra    []Selection // secondary selections, sorted, never overlapping
+	op       *cursors    // state before the running forEachCursor, if any
+	opSeq    int         // numbers forEachCursor runs, for undo keys
+	goal     int         // preferred screen column for vertical moves; -1 if unset
 	eol      buffer.LineEnding
 	bom      bool
 	tabWidth int
@@ -61,7 +65,7 @@ func NewDocument(content []byte, opts Options) *Document {
 	}
 	return &Document{
 		buf:      buffer.New(text),
-		hist:     history.New[Selection](opts.UndoLimit),
+		hist:     history.New[cursors](opts.UndoLimit),
 		goal:     -1,
 		eol:      buffer.DetectLineEnding(text, opts.DefaultEOL),
 		bom:      bom,
@@ -125,13 +129,15 @@ func (d *Document) CanUndo() bool { return d.hist.CanUndo() }
 // CanRedo reports whether Redo would do something.
 func (d *Document) CanRedo() bool { return d.hist.CanRedo() }
 
-// Selection returns the current selection.
+// Selection returns the primary selection.
 func (d *Document) Selection() Selection { return d.sel }
 
 // SetSelection sets the selection, clamping and snapping both ends to valid
-// cursor positions. It ends the current undo group.
+// cursor positions, and removes the secondary cursors. It ends the current
+// undo group.
 func (d *Document) SetSelection(s Selection) {
 	d.hist.Seal()
+	d.extra = nil
 	d.goal = -1
 	d.sel = Selection{d.snap(s.Anchor), d.snap(s.Head)}
 }

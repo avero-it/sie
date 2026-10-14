@@ -16,10 +16,29 @@ const (
 	MoveDocEnd
 )
 
-// Move moves the cursor; with extend the selection anchor stays put.
+// Move moves every cursor; with extend the selection anchors stay put.
 // Without extend, Left/Right on a selection collapse it to its start/end.
 func (d *Document) Move(m Motion, extend bool) {
 	d.hist.Seal()
+	d.eachCursorMove(func() { d.move(m, extend) })
+}
+
+// eachCursorMove runs a motion for every cursor. The preferred column of
+// vertical moves is kept only with a single cursor.
+func (d *Document) eachCursorMove(move func()) {
+	if len(d.extra) == 0 {
+		move()
+		return
+	}
+	_ = d.forEachCursor(func() error {
+		d.goal = -1
+		move()
+		return nil
+	})
+	d.goal = -1
+}
+
+func (d *Document) move(m Motion, extend bool) {
 	if !extend && !d.sel.Empty() {
 		start, end := d.sel.Range()
 		switch m {
@@ -61,11 +80,11 @@ func (d *Document) Move(m Motion, extend bool) {
 	d.setHead(head, extend)
 }
 
-// MovePage moves the cursor by rows lines (negative is up), keeping the
+// MovePage moves every cursor by rows lines (negative is up), keeping the
 // preferred screen column.
 func (d *Document) MovePage(rows int, extend bool) {
 	d.hist.Seal()
-	d.setHead(d.verticalPos(d.sel.Head, rows), extend)
+	d.eachCursorMove(func() { d.setHead(d.verticalPos(d.sel.Head, rows), extend) })
 }
 
 func (d *Document) setHead(head int, extend bool) {

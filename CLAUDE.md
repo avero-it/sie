@@ -10,7 +10,7 @@ This file is the source of truth for humans and agents. If code and this file di
 
 ## Scope
 
-**v0 goals**: single buffer, open/edit/save, undo/redo, selection (keyboard + mouse), clipboard, find/replace, go to line, menu bar, command prompt, status line, horizontal scroll, LF/CRLF preserved, UTF-8 with grapheme-correct cursor movement.
+**v0 goals**: single buffer, open/edit/save, undo/redo, selection (keyboard + mouse), multiple cursors (Alt+click), clipboard, find/replace, go to line, menu bar, command prompt, status line, horizontal scroll, LF/CRLF preserved, UTF-8 with grapheme-correct cursor movement.
 
 **Non-goals for v0** (future work, don't build them yet): tabs/splits/multiple buffers, soft wrap, syntax highlighting, LSP, plugins, modal (vim) editing, F-key fallbacks for Ctrl+Alt bindings.
 
@@ -174,6 +174,16 @@ internal/adapters/
    - **Mouse hit-testing is in the app as well** (`HandleMouse` gets raw cells). It uses the same geometry helpers as the view, so drawn and clickable areas can't drift apart.
 5. Viewport, scroll and column↔screen-x math live in the core. The adapter only reports `Resize(w, h)`.
 6. `defer screen.Fini()` plus `recover()` always restore the terminal, even on panic.
+
+### Multiple cursors
+
+- **Alt+click** in the text area adds a cursor (`Document.AddCursor`); the new one becomes the primary cursor (terminal cursor, viewport follows), the old primary is kept as a secondary one. Alt+click on an existing cursor removes it.
+- `Document` holds the primary `sel` plus `extra []Selection` (sorted, never overlapping; `mergeCursors` drops collisions, the primary wins). `SetSelection` removes the secondary cursors, so clicks, find, go to line, select all… go back to one cursor.
+- `forEachCursor` runs a single-cursor operation once per cursor, from the last in the document to the first; `replace` shifts the other cursors (`mapReplace`). Multi-cursor: `Insert` (typing, Tab, paste), `InsertNewline`, `Backspace`, `DeleteForward`, `DeleteSelection`, `Move`, `MovePage`. Other operations act on the primary selection only.
+- Undo: the history state is every cursor (`cursors`), so undo/redo restores them all. One run is one undo step (typing bursts still coalesce); `History.Amend` sets the final state after the run.
+- App: Esc removes the secondary cursors first (a second Esc collapses the selection). `Dispatch` removes them before every non-silent command without `Command.MultiCursor` (set on Paste, Undo, Redo).
+- View: secondary selections are drawn as selections, each secondary cursor as one `StyleCursorSecondary` cell (also at a line end); the status line shows `(N cursors)`.
+- Terminals: Alt+click needs Option-as-Meta on macOS; some Linux desktops grab Alt+click to move windows.
 
 ### Default keymap (v0)
 

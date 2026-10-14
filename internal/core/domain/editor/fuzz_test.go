@@ -35,14 +35,25 @@ func FuzzDocument(f *testing.F) {
 					err = d.DeleteToLineEnd()
 				}
 			case 15:
-				d.SetSelection(Selection{int(op) * 7 % (d.Len() + 1), i % (d.Len() + 1)})
+				if op&0x10 != 0 {
+					d.AddCursor(int(op) * 7 % (d.Len() + 1))
+				} else {
+					d.SetSelection(Selection{int(op) * 7 % (d.Len() + 1), i % (d.Len() + 1)})
+				}
 			}
 			if err != nil {
 				t.Fatalf("op %d (%d): %v", i, op, err)
 			}
-			sel := d.Selection()
-			if d.snap(sel.Anchor) != sel.Anchor || d.snap(sel.Head) != sel.Head {
-				t.Fatalf("op %d (%d): selection %+v not on a valid cursor position in %q", i, op, sel, d.Text())
+			sels := d.Selections()
+			for j, sel := range sels {
+				if d.snap(sel.Anchor) != sel.Anchor || d.snap(sel.Head) != sel.Head {
+					t.Fatalf("op %d (%d): selection %+v not on a valid cursor position in %q", i, op, sel, d.Text())
+				}
+				for _, other := range sels[j+1:] {
+					if overlaps(sel, other) {
+						t.Fatalf("op %d (%d): selections %+v and %+v overlap", i, op, sel, other)
+					}
+				}
 			}
 		}
 		for d.CanUndo() {

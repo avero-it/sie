@@ -18,10 +18,14 @@ const (
 	keyTrim      = "trim"
 )
 
-// Insert replaces the selection with text. Line breaks in text are
+// Insert replaces each selection with text. Line breaks in text are
 // normalized to the document's line ending. Typing single graphemes
 // coalesces into one undo step; pastes and newlines are their own step.
 func (d *Document) Insert(text string) error {
+	return d.forEachCursor(func() error { return d.insert(text) })
+}
+
+func (d *Document) insert(text string) error {
 	norm := d.normalizeEOL(text)
 	start, end := d.sel.Range()
 	key := ""
@@ -31,22 +35,31 @@ func (d *Document) Insert(text string) error {
 	return d.replace(start, end, norm, Cursor(start+len(norm)), key)
 }
 
-// InsertNewline inserts a line break and copies the current line's leading
-// whitespace (auto-indent).
+// InsertNewline inserts a line break at each cursor and copies the current
+// line's leading whitespace (auto-indent).
 func (d *Document) InsertNewline() error {
+	return d.forEachCursor(d.insertNewline)
+}
+
+func (d *Document) insertNewline() error {
 	start, _ := d.sel.Range()
 	line := d.lineOf(start)
 	text := d.Line(line)
 	indent := len(text) - len(strings.TrimLeft(string(text), " \t"))
 	ls, _ := d.lineRange(line)
 	indent = min(indent, start-ls)
-	return d.Insert(string(d.eol.Bytes()) + string(text[:indent]))
+	return d.insert(string(d.eol.Bytes()) + string(text[:indent]))
 }
 
-// Backspace deletes the selection, or the grapheme (or line break) before the cursor.
+// Backspace deletes each selection, or the grapheme (or line break) before
+// each cursor.
 func (d *Document) Backspace() error {
+	return d.forEachCursor(d.backspace)
+}
+
+func (d *Document) backspace() error {
 	if !d.sel.Empty() {
-		return d.DeleteSelection()
+		return d.deleteSelection()
 	}
 	off := d.sel.Head
 	prev := d.prevPos(off)
@@ -56,10 +69,15 @@ func (d *Document) Backspace() error {
 	return d.replace(prev, off, "", Cursor(prev), keyBackspace)
 }
 
-// DeleteForward deletes the selection, or the grapheme (or line break) after the cursor.
+// DeleteForward deletes each selection, or the grapheme (or line break)
+// after each cursor.
 func (d *Document) DeleteForward() error {
+	return d.forEachCursor(d.deleteForward)
+}
+
+func (d *Document) deleteForward() error {
 	if !d.sel.Empty() {
-		return d.DeleteSelection()
+		return d.deleteSelection()
 	}
 	off := d.sel.Head
 	next := d.nextPos(off)
@@ -69,8 +87,13 @@ func (d *Document) DeleteForward() error {
 	return d.replace(off, next, "", Cursor(off), keyDelete)
 }
 
-// DeleteSelection removes the selected text as one undo step.
+// DeleteSelection removes the selected text of every selection as one
+// undo step.
 func (d *Document) DeleteSelection() error {
+	return d.forEachCursor(d.deleteSelection)
+}
+
+func (d *Document) deleteSelection() error {
 	start, end := d.sel.Range()
 	if start == end {
 		return nil
@@ -170,30 +193,33 @@ func (d *Document) SelectAll() {
 
 // Undo reverts the last undo step. It reports false when there was nothing to undo.
 func (d *Document) Undo() (bool, error) {
-	sel, ok, err := d.hist.Undo(recorder{d})
+	state, ok, err := d.hist.Undo(recorder{d})
 	if err != nil || !ok {
 		return false, err
 	}
-	d.sel = Selection{d.snap(sel.Anchor), d.snap(sel.Head)}
-	d.goal = -1
+	d.restore(state)
 	return true, nil
 }
 
 // Redo re-applies the last undone step. It reports false when there was nothing to redo.
 func (d *Document) Redo() (bool, error) {
-	sel, ok, err := d.hist.Redo(recorder{d})
+	state, ok, err := d.hist.Redo(recorder{d})
 	if err != nil || !ok {
 		return false, err
 	}
-	d.sel = Selection{d.snap(sel.Anchor), d.snap(sel.Head)}
-	d.goal = -1
+	d.restore(state)
 	return true, nil
 }
 
-// replace swaps [start, end) for text, sets the selection to after and
-// records one history edit with the given coalescing key.
+// replace swaps [start, end) for text, sets the selection to after, shifts
+// the secondary cursors and records one history edit with the given
+// coalescing key.
 func (d *Document) replace(start, end int, text string, after Selection, key string) error {
-	before := d.sel
+	before := d.state()
+	if d.op != nil && key == "" {
+		// One forEachCursor run is one undo step.
+		key = fmt.Sprintf("cursors#%d", d.opSeq)
+	}
 	removed, err := d.buf.Delete(start, end-start)
 	if err != nil {
 		return fmt.Errorf("edit: %w", err)
@@ -206,8 +232,15 @@ func (d *Document) replace(start, end int, text string, after Selection, key str
 	// so move the selection past any cluster it now falls inside.
 	after = Selection{d.snapForward(after.Anchor), d.snapForward(after.Head)}
 	d.sel = after
+	for i, s := range d.extra {
+		s = s.mapReplace(start, end, len(text))
+		d.extra[i] = Selection{d.snapForward(s.Anchor), d.snapForward(s.Head)}
+	}
+	if d.op == nil {
+		d.mergeCursors()
+	}
 	d.goal = -1
-	d.hist.Record(history.Edit{Off: start, Removed: removed, Inserted: []byte(text)}, before, after, key)
+	d.hist.Record(history.Edit{Off: start, Removed: removed, Inserted: []byte(text)}, before, d.state(), key)
 	return nil
 }
 

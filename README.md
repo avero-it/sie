@@ -97,6 +97,8 @@ Moving the cursor (hold **Shift** with any of these to select):
 
 The mouse works too: click to place the cursor, drag or Shift+click to select, and use the wheel to scroll.
 
+**Multiple cursors:** Alt+click adds a cursor (Alt+click on a cursor removes it). Typing, Enter, Tab, Backspace, Delete, Paste and the arrow keys then act on every cursor, and Undo restores them all. A plain click, Esc or any other command goes back to a single cursor.
+
 ### Opening and saving files
 
 **Ctrl+O** (Open) and **Save as** show a file browser in the prompt line:
@@ -154,6 +156,7 @@ validate_on_save: true  # check JSON/YAML/TOML/XML before saving
 - **macOS:** `Ctrl+Alt` shortcuts need the Option key to act as Meta. In Terminal.app, go to *Settings → Profiles → Keyboard* and enable **Use Option as Meta key**. In iTerm2, go to *Settings → Profiles → Keys* and set the **Left Option key** to **Esc+**.
 - **Cmd (⌘) shortcuts** only work in terminals that report Cmd to programs through the kitty keyboard protocol, which sie turns on automatically: kitty, WezTerm, Ghostty and other terminals that implement it. **Terminal.app does not report Cmd**, so use Home/End there (Fn+←/→ on Mac keyboards). In iTerm2 **don't** use the "Natural Text Editing" key preset as-is: it sends ⌘← as Ctrl+A, which is *Select all* in sie.
 - **Option (⌥)+←/→** works out of the box in Terminal.app (it sends Alt+B/Alt+F, which sie treats as word moves). Shift+Option may not reach sie there without a custom key mapping.
+- **Alt+click** needs the terminal to pass Alt with mouse clicks. On macOS enable *Use Option as Meta key* (see above); some Linux desktops use Alt+click to move windows, so change that shortcut in the desktop settings if Alt+click does nothing in sie.
 - **Windows:** `Ctrl+Alt` is AltGr on many keyboard layouts. If an `AltGr` combination types a character, sie inserts that character, unless that exact combination is bound to a command.
 - **Clipboard:** copy goes to the system clipboard through the terminal (OSC 52, which also works over SSH) and through the native clipboard: Win32 on Windows, `pbcopy` on macOS, and `wl-copy`, `xclip` or `xsel` on Linux. Pasting from other applications works through the native clipboard or through your terminal's own paste.
 

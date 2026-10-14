@@ -194,6 +194,9 @@ func (e *Editor) Dispatch(id string, args ...string) error {
 		return nil
 	}
 	label := invocationLabel(c, args)
+	if !c.Silent && !c.MultiCursor {
+		e.doc.ClearSecondary()
+	}
 	if !c.Silent {
 		e.msg = message{text: label, hint: e.shortcut(c.ID), kind: msgEcho}
 		e.remember(c.ID, args)
@@ -244,7 +247,9 @@ func (e *Editor) editorKey(k ports.KeyEvent) {
 	case ports.KeyTab:
 		e.check(e.doc.Insert("\t"))
 	case ports.KeyEsc:
-		e.doc.SetSelection(editor.Cursor(e.doc.Selection().Head))
+		if !e.doc.ClearSecondary() {
+			e.doc.SetSelection(editor.Cursor(e.doc.Selection().Head))
+		}
 	case ports.KeyRune:
 		if isText(k) {
 			e.check(e.doc.Insert(string(k.Rune)))

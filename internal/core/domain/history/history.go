@@ -103,6 +103,14 @@ func (h *History[S]) EndGroup() {
 	h.grouping, h.groupID, h.sealed = false, 0, true
 }
 
+// Amend replaces the state restored by Redo of the newest undo group, for
+// callers that know their final state only after recording several edits.
+func (h *History[S]) Amend(after S) {
+	if n := len(h.undo); n > 0 {
+		h.undo[n-1].after = after
+	}
+}
+
 // Seal ends the current group: the next Record starts a new undo step.
 func (h *History[S]) Seal() { h.sealed = true }
 

@@ -36,6 +36,9 @@ type Command[E any] struct {
 	Args    []Arg[E]
 	// Silent commands are not echoed or kept in history (e.g. opening the prompt).
 	Silent bool
+	// MultiCursor commands act on every cursor; Dispatch removes the
+	// secondary cursors before running any other non-silent command.
+	MultiCursor bool
 	// Checked makes the command an on/off option and reports whether it is
 	// on; menus, completions and the echo show a tick for it. Nil for
 	// ordinary commands.
