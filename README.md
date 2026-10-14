@@ -16,9 +16,30 @@ A small, modeless terminal text editor written in Go. It ships as a single stati
 
 ## Install
 
-Download the archive for your platform from the [releases page](https://github.com/avero-it/sie/releases), unpack it and put `sie` (`sie.exe` on Windows) somewhere on your `PATH`. Each release lists SHA-256 checksums in `checksums.txt`.
+**Homebrew** (macOS, Linux):
 
-On macOS, a binary downloaded with a browser is quarantined. Allow it once with:
+```sh
+brew install --cask avero-it/tap/sie
+```
+
+**Scoop** (Windows):
+
+```powershell
+scoop bucket add avero-it https://github.com/avero-it/scoop-bucket
+scoop install sie
+```
+
+**Linux packages:** download the package for your system from the [releases page](https://github.com/avero-it/sie/releases), then:
+
+```sh
+sudo apt install ./sie_<version>_linux_amd64.deb             # Debian, Ubuntu
+sudo dnf install ./sie_<version>_linux_amd64.rpm             # Fedora, RHEL
+sudo apk add --allow-untrusted ./sie_<version>_linux_amd64.apk # Alpine
+```
+
+**Manually:** download the archive for your platform from the [releases page](https://github.com/avero-it/sie/releases), unpack it and put `sie` (`sie.exe` on Windows) somewhere on your `PATH`. Each release lists SHA-256 checksums in `checksums.txt`.
+
+On macOS, a binary downloaded with a browser is quarantined (the Homebrew cask takes care of this for you). Allow it once with:
 
 ```sh
 xattr -d com.apple.quarantine ./sie

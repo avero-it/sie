@@ -284,6 +284,11 @@ CGO_ENABLED=0 go list -deps -f '{{if .CgoFiles}}{{.ImportPath}}{{end}}' ./...
   - GoReleaser builds six static binaries with `-trimpath -mod=vendor`. buildinfo is set through ldflags: `version={{.Tag}}`, `commit`, `date`.
   - It produces `tar.gz` archives (`zip` on Windows) containing the binary, README and LICENSE, plus `checksums.txt`, a changelog from git, and the GitHub release.
   - The tag's sources are checked out in `src`, while the config and LICENSE come from the workflow's own ref in `cfg` (`--config $GITHUB_WORKSPACE/cfg/.goreleaser.yaml`, and an absolute `LICENSE_DIR`, since GoReleaser can't archive `../` paths). That way older tags, which have neither, still build with a clean tree.
+- **Package managers**, published by GoReleaser on every release:
+  - **Homebrew:** a cask in `avero-it/homebrew-tap` (`Casks/sie.rb`, macOS and Linux). A `postflight` hook removes the macOS quarantine flag, since the binaries are unsigned.
+  - **Scoop:** a manifest in `avero-it/scoop-bucket` (`sie.json`).
+  - **Linux packages:** `.deb`, `.rpm` and `.apk` (nfpm, `/usr/bin/sie` plus the LICENSE), attached to the release and covered by `checksums.txt`.
+  - **The token:** writing to the tap and bucket needs the repository secret **`TAP_GITHUB_TOKEN`** in avero-it/sie: a fine-grained PAT, resource owner `avero-it`, access to only those two repos, Contents read and write. Without it, `skip_upload` turns those two steps off and the release still succeeds. When it expires, create a new one the same way and update the secret.
 - **To release:** `git tag -a vX.Y.Z -m … && git push origin vX.Y.Z`. To try the release locally: `goreleaser release --snapshot --clean` (output in `dist/`, which is git-ignored).
 - **Pins:** actions are pinned to exact versions at least two weeks old (checkout v7.0.1, setup-go v7.0.0, goreleaser-action v7.2.3). Bump them deliberately.
 - `.gitattributes` forces LF checkouts, so the Windows runners see the same bytes (gofmt, fuzz corpora).

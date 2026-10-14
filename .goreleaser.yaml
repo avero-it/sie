@@ -52,3 +52,52 @@ release:
     dependencies. Download the archive for your platform, or:
 
         go install github.com/avero-it/sie/cmd/sie@{{ .Tag }}
+
+# Package managers. The tap and bucket repos are written with the
+# TAP_GITHUB_TOKEN secret (a fine-grained PAT, Contents read/write on both
+# repos); without it the uploads are skipped and the release still succeeds.
+homebrew_casks:
+  - name: sie
+    repository:
+      owner: avero-it
+      name: homebrew-tap
+      token: '{{ envOrDefault "TAP_GITHUB_TOKEN" "" }}'
+    directory: Casks
+    homepage: https://github.com/avero-it/sie
+    description: "siMPLE eDITOR: a modeless terminal text editor"
+    license: MIT
+    binaries: [sie]
+    skip_upload: '{{ if eq (envOrDefault "TAP_GITHUB_TOKEN" "") "" }}true{{ else }}false{{ end }}'
+    hooks:
+      post:
+        # The binaries are not signed: clear the quarantine flag so macOS
+        # lets sie run without a Gatekeeper prompt.
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/sie"]
+          end
+
+scoops:
+  - name: sie
+    repository:
+      owner: avero-it
+      name: scoop-bucket
+      token: '{{ envOrDefault "TAP_GITHUB_TOKEN" "" }}'
+    homepage: https://github.com/avero-it/sie
+    description: "siMPLE eDITOR: a modeless terminal text editor"
+    license: MIT
+    skip_upload: '{{ if eq (envOrDefault "TAP_GITHUB_TOKEN" "") "" }}true{{ else }}false{{ end }}'
+
+nfpms:
+  - package_name: sie
+    file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    vendor: Simone Baglioni
+    homepage: https://github.com/avero-it/sie
+    maintainer: Simone Baglioni <github@simonebaglioni.com>
+    description: "siMPLE eDITOR: a modeless terminal text editor"
+    license: MIT
+    formats: [deb, rpm, apk]
+    bindir: /usr/bin
+    contents:
+      - src: '{{ envOrDefault "LICENSE_DIR" "." }}/LICENSE'
+        dst: /usr/share/licenses/sie/LICENSE
