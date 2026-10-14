@@ -1,5 +1,7 @@
 # sie
 
+**sie** stands for **siMPLE eDITOR**: the lowercase letters spell its name.
+
 A small, modeless terminal text editor written in Go. It ships as a single static binary for Linux, Windows and macOS, with no C dependencies.
 
 ```
