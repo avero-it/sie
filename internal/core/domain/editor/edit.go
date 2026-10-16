@@ -234,7 +234,10 @@ func (d *Document) replace(start, end int, text string, after Selection, key str
 	d.sel = after
 	for i, s := range d.extra {
 		s = s.mapReplace(start, end, len(text))
-		d.extra[i] = Selection{d.snapForward(s.Anchor), d.snapForward(s.Head)}
+		if d.op == nil {
+			s = Selection{d.snapForward(s.Anchor), d.snapForward(s.Head)}
+		}
+		d.extra[i] = s
 	}
 	if d.op == nil {
 		d.mergeCursors()

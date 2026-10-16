@@ -119,8 +119,14 @@ func (e *Editor) handleMouse(m ports.MouseEvent) {
 	switch m.Action {
 	case ports.MouseRelease:
 		e.dragging = false
+		e.endRectDrag()
 		return
 	case ports.MouseDrag:
+		if e.rectDrag != nil {
+			line, vcol := e.textCellAt(m.X, m.Y, r)
+			e.dragRect(line, vcol)
+			return
+		}
 		if e.dragging {
 			e.doc.SetSelection(editor.Selection{Anchor: e.doc.Selection().Anchor, Head: e.textOffsetAt(m.X, m.Y, r)})
 			e.follow()
@@ -171,7 +177,16 @@ func (e *Editor) handleMouse(m ports.MouseEvent) {
 		}
 		off := e.textOffsetAt(m.X, m.Y, r)
 		if m.Mod&ports.ModAlt != 0 {
-			e.doc.AddCursor(off) // Alt+click adds a cursor, or removes one
+			// Alt+click adds a cursor (or removes one) when the button is
+			// released; Alt+drag makes a rectangle instead.
+			line, vcol := e.textCellAt(m.X, m.Y, r)
+			e.rectDrag = &rectDrag{line: line, vcol: vcol, off: off, alt: true}
+			return
+		}
+		if e.columnMode && m.Mod&ports.ModShift == 0 {
+			line, vcol := e.textCellAt(m.X, m.Y, r)
+			e.doc.SetSelection(editor.Cursor(off))
+			e.rectDrag = &rectDrag{line: line, vcol: vcol, off: off}
 			e.follow()
 			return
 		}
@@ -195,8 +210,15 @@ func (e *Editor) menuTitleAt(x int) int {
 }
 
 func (e *Editor) textOffsetAt(x, y int, r regions) int {
+	line, vcol := e.textCellAt(x, y, r)
+	return e.doc.OffsetAt(line, vcol)
+}
+
+// textCellAt maps a screen cell to a document line and screen column. The
+// column is not clamped to the line, so it can lie past a short line's end.
+func (e *Editor) textCellAt(x, y int, r regions) (line, vcol int) {
 	row := max(0, min(y-r.textTop, r.textRows-1))
-	return e.doc.OffsetAt(e.view.LineAt(row), e.view.ColAt(max(0, x-r.gutter)))
+	return e.view.LineAt(row), e.view.ColAt(max(0, x-r.gutter))
 }
 
 // View renders the current state.
@@ -424,6 +446,9 @@ func (e *Editor) drawStatus(vm *viewBuilder, r regions) {
 	cursors := ""
 	if n := e.doc.CursorCount(); n > 1 {
 		cursors = fmt.Sprintf(" (%d cursors)", n)
+	}
+	if e.columnMode {
+		cursors += "   COLUMN"
 	}
 	right := fmt.Sprintf("Ln %d, Col %d%s   %s   %s   %s ", line+1, vcol+1, cursors, e.languageLabel(), enc, e.doc.LineEnding())
 	vm.row(r.statusY, " sie "+e.version()+" - "+name, right, ports.StyleStatus, ports.StyleStatus)

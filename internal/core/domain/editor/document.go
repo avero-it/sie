@@ -47,6 +47,8 @@ type Document struct {
 	extra    []Selection // secondary selections, sorted, never overlapping
 	op       *cursors    // state before the running forEachCursor, if any
 	opSeq    int         // numbers forEachCursor runs, for undo keys
+	rank     int         // document-order index of the cursor forEachCursor is running on
+	rect     *rectState  // the last rectangle made by SelectRect; see activeRect
 	goal     int         // preferred screen column for vertical moves; -1 if unset
 	eol      buffer.LineEnding
 	bom      bool

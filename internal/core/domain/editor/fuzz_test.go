@@ -35,9 +35,14 @@ func FuzzDocument(f *testing.F) {
 					err = d.DeleteToLineEnd()
 				}
 			case 15:
-				if op&0x10 != 0 {
+				switch {
+				case op&0x10 != 0:
 					d.AddCursor(int(op) * 7 % (d.Len() + 1))
-				} else {
+				case op&0x20 != 0:
+					d.SelectRect(i%5, int(op)%7, int(op)%4, i%9)
+				case op&0x40 != 0:
+					d.ExtendRect(int(op)%3-1, int(op)%5-2)
+				default:
 					d.SetSelection(Selection{int(op) * 7 % (d.Len() + 1), i % (d.Len() + 1)})
 				}
 			}

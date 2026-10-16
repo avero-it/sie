@@ -72,6 +72,7 @@ func DefaultBindings() []Binding {
 		{c('r'), "search.replace"},
 		{c('g'), "search.gotoLine"},
 		{c('t'), "edit.validate"},
+		{c('u'), "selection.toggleColumnMode"},
 		{ports.CtrlAlt('p'), "ui.prompt"},
 		{ports.CtrlAlt('m'), "ui.menu"},
 	}

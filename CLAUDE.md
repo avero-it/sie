@@ -10,7 +10,7 @@ This file is the source of truth for humans and agents. If code and this file di
 
 ## Scope
 
-**v0 goals**: single buffer, open/edit/save, undo/redo, selection (keyboard + mouse), multiple cursors (Alt+click), clipboard, find/replace, go to line, menu bar, command prompt, status line, horizontal scroll, LF/CRLF preserved, UTF-8 with grapheme-correct cursor movement.
+**v0 goals**: single buffer, open/edit/save, undo/redo, selection (keyboard + mouse), multiple cursors (Alt+click), rectangular selection (Alt+drag, column mode), clipboard, find/replace, go to line, menu bar, command prompt, status line, horizontal scroll, LF/CRLF preserved, UTF-8 with grapheme-correct cursor movement.
 
 **Non-goals for v0** (future work, don't build them yet): tabs/splits/multiple buffers, soft wrap, syntax highlighting, LSP, plugins, modal (vim) editing, F-key fallbacks for Ctrl+Alt bindings.
 
@@ -179,11 +179,19 @@ internal/adapters/
 
 - **Alt+click** in the text area adds a cursor (`Document.AddCursor`); the new one becomes the primary cursor (terminal cursor, viewport follows), the old primary is kept as a secondary one. Alt+click on an existing cursor removes it.
 - `Document` holds the primary `sel` plus `extra []Selection` (sorted, never overlapping; `mergeCursors` drops collisions, the primary wins). `SetSelection` removes the secondary cursors, so clicks, find, go to line, select all… go back to one cursor.
-- `forEachCursor` runs a single-cursor operation once per cursor, from the last in the document to the first; `replace` shifts the other cursors (`mapReplace`). Multi-cursor: `Insert` (typing, Tab, paste), `InsertNewline`, `Backspace`, `DeleteForward`, `DeleteSelection`, `Move`, `MovePage`. Other operations act on the primary selection only.
+- `forEachCursor` runs a single-cursor operation once per cursor, from the last in the document to the first; `replace` shifts the other cursors (`mapReplace`). Multi-cursor: `Insert` (typing, Tab, paste), `InsertEach`, `InsertNewline`, `Backspace`, `DeleteForward`, `DeleteSelection`, `Move`, `MovePage`. Other operations act on the primary selection only.
 - Undo: the history state is every cursor (`cursors`), so undo/redo restores them all. One run is one undo step (typing bursts still coalesce); `History.Amend` sets the final state after the run.
-- App: Esc removes the secondary cursors first (a second Esc collapses the selection). `Dispatch` removes them before every non-silent command without `Command.MultiCursor` (set on Paste, Undo, Redo).
+- App: Esc removes the secondary cursors first (a second Esc collapses the selection). `Dispatch` removes them before every non-silent command without `Command.MultiCursor` (set on Copy, Cut, Paste, Undo, Redo and the column-mode toggle).
 - View: secondary selections are drawn as selections, each secondary cursor as one `StyleCursorSecondary` cell (also at a line end); the status line shows `(N cursors)`.
 - Terminals: Alt+click needs Option-as-Meta on macOS; some Linux desktops grab Alt+click to move windows.
+
+### Rectangular (column) selection
+
+- A rectangle is **one `Selection` per line** on top of the multi-cursor code, so editing and undo need no new logic. `Document.SelectRect(aLine, aVCol, hLine, hVCol)` (`domain/editor/rect.go`) builds it from two corners given as line and screen column (`Layout`/`OffsetAtCol` rules: a glyph is inside when its first column is in `[left, right)`; a line shorter than the left edge gets an empty cursor at its end). The head line's selection is the primary one, and its cursor is on the dragged side. The block is read from the buffer once, because asking for each line's offset is quadratic.
+- `rectState` keeps the corners in **virtual** columns (they may lie past a short line's end) together with the selections it produced. `ExtendRect(dLine, dVCol)` moves the head corner and reselects. The rectangle is *active* only while the document's selections are exactly the ones it produced (`activeRect`), so any other selection change or edit ends it with no explicit clearing.
+- **Gestures** (app, `rect.go`): **Alt+drag** (the press is only recorded in `Editor.rectDrag`; a release without movement is the old Alt+click toggle), and **Column selection** (`selection.toggleColumnMode`, ✓ option, **Ctrl+U**, session only, status line shows `COLUMN`): a plain drag draws a rectangle and Shift+←/→/↑/↓ call `ExtendRect`. Alt+Shift+arrows stay word/jump selection.
+- **Clipboard:** with several cursors, Copy/Cut put `SelectedTexts()` (document order, empty selections kept as empty lines) joined with `\n` on the clipboard, and say "nothing selected" if all are empty. Paste with N cursors splits the text into lines (a trailing line break first counts as an empty last line, then as a terminator); if there are N lines, `InsertEach` puts line *i* on the *i*-th cursor in document order (`forEachCursor` exposes the rank), else the whole text goes to every cursor. Copy, Cut and the toggle are `MultiCursor` commands.
+- **Cost:** `forEachCursor` snaps the other cursors once at the end of a run (not after every edit). Selecting any height is instant; typing into a 5,000-line rectangle takes about 0.5 s (piece table, O(pieces) per edit), 20,000 lines about 8 s.
 
 ### Default keymap (v0)
 
@@ -192,7 +200,7 @@ internal/adapters/
 | Ctrl+N | New | Ctrl+F | Find |
 | Ctrl+O | Open | Ctrl+R | Replace |
 | Ctrl+E | Open recent | Ctrl+W | Close file |
-| Ctrl+T | Validate | | |
+| Ctrl+T | Validate | Ctrl+U | Column selection (toggle) |
 | Ctrl+S | Save | Ctrl+G | Go to line |
 | Ctrl+Q | Quit | Ctrl+D | Duplicate line |
 | Ctrl+Z / Ctrl+Y | Undo / Redo | Ctrl+K | Delete line |
@@ -233,7 +241,7 @@ internal/adapters/
 - Linux desktops grab some Ctrl+Alt combinations (T, L, Del, F-keys, arrows). Check new Ctrl+Alt bindings against them.
 - Never bind Ctrl+M (Enter), Ctrl+I (Tab) or Ctrl+[ (Esc). Avoid Ctrl+H (Backspace on some terminals), Ctrl+J (LF) and Ctrl+Shift combinations.
 - Raw mode disables XON/XOFF, so Ctrl+S and Ctrl+Q are usable.
-- Free Ctrl keys for future commands: **B, P, U** (E Open recent, T Validate, W Close file).
+- Free Ctrl keys for future commands: **B, P** (E Open recent, T Validate, U Column selection, W Close file). Ctrl+B is the tmux prefix, so prefer P.
 - Alt+B and Alt+F are taken by word moves (readline/macOS Terminal). Plain Alt+letter otherwise does nothing.
 
 ## Text model

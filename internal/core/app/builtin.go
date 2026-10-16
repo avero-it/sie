@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode"
@@ -42,8 +43,8 @@ func builtins() []command {
 
 		{ID: "edit.undo", Title: "Undo", MultiCursor: true, Run: (*Editor).cmdUndo},
 		{ID: "edit.redo", Title: "Redo", MultiCursor: true, Run: (*Editor).cmdRedo},
-		{ID: "edit.cut", Title: "Cut", Run: (*Editor).cmdCut},
-		{ID: "edit.copy", Title: "Copy", Run: (*Editor).cmdCopy},
+		{ID: "edit.cut", Title: "Cut", MultiCursor: true, Run: (*Editor).cmdCut},
+		{ID: "edit.copy", Title: "Copy", MultiCursor: true, Run: (*Editor).cmdCopy},
 		{ID: "edit.paste", Title: "Paste", MultiCursor: true, Run: (*Editor).cmdPaste},
 		{ID: "edit.validate", Title: "Validate", Aliases: []string{"check", "lint", "validate file"},
 			Run: (*Editor).cmdValidate},
@@ -55,6 +56,11 @@ func builtins() []command {
 
 		{ID: "selection.all", Title: "Select all", Run: func(e *Editor, _ []string) error { e.doc.SelectAll(); return nil }},
 		{ID: "selection.line", Title: "Select line", Run: func(e *Editor, _ []string) error { e.doc.SelectLine(); return nil }},
+		{ID: "selection.toggleColumnMode", Title: "Column selection",
+			Aliases:     []string{"column mode", "block selection", "rectangular selection", "column"},
+			MultiCursor: true,
+			Checked:     func(e *Editor) bool { return e.columnMode },
+			Run:         func(e *Editor, _ []string) error { return e.toggleOption(&e.columnMode) }},
 		{ID: "selection.trimTrailingSpaces", Title: "Trim trailing spaces",
 			Aliases: []string{"trim ending spaces", "trim spaces from selection", "trim"}, Run: (*Editor).cmdTrim},
 
@@ -211,17 +217,32 @@ func (e *Editor) cmdRedo([]string) error {
 	return err
 }
 
-// copySelection copies the selection, or the whole line when nothing is selected.
-func (e *Editor) copySelection() {
-	if e.doc.Selection().Empty() {
-		e.doc.SelectLine()
+// copySelection copies the selection, or the whole line when nothing is
+// selected. With several cursors (a rectangle, for one) it copies every
+// selection, one per line, so the block keeps its shape. It reports whether
+// anything was copied.
+func (e *Editor) copySelection() bool {
+	var text string
+	if e.doc.CursorCount() > 1 {
+		texts := e.doc.SelectedTexts()
+		if !slices.ContainsFunc(texts, func(s string) bool { return s != "" }) {
+			e.note("nothing selected")
+			return false
+		}
+		text = strings.Join(texts, "\n")
+	} else {
+		if e.doc.Selection().Empty() {
+			e.doc.SelectLine()
+		}
+		text = e.doc.SelectedText()
 	}
-	e.clip = e.doc.SelectedText()
+	e.clip = text
 	if e.cfg.Clipboard != nil {
 		if err := e.cfg.Clipboard.Copy(e.clip); err != nil {
 			e.note("system clipboard unavailable")
 		}
 	}
+	return true
 }
 
 func (e *Editor) cmdCopy([]string) error {
@@ -230,7 +251,9 @@ func (e *Editor) cmdCopy([]string) error {
 }
 
 func (e *Editor) cmdCut([]string) error {
-	e.copySelection()
+	if !e.copySelection() {
+		return nil
+	}
 	return e.doc.DeleteSelection()
 }
 
@@ -245,7 +268,28 @@ func (e *Editor) cmdPaste([]string) error {
 		e.note("clipboard empty")
 		return nil
 	}
+	if n := e.doc.CursorCount(); n > 1 {
+		if parts, ok := splitForCursors(text, n); ok {
+			return e.doc.InsertEach(parts)
+		}
+	}
 	return e.doc.Insert(text)
+}
+
+// splitForCursors splits clipboard text into one line per cursor, for pasting
+// a block onto several cursors. A trailing line break counts as a line of its
+// own first (a block whose last line is empty), then as a terminator (whole
+// lines copied with one cursor). It reports false when the text has another
+// number of lines, in which case the whole text goes to every cursor.
+func splitForCursors(text string, n int) ([]string, bool) {
+	lines := strings.Split(strings.ReplaceAll(text, "\r\n", "\n"), "\n")
+	if len(lines) == n {
+		return lines, true
+	}
+	if len(lines) == n+1 && lines[n] == "" {
+		return lines[:n], true
+	}
+	return nil, false
 }
 
 func (e *Editor) cmdTrim([]string) error {

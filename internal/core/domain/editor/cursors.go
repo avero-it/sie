@@ -80,7 +80,7 @@ func (d *Document) forEachCursor(op func() error) error {
 	before := d.state()
 	d.op = &before
 	d.opSeq++
-	defer func() { d.op = nil }()
+	defer func() { d.op, d.rank = nil, 0 }()
 	version := d.version
 
 	// Cursors keep their index in all; 0 is the primary one.
@@ -92,7 +92,8 @@ func (d *Document) forEachCursor(op func() error) error {
 	slices.SortStableFunc(order, func(a, b int) int { return cmpSel(all[b], all[a]) })
 
 	var err error
-	for _, i := range order {
+	for k, i := range order {
+		d.rank = len(order) - 1 - k
 		d.sel = all[i]
 		d.extra = slices.Delete(slices.Clone(all), i, i+1)
 		err = op()
@@ -102,6 +103,16 @@ func (d *Document) forEachCursor(op func() error) error {
 		}
 	}
 	d.sel, d.extra = all[0], all[1:]
+	if d.version != version {
+		// Inside the run the other cursors are only shifted: snapping each
+		// of them after every edit made big rectangles quadratic. Edits go
+		// from the last cursor to the first, so the cursors still to be
+		// processed are before the edit and can't be affected by a fusion
+		// of clusters. Snap once, at the end.
+		for i, s := range d.extra {
+			d.extra[i] = Selection{d.snapForward(s.Anchor), d.snapForward(s.Head)}
+		}
+	}
 	d.mergeCursors()
 	d.op = nil
 	if d.version != version {

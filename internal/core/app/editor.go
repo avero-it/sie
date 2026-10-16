@@ -91,6 +91,7 @@ type Editor struct {
 	clip          string
 	lastQuery     string
 	dragging      bool
+	rectDrag      *rectDrag // a rectangle being dragged out with the mouse
 	done          bool
 
 	showInvisibles bool
@@ -98,6 +99,7 @@ type Editor struct {
 	showSyntax     bool
 	hl             highlightState
 	validateOnSave bool
+	columnMode     bool // Shift+arrows and plain drags make rectangles
 }
 
 var _ ports.EditorService = (*Editor)(nil)
@@ -267,6 +269,9 @@ func (e *Editor) editorKey(k ports.KeyEvent) {
 //	PgUp/PgDn           one screen
 func (e *Editor) navigate(k ports.KeyEvent) bool {
 	shift := k.Mod&ports.ModShift != 0
+	if e.columnMode && k.Mod == ports.ModShift && e.extendRect(k.Key) {
+		return true
+	}
 	cmd := k.Mod&ports.ModSuper != 0
 	word := k.Mod&(ports.ModCtrl|ports.ModAlt) != 0
 	move := func(m editor.Motion) bool {
