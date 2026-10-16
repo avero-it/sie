@@ -299,6 +299,7 @@ CGO_ENABLED=0 go list -deps -f '{{if .CgoFiles}}{{.ImportPath}}{{end}}' ./...
   - **Scoop:** a manifest in `avero-it/scoop-bucket` (`sie.json`).
   - **Linux packages:** `.deb`, `.rpm` and `.apk` (nfpm, `/usr/bin/sie` plus the LICENSE), attached to the release and covered by `checksums.txt`.
   - **The token:** writing to the tap and bucket needs the repository secret **`TAP_GITHUB_TOKEN`** in avero-it/sie: a fine-grained PAT, resource owner `avero-it`, access to only those two repos, Contents read and write. Without it, `skip_upload` turns those two steps off and the release still succeeds. When it expires, create a new one the same way and update the secret.
+- **First package-manager release:** v0.6.1 (v0.6.0 was published before `TAP_GITHUB_TOKEN` existed, so the tap and bucket start at v0.6.1). Never put two release tags on one commit: GoReleaser picks the highest and fails if that release already exists.
 - **To release:** `git tag -a vX.Y.Z -m … && git push origin vX.Y.Z`. To try the release locally: `goreleaser release --snapshot --clean` (output in `dist/`, which is git-ignored).
 - **Pins:** actions are pinned to exact versions at least two weeks old (checkout v7.0.1, setup-go v7.0.0, goreleaser-action v7.2.3). Bump them deliberately.
 - `.gitattributes` forces LF checkouts, so the Windows runners see the same bytes (gofmt, fuzz corpora).
