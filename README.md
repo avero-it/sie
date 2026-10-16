@@ -29,7 +29,17 @@ scoop bucket add avero-it https://github.com/avero-it/scoop-bucket
 scoop install sie
 ```
 
-**Linux packages:** download the package for your system from the [releases page](https://github.com/avero-it/sie/releases), then:
+**Debian, Ubuntu** (apt repository, updated with every release; amd64 and arm64):
+
+```sh
+sudo curl -fsSL https://avero-it.github.io/sie/sie.gpg -o /usr/share/keyrings/sie.gpg
+echo "deb [signed-by=/usr/share/keyrings/sie.gpg] https://avero-it.github.io/sie stable main" | sudo tee /etc/apt/sources.list.d/sie.list
+sudo apt update && sudo apt install sie
+```
+
+After that, `sudo apt upgrade` keeps sie current.
+
+**Other Linux packages:** download the package for your system from the [releases page](https://github.com/avero-it/sie/releases), then:
 
 ```sh
 sudo apt install ./sie_<version>_linux_amd64.deb             # Debian, Ubuntu
