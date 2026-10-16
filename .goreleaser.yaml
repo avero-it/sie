@@ -61,13 +61,13 @@ homebrew_casks:
     repository:
       owner: avero-it
       name: homebrew-tap
-      token: '{{ envOrDefault "TAP_GITHUB_TOKEN" "" }}'
+      token: "{{ .Env.TAP_GITHUB_TOKEN }}"
     directory: Casks
     homepage: https://github.com/avero-it/sie
     description: "siMPLE eDITOR: a modeless terminal text editor"
     license: MIT
     binaries: [sie]
-    skip_upload: '{{ if eq (envOrDefault "TAP_GITHUB_TOKEN" "") "" }}true{{ else }}false{{ end }}'
+    skip_upload: '{{ if .Env.TAP_GITHUB_TOKEN }}false{{ else }}true{{ end }}'
     hooks:
       post:
         # The binaries are not signed: clear the quarantine flag so macOS
@@ -82,11 +82,11 @@ scoops:
     repository:
       owner: avero-it
       name: scoop-bucket
-      token: '{{ envOrDefault "TAP_GITHUB_TOKEN" "" }}'
+      token: "{{ .Env.TAP_GITHUB_TOKEN }}"
     homepage: https://github.com/avero-it/sie
     description: "siMPLE eDITOR: a modeless terminal text editor"
     license: MIT
-    skip_upload: '{{ if eq (envOrDefault "TAP_GITHUB_TOKEN" "") "" }}true{{ else }}false{{ end }}'
+    skip_upload: '{{ if .Env.TAP_GITHUB_TOKEN }}false{{ else }}true{{ end }}'
 
 nfpms:
   - package_name: sie
