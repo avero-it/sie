@@ -170,6 +170,46 @@ func (d *Document) wordRight(off int) int {
 	return start + col
 }
 
+// WordRange returns the run of same-class characters (word, punctuation or
+// whitespace) around off, on off's line. At the end of a line it uses the last
+// character; on an empty line the range is empty.
+func (d *Document) WordRange(off int) (int, int) {
+	line := d.lineOf(off)
+	start, _ := d.lineRange(line)
+	text := d.Line(line)
+	var spans [][2]int
+	forClusters(text, func(s, e int) bool {
+		spans = append(spans, [2]int{s, e})
+		return true
+	})
+	if len(spans) == 0 {
+		return off, off
+	}
+	col := off - start
+	i := len(spans) - 1
+	for j, sp := range spans {
+		if col < sp[1] {
+			i = j
+			break
+		}
+	}
+	c := classOf(text[spans[i][0]:spans[i][1]])
+	lo, hi := i, i
+	for lo > 0 && classOf(text[spans[lo-1][0]:spans[lo-1][1]]) == c {
+		lo--
+	}
+	for hi < len(spans)-1 && classOf(text[spans[hi+1][0]:spans[hi+1][1]]) == c {
+		hi++
+	}
+	return start + spans[lo][0], start + spans[hi][1]
+}
+
+// LineRange returns off's line including its line break.
+func (d *Document) LineRange(off int) (int, int) {
+	line := d.lineOf(off)
+	return d.lineStart(line), d.lineStart(line + 1)
+}
+
 // wordLeft is the mirror of wordRight: it lands on the start of a word.
 func (d *Document) wordLeft(off int) int {
 	line := d.lineOf(off)

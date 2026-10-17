@@ -119,6 +119,7 @@ func (e *Editor) handleMouse(m ports.MouseEvent) {
 	switch m.Action {
 	case ports.MouseRelease:
 		e.dragging = false
+		e.dragUnit = dragChar
 		e.endRectDrag()
 		return
 	case ports.MouseDrag:
@@ -127,7 +128,10 @@ func (e *Editor) handleMouse(m ports.MouseEvent) {
 			e.dragRect(line, vcol)
 			return
 		}
-		if e.dragging {
+		if e.dragging && e.dragUnit != dragChar {
+			e.dragByUnit(e.textOffsetAt(m.X, m.Y, r))
+			e.follow()
+		} else if e.dragging {
 			e.doc.SetSelection(editor.Selection{Anchor: e.doc.Selection().Anchor, Head: e.textOffsetAt(m.X, m.Y, r)})
 			e.follow()
 		}
@@ -190,8 +194,17 @@ func (e *Editor) handleMouse(m ports.MouseEvent) {
 			e.follow()
 			return
 		}
+		e.dragUnit = dragChar
 		if m.Mod&ports.ModShift != 0 {
 			e.doc.SetSelection(editor.Selection{Anchor: e.doc.Selection().Anchor, Head: off})
+		} else if m.Clicks == 2 {
+			e.dragUnit = dragWord
+			e.dragFrom, e.dragTo = e.doc.WordRange(off)
+			e.doc.SetSelection(editor.Selection{Anchor: e.dragFrom, Head: e.dragTo})
+		} else if m.Clicks >= 3 {
+			e.dragUnit = dragLine
+			e.dragFrom, e.dragTo = e.doc.LineRange(off)
+			e.doc.SetSelection(editor.Selection{Anchor: e.dragFrom, Head: e.dragTo})
 		} else {
 			e.doc.SetSelection(editor.Cursor(off))
 		}
@@ -549,5 +562,29 @@ func (e *Editor) drawCompletions(vm *viewBuilder) {
 		if it.hint != "" {
 			vm.add(box.x+box.w-uniseg.StringWidth(it.hint)-1, y, it.hint, hintStyle)
 		}
+	}
+}
+
+// dragUnit is the granularity of a mouse drag: characters, or whole words or
+// lines after a double or triple click.
+type dragUnit uint8
+
+const (
+	dragChar dragUnit = iota
+	dragWord
+	dragLine
+)
+
+// dragByUnit extends the selection made by a double or triple click to the
+// word or line under off, keeping the original unit selected.
+func (e *Editor) dragByUnit(off int) {
+	lo, hi := e.doc.WordRange(off)
+	if e.dragUnit == dragLine {
+		lo, hi = e.doc.LineRange(off)
+	}
+	if off < e.dragFrom {
+		e.doc.SetSelection(editor.Selection{Anchor: e.dragTo, Head: lo})
+	} else {
+		e.doc.SetSelection(editor.Selection{Anchor: e.dragFrom, Head: hi})
 	}
 }

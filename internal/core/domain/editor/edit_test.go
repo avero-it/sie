@@ -172,3 +172,29 @@ func TestModifiedAndBOMRoundTrip(t *testing.T) {
 		t.Fatalf("undo to original: modified=%v bytes=%q", d.Modified(), d.Bytes())
 	}
 }
+
+func TestWordAndLineRange(t *testing.T) {
+	d := NewDocument([]byte("foo  bar.baz\n\nend"), Options{})
+	tests := []struct {
+		off          int
+		word         string
+		wordLo, line int
+	}{
+		{1, "foo", 0, 0},
+		{4, "  ", 3, 0},
+		{6, "bar", 5, 0},
+		{8, ".", 8, 0},
+		{12, "baz", 9, 0}, // end of line: previous run
+		{13, "", 13, 13},  // empty line
+		{16, "end", 14, 14},
+	}
+	for _, tt := range tests {
+		lo, hi := d.WordRange(tt.off)
+		if got := d.Text()[lo:hi]; got != tt.word || lo != tt.wordLo && tt.word != "" {
+			t.Errorf("WordRange(%d) = %q [%d,%d)", tt.off, got, lo, hi)
+		}
+		if lo, _ := d.LineRange(tt.off); lo != tt.line {
+			t.Errorf("LineRange(%d) start = %d, want %d", tt.off, lo, tt.line)
+		}
+	}
+}

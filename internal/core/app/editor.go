@@ -82,17 +82,19 @@ type Editor struct {
 	path string
 	view editor.Viewport
 
-	width, height int
-	focus         focus
-	menu          menuState
-	prompt        promptState
-	msg           message
-	history       []invocation // most recent first
-	clip          string
-	lastQuery     string
-	dragging      bool
-	rectDrag      *rectDrag // a rectangle being dragged out with the mouse
-	done          bool
+	width, height    int
+	focus            focus
+	menu             menuState
+	prompt           promptState
+	msg              message
+	history          []invocation // most recent first
+	clip             string
+	lastQuery        string
+	dragging         bool
+	dragUnit         dragUnit  // word/line granularity of the current drag
+	dragFrom, dragTo int       // the unit first selected by a double or triple click
+	rectDrag         *rectDrag // a rectangle being dragged out with the mouse
+	done             bool
 
 	showInvisibles bool
 	showEmptyCells bool

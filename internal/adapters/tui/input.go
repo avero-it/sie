@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"time"
+
 	"github.com/avero-it/sie/internal/core/ports"
 	"github.com/gdamore/tcell/v2"
 )
@@ -110,7 +112,15 @@ func normalizeMods(m tcell.ModMask) ports.Mod {
 // release transitions.
 type mouseTracker struct {
 	held tcell.ButtonMask
+
+	lastPress time.Time
+	lastX     int
+	lastY     int
+	clicks    int
 }
+
+// multiClickGap is the longest pause between presses of one multi-click.
+const multiClickGap = 400 * time.Millisecond
 
 func (t *mouseTracker) normalize(ev *tcell.EventMouse) (ports.MouseEvent, bool) {
 	x, y := ev.Position()
@@ -130,6 +140,9 @@ func (t *mouseTracker) normalize(ev *tcell.EventMouse) (ports.MouseEvent, bool) 
 	switch {
 	case pressed != 0 && prev == 0:
 		me.Button, me.Action = mouseButton(pressed), ports.MousePress
+		if me.Button == ports.MouseLeft {
+			me.Clicks = t.countClick(x, y, ev.When())
+		}
 	case pressed != 0:
 		me.Button, me.Action = mouseButton(pressed), ports.MouseDrag
 	case prev != 0:
@@ -138,6 +151,18 @@ func (t *mouseTracker) normalize(ev *tcell.EventMouse) (ports.MouseEvent, bool) 
 		return me, false // plain motion
 	}
 	return me, true
+}
+
+// countClick returns 1, 2 or 3: presses on the same cell in quick succession
+// count up, and a fourth starts over.
+func (t *mouseTracker) countClick(x, y int, when time.Time) int {
+	if t.clicks > 0 && t.clicks < 3 && x == t.lastX && y == t.lastY && when.Sub(t.lastPress) <= multiClickGap {
+		t.clicks++
+	} else {
+		t.clicks = 1
+	}
+	t.lastPress, t.lastX, t.lastY = when, x, y
+	return t.clicks
 }
 
 func mouseButton(b tcell.ButtonMask) ports.MouseButton {

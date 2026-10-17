@@ -120,4 +120,6 @@ type MouseEvent struct {
 	Button MouseButton
 	Action MouseAction
 	Mod    Mod
+	// Clicks is the click count (1, 2, 3) on a left MousePress; 0 otherwise.
+	Clicks int
 }

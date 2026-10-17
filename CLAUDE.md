@@ -175,6 +175,11 @@ internal/adapters/
 5. Viewport, scroll and column↔screen-x math live in the core. The adapter only reports `Resize(w, h)`.
 6. `defer screen.Fini()` plus `recover()` always restore the terminal, even on panic.
 
+### Double and triple click
+
+- `ports.MouseEvent.Clicks` is 1, 2 or 3 on a left press (0 otherwise). The tui `mouseTracker` counts presses on the same cell within 400 ms (using tcell's event time), and a fourth press starts over, so the core has no clock.
+- In the text area a plain double click selects the run of same-class characters (`Document.WordRange`, the classes of word movement), and a triple click selects the line with its line break (`Document.LineRange`). Dragging afterwards extends by whole words or lines (`Editor.dragUnit`). Shift, Alt and column mode keep their own behavior.
+
 ### Multiple cursors
 
 - **Alt+click** in the text area adds a cursor (`Document.AddCursor`); the new one becomes the primary cursor (terminal cursor, viewport follows), the old primary is kept as a secondary one. Alt+click on an existing cursor removes it.

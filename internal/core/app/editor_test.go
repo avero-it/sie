@@ -557,3 +557,37 @@ func TestStatusShowsVersionAndTruncates(t *testing.T) {
 	_ = h.Dispatch("help.about")
 	h.wantRowPrefix(rowPrompt, "> About sie — sie test")
 }
+
+func TestDoubleAndTripleClick(t *testing.T) {
+	h := newHarness(t, nil)
+	h.typeText("foo bar_1, baz\nsecond")
+	press := func(x, y, clicks int) {
+		h.HandleMouse(ports.MouseEvent{X: x, Y: y, Button: ports.MouseLeft, Action: ports.MousePress, Clicks: clicks})
+	}
+	release := func(x, y int) { h.HandleMouse(ports.MouseEvent{X: x, Y: y, Action: ports.MouseRelease}) }
+
+	press(3+5, rowText, 2) // inside "bar_1"
+	release(3+5, rowText)
+	if got := h.doc.SelectedText(); got != "bar_1" {
+		t.Errorf("double click %q", got)
+	}
+	press(3+5, rowText, 3)
+	release(3+5, rowText)
+	if got := h.doc.SelectedText(); got != "foo bar_1, baz\n" {
+		t.Errorf("triple click %q", got)
+	}
+	// Dragging after a double click extends by whole words.
+	press(3+1, rowText, 2) // "foo"
+	h.HandleMouse(ports.MouseEvent{X: 3 + 6, Y: rowText, Action: ports.MouseDrag})
+	release(3+6, rowText)
+	if got := h.doc.SelectedText(); got != "foo bar_1" {
+		t.Errorf("word drag %q", got)
+	}
+	// Dragging after a triple click extends by whole lines.
+	press(3+1, rowText, 3)
+	h.HandleMouse(ports.MouseEvent{X: 3 + 2, Y: rowText + 1, Action: ports.MouseDrag})
+	release(3+2, rowText+1)
+	if got := h.doc.SelectedText(); got != "foo bar_1, baz\nsecond" {
+		t.Errorf("line drag %q", got)
+	}
+}

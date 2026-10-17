@@ -67,7 +67,7 @@ func TestMouseTracker(t *testing.T) {
 		ok      bool
 	}{
 		{tcell.ButtonNone, ports.MouseEvent{}, false}, // motion only
-		{tcell.Button1, ports.MouseEvent{Button: ports.MouseLeft, Action: ports.MousePress}, true},
+		{tcell.Button1, ports.MouseEvent{Button: ports.MouseLeft, Action: ports.MousePress, Clicks: 1}, true},
 		{tcell.Button1, ports.MouseEvent{Button: ports.MouseLeft, Action: ports.MouseDrag}, true},
 		{tcell.ButtonNone, ports.MouseEvent{Button: ports.MouseLeft, Action: ports.MouseRelease}, true},
 		{tcell.WheelDown, ports.MouseEvent{Button: ports.WheelDown, Action: ports.MousePress}, true},
@@ -77,6 +77,29 @@ func TestMouseTracker(t *testing.T) {
 		got, ok := m.normalize(tcell.NewEventMouse(0, 0, s.buttons, 0))
 		if ok != s.ok || (ok && got != s.want) {
 			t.Errorf("step %d: got %+v ok=%v, want %+v ok=%v", i, got, ok, s.want, s.ok)
+		}
+	}
+}
+
+func TestCountClick(t *testing.T) {
+	var m mouseTracker
+	t0 := time.Unix(100, 0)
+	steps := []struct {
+		x, y int
+		at   time.Duration
+		want int
+	}{
+		{1, 1, 0, 1},
+		{1, 1, 100 * time.Millisecond, 2},
+		{1, 1, 200 * time.Millisecond, 3},
+		{1, 1, 300 * time.Millisecond, 1}, // a fourth starts over
+		{1, 1, 400 * time.Millisecond, 2},
+		{2, 1, 500 * time.Millisecond, 1},  // moved
+		{2, 1, 1500 * time.Millisecond, 1}, // too slow
+	}
+	for i, s := range steps {
+		if got := m.countClick(s.x, s.y, t0.Add(s.at)); got != s.want {
+			t.Errorf("step %d: got %d, want %d", i, got, s.want)
 		}
 	}
 }
