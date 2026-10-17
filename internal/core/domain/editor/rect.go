@@ -49,8 +49,8 @@ func (d *Document) SelectRect(aLine, aVCol, hLine, hVCol int) {
 			end = pos + nl
 		}
 		text := bytes.TrimSuffix(block[pos:end], []byte("\r"))
-		glyphs := Layout(text, d.tabWidth)
-		sel := Selection{Anchor: base + pos + offsetIn(glyphs, left, len(text)), Head: base + pos + offsetIn(glyphs, right, len(text))}
+		lo, hi := rectCols(text, left, right, d.tabWidth)
+		sel := Selection{Anchor: base + pos + lo, Head: base + pos + hi}
 		if hVCol < aVCol {
 			sel.Anchor, sel.Head = sel.Head, sel.Anchor
 		}
@@ -110,13 +110,22 @@ func (d *Document) InsertEach(parts []string) error {
 	return d.forEachCursor(func() error { return d.insert(parts[d.rank]) })
 }
 
-// offsetIn is OffsetAtCol on an already computed layout: the byte column of
-// the glyph covering screen column vcol, or n (the line length) past the end.
-func offsetIn(glyphs []Glyph, vcol, n int) int {
-	for _, g := range glyphs {
-		if vcol < g.Col+g.Width {
-			return g.Off
+// rectCols returns OffsetAtCol of left and of right (left <= right) for one
+// line in a single pass that stops at the right edge, so a rectangle near
+// the start of very long lines doesn't scan them to the end.
+func rectCols(text []byte, left, right, tabWidth int) (lo, hi int) {
+	lo, hi = -1, len(text)
+	for g := range Glyphs(text, tabWidth) {
+		if lo < 0 && left < g.Col+g.Width {
+			lo = g.Off
+		}
+		if right < g.Col+g.Width {
+			hi = g.Off
+			break
 		}
 	}
-	return n
+	if lo < 0 {
+		lo = len(text)
+	}
+	return lo, hi
 }

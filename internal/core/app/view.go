@@ -329,7 +329,7 @@ func (e *Editor) drawText(vm *viewBuilder, r regions) {
 		start := e.doc.OffsetAt(line, 0)
 		tokens := e.cursorAt(start)
 		width := 0
-		for _, g := range editor.Layout(text, tw) {
+		for g := range editor.Glyphs(text, tw) {
 			width = g.Col + g.Width
 			x := g.Col - e.view.Left
 			if x+g.Width <= 0 {

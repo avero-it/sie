@@ -140,12 +140,12 @@ var keys = testKeymap{
 
 type harness struct {
 	*Editor
-	t    *testing.T
+	t    testing.TB
 	fs   *memFS
 	clip *memClip
 }
 
-func newHarness(t *testing.T, files map[string]string) *harness {
+func newHarness(t testing.TB, files map[string]string) *harness {
 	t.Helper()
 	m := &memFS{files: map[string][]byte{}}
 	for k, v := range files {

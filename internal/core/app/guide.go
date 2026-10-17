@@ -73,10 +73,12 @@ func (e *Editor) drawGuide(vm *viewBuilder, r regions) {
 		}
 		text := e.doc.Line(line)
 		var at *editor.Glyph
-		glyphs := editor.Layout(text, tw)
-		for i, g := range glyphs {
+		for g := range editor.Glyphs(text, tw) {
 			if g.Col <= e.guide.col && e.guide.col < g.Col+g.Width {
-				at = &glyphs[i]
+				at = &g
+				break
+			}
+			if g.Col > e.guide.col {
 				break
 			}
 		}

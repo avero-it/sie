@@ -55,6 +55,19 @@ type Document struct {
 	tabWidth int
 	version  uint64   // see Version
 	changes  []Change // recent mutations, oldest first; see ChangesSince
+	pos      posMemo  // the last Position result; see Position
+}
+
+// posMemo remembers the last Position call. A frame asks for the cursor
+// position several times (text, status line, scrolling), and on a very long
+// line each answer is a scan of the line, so repeating the last one matters.
+// It is keyed by the text version and length (length too, so a failed
+// half-done edit can't leave it stale) and by the offset.
+type posMemo struct {
+	ok              bool
+	version         uint64
+	length, off     int
+	line, col, vcol int
 }
 
 // NewDocument creates a document from file content. A UTF-8 BOM is removed
@@ -152,10 +165,15 @@ func (d *Document) CursorPos() (line, col, vcol int) {
 // Position converts a document offset to line, byte column and screen column.
 func (d *Document) Position(off int) (line, col, vcol int) {
 	off = max(0, min(off, d.buf.Len()))
+	if m := d.pos; m.ok && m.version == d.version && m.length == d.buf.Len() && m.off == off {
+		return m.line, m.col, m.vcol
+	}
 	line = d.lineOf(off)
 	start, _ := d.lineRange(line)
 	col = off - start
-	return line, col, VisualCol(d.Line(line), col, d.tabWidth)
+	vcol = VisualCol(d.Line(line), col, d.tabWidth)
+	d.pos = posMemo{ok: true, version: d.version, length: d.buf.Len(), off: off, line: line, col: col, vcol: vcol}
+	return line, col, vcol
 }
 
 // OffsetAt converts a line and screen column (e.g. a mouse click) to a

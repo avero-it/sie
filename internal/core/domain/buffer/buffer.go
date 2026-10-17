@@ -197,13 +197,18 @@ func (b *Buffer) LineStart(line int) (int, error) {
 	seen, pos := 0, 0
 	for _, p := range b.pieces {
 		if seen+p.newlines >= line {
+			// Hop from '\n' to '\n' with IndexByte (vectorized), so a very
+			// long line costs a memchr, not a byte-by-byte loop.
 			data := b.span(p)
-			for j, c := range data {
-				if c == '\n' {
-					seen++
-					if seen == line {
-						return pos + j + 1, nil
-					}
+			for j := 0; ; j++ {
+				k := bytes.IndexByte(data[j:], '\n')
+				if k < 0 {
+					break
+				}
+				j += k
+				seen++
+				if seen == line {
+					return pos + j + 1, nil
 				}
 			}
 		}
