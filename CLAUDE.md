@@ -12,7 +12,7 @@ This file is the source of truth for humans and agents. If code and this file di
 
 **v0 goals**: single buffer, open/edit/save, undo/redo, selection (keyboard + mouse), multiple cursors (Alt+click), rectangular selection (Alt+drag, column mode), clipboard, find/replace, go to line, menu bar, command prompt, status line, horizontal scroll, LF/CRLF preserved, UTF-8 with grapheme-correct cursor movement.
 
-**Non-goals for v0** (future work, don't build them yet): tabs/splits/multiple buffers, soft wrap, syntax highlighting, LSP, plugins, modal (vim) editing, F-key fallbacks for Ctrl+Alt bindings.
+**Non-goals for v0** (future work, don't build them yet): tabs/splits/multiple buffers, soft wrap, LSP, plugins, modal (vim) editing, F-key fallbacks for Ctrl+Alt bindings.
 
 ## Architecture
 
@@ -215,14 +215,14 @@ internal/adapters/
 | Key | Command | Key | Command |
 |---|---|---|---|
 | Ctrl+N | New | Ctrl+F | Find |
-| Ctrl+O | Open | Ctrl+R | Replace |
+| Ctrl+O | Open | Ctrl+R | Replace… (interactive) |
 | Ctrl+E | Open recent | Ctrl+W | Close file |
 | Ctrl+T | Validate | Ctrl+U | Column selection (toggle) |
 | Ctrl+S | Save | Ctrl+G | Go to line |
 | Ctrl+Q | Quit | Ctrl+D | Duplicate line |
 | Ctrl+Z / Ctrl+Y | Undo / Redo | Ctrl+K | Delete line |
 | Ctrl+X / C / V | Cut / Copy / Paste | Ctrl+L | Select line |
-| Ctrl+A | Select all | Ctrl+R | Replace… (interactive) |
+| Ctrl+A | Select all | | Replace all… (prompt only, no key) |
 | **Ctrl+Alt+P** | Focus prompt | **Ctrl+Alt+M** | Open menus (also: mouse click) |
 | Esc | Back to editor (closes menu, prompt or popup) | | |
 

@@ -89,12 +89,12 @@ Whichever way you run a command, its name and shortcut appear in the prompt line
 | Ctrl+N | New | Ctrl+F | Find |
 | Ctrl+E | Open recent (fuzzy search) | Ctrl+W | Close file |
 | Ctrl+T | Validate (JSON, YAML, TOML, XML) | Ctrl+U | Column selection (on/off) |
-| Ctrl+O | Open | Ctrl+R | Replace all |
+| Ctrl+O | Open | Ctrl+R | Replace… (asks y/n/a/q per match) |
 | Ctrl+S | Save | Ctrl+G | Go to line |
 | Ctrl+Q | Quit | Ctrl+D | Duplicate line |
 | Ctrl+Z / Ctrl+Y | Undo / Redo | Ctrl+K | Delete line |
 | Ctrl+X / C / V | Cut / Copy / Paste | Ctrl+L | Select line |
-| Ctrl+A | Select all | Ctrl+R | Replace… (asks y/n/a/q per match) |
+| Ctrl+A | Select all | | Replace all: no key, use the prompt (`replace all foo bar`) |
 | **Ctrl+Alt+P** | Command prompt | **Ctrl+Alt+M** | Menus |
 | Esc | Back to the editor | | |
 
