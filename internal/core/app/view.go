@@ -180,6 +180,7 @@ func (e *Editor) handleMouse(m ports.MouseEvent) {
 			e.closePrompt()
 		}
 		off := e.textOffsetAt(m.X, m.Y, r)
+		e.startRipple(m.X, m.Y)
 		if m.Mod&ports.ModAlt != 0 {
 			// Alt+click adds a cursor (or removes one) when the button is
 			// released; Alt+drag makes a rectangle instead.
@@ -244,6 +245,7 @@ func (e *Editor) View() ports.ViewModel {
 	r := e.regions()
 	e.drawMenuBar(vm, r)
 	e.drawText(vm, r)
+	e.drawRipples(vm, r)
 	e.drawStatus(vm, r)
 	e.drawPrompt(vm, r)
 	switch {

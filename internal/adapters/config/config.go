@@ -20,6 +20,7 @@ type Settings struct {
 	TabWidth       int    `mapstructure:"tab_width"`
 	ShowInvisibles bool   `mapstructure:"show_invisibles"`  // mark spaces and tabs
 	ShowEmptyCells bool   `mapstructure:"show_empty_cells"` // mark cells holding no character
+	ClickRipple    bool   `mapstructure:"click_ripple"`     // wave animation on clicks
 	LineEnding     string `mapstructure:"line_ending"`      // for new files: "lf" or "crlf"
 	JumpLines      int    `mapstructure:"jump_lines"`       // lines moved by Alt+Up/Down
 
@@ -31,7 +32,7 @@ type Settings struct {
 
 // Defaults returns the built-in settings.
 func Defaults() Settings {
-	return Settings{TabWidth: 4, ShowInvisibles: false, ShowEmptyCells: true, LineEnding: "lf", JumpLines: 5,
+	return Settings{TabWidth: 4, ShowInvisibles: false, ShowEmptyCells: true, ClickRipple: false, LineEnding: "lf", JumpLines: 5,
 		SyntaxHighlighting: true, SyntaxMaxSize: "2MB", SyntaxMaxBytes: 2 << 20, ValidateOnSave: true}
 }
 
@@ -64,6 +65,7 @@ func load(paths []string, mustExist bool) (Settings, []string, error) {
 	v.SetDefault("tab_width", d.TabWidth)
 	v.SetDefault("show_invisibles", d.ShowInvisibles)
 	v.SetDefault("show_empty_cells", d.ShowEmptyCells)
+	v.SetDefault("click_ripple", d.ClickRipple)
 	v.SetDefault("line_ending", d.LineEnding)
 	v.SetDefault("jump_lines", d.JumpLines)
 	v.SetDefault("syntax_highlighting", d.SyntaxHighlighting)

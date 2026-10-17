@@ -53,11 +53,12 @@ func TestEnvOverridesFiles(t *testing.T) {
 	user := write(t, dir, "config.yaml", "tab_width: 2\n")
 	t.Setenv("SIE_TAB_WIDTH", "6")
 	t.Setenv("SIE_SHOW_EMPTY_CELLS", "false")
+	t.Setenv("SIE_CLICK_RIPPLE", "true")
 	s, _, err := load([]string{user}, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s.TabWidth != 6 || s.ShowEmptyCells {
+	if s.TabWidth != 6 || s.ShowEmptyCells || !s.ClickRipple {
 		t.Errorf("got %+v", s)
 	}
 }

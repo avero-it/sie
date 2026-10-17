@@ -50,6 +50,13 @@ type Run struct {
 	Style Style
 }
 
+// Tint lightens the background of one cell, keeping its text and foreground.
+// Level runs from 1 (faint) to 3 (strong).
+type Tint struct {
+	X, Y  int
+	Level uint8
+}
+
 // Cursor is the terminal cursor position.
 type Cursor struct {
 	X, Y    int
@@ -62,5 +69,7 @@ type Cursor struct {
 type ViewModel struct {
 	Width, Height int
 	Runs          []Run
+	Tints         []Tint // cells whose background is tinted after the runs are drawn
 	Cursor        Cursor
+	Animate       bool // the next frame will differ with time alone: redraw soon
 }

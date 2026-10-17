@@ -176,6 +176,8 @@ type fakeService struct {
 	w, h   int
 	done   bool
 	polls  int
+	// animateUntil: View asks for another frame while polls < animateUntil.
+	animateUntil int
 }
 
 func (f *fakeService) HandleKey(k ports.KeyEvent) {
@@ -201,7 +203,9 @@ func (f *fakeService) Dispatch(string, ...string) error { return nil }
 func (f *fakeService) Poll()                            { f.mu.Lock(); f.polls++; f.mu.Unlock() }
 func (f *fakeService) Done() bool                       { f.mu.Lock(); defer f.mu.Unlock(); return f.done }
 func (f *fakeService) View() ports.ViewModel {
-	return ports.ViewModel{Runs: []ports.Run{{Text: "hello"}}}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return ports.ViewModel{Runs: []ports.Run{{Text: "hello"}}, Animate: f.polls < f.animateUntil}
 }
 
 func TestLoopHandlesPasteAsOneEvent(t *testing.T) {
@@ -284,5 +288,60 @@ func TestWakePollsBeforeDrawing(t *testing.T) {
 	s.InjectKey(tcell.KeyCtrlQ, 'q', tcell.ModCtrl)
 	if err := <-errc; err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestAnimationTicksUntilDone(t *testing.T) {
+	s := tcell.NewSimulationScreen("UTF-8")
+	svc := &fakeService{animateUntil: 5}
+	term := &Terminal{screen: s, theme: DefaultTheme()}
+	errc := make(chan error, 1)
+	go func() { errc <- term.Run(svc) }()
+	deadline := time.Now().Add(5 * time.Second)
+	polls := func() int { svc.mu.Lock(); defer svc.mu.Unlock(); return svc.polls }
+	for polls() < 5 { // no input at all: only the frame timer can poll
+		if time.Now().After(deadline) {
+			t.Fatalf("only %d polls without input", polls())
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	time.Sleep(3 * frameInterval)
+	if n := polls(); n != 5 {
+		t.Errorf("polls kept coming after the animation ended: %d", n)
+	}
+	s.InjectKey(tcell.KeyCtrlQ, 'q', tcell.ModCtrl)
+	if err := <-errc; err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestPaintTintKeepsTextAndForeground(t *testing.T) {
+	s := newSim(t, 10, 2)
+	theme := DefaultTheme()
+	theme[ports.StyleKeyword] = tcell.StyleDefault.Foreground(tcell.ColorPurple).Bold(true)
+	vm := ports.ViewModel{
+		Runs:  []ports.Run{{X: 0, Y: 0, Text: "a世b", Style: ports.StyleKeyword}},
+		Tints: []ports.Tint{{X: 0, Y: 0, Level: 2}, {X: 1, Y: 0, Level: 3}, {X: 3, Y: 0, Level: 1}, {X: 5, Y: 1, Level: 3}},
+	}
+	paint(s, vm, theme)
+	s.Show()
+	cells, _, _ := s.GetContents()
+	for x, want := range []rune{'a', '世'} {
+		c := cells[x]
+		fg, _, _ := c.Style.Decompose()
+		if len(c.Runes) == 0 || c.Runes[0] != want {
+			t.Errorf("cell %d rune %q, want %q", x, c.Runes, want)
+		}
+		if fg != tcell.ColorPurple {
+			t.Errorf("cell %d lost its foreground: %v", x, fg)
+		}
+	}
+	_, bg, _ := cells[0].Style.Decompose()
+	if bg != rippleRamp[1] {
+		t.Errorf("tinted background %v, want %v", bg, rippleRamp[1])
+	}
+	_, plain, _ := cells[2].Style.Decompose()
+	if plain == rippleRamp[0] || plain == rippleRamp[1] || plain == rippleRamp[2] {
+		t.Errorf("untinted cell has a ripple background: %v", plain)
 	}
 }

@@ -84,7 +84,10 @@ func builtins() []command {
 			Aliases: []string{"show/hide empty cells", "toggle empty cells", "show empty cells", "hide empty cells"},
 			Checked: func(e *Editor) bool { return e.showEmptyCells },
 			Run:     func(e *Editor, _ []string) error { return e.toggle(&e.showEmptyCells) }},
-
+		{ID: "view.toggleClickRipple", Title: "Click ripple",
+			Aliases: []string{"ripple", "click effect", "click highlight"},
+			Checked: func(e *Editor) bool { return e.clickRipple },
+			Run:     func(e *Editor, _ []string) error { return e.toggleOption(&e.clickRipple) }},
 		{ID: "view.toggleSyntax", Title: "Syntax highlighting",
 			Aliases: []string{"toggle syntax", "highlighting", "colors"},
 			Checked: func(e *Editor) bool { return e.showSyntax },

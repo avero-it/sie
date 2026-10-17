@@ -7,6 +7,7 @@ package tui
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/avero-it/sie/internal/core/ports"
 	"github.com/gdamore/tcell/v2"
@@ -63,13 +64,32 @@ func run(screen tcell.Screen, svc ports.EditorService, theme Theme) (err error) 
 	defer close(quit)
 	go screen.ChannelEvents(events, quit)
 
-	l.draw()
-	for !svc.Done() {
-		ev, ok := <-events
-		if !ok {
-			return nil
+	// While the view animates, a timer wakes the loop for the next frame.
+	// The channel is nil when idle, so an idle editor costs nothing.
+	var timer *time.Timer
+	var tick <-chan time.Time
+	frame := func(animate bool) {
+		if timer != nil {
+			timer.Stop()
 		}
-		l.handle(ev)
+		tick = nil
+		if animate {
+			timer = time.NewTimer(frameInterval)
+			tick = timer.C
+		}
+	}
+	frame(l.draw())
+	for !svc.Done() {
+		select {
+		case ev, ok := <-events:
+			if !ok {
+				return nil
+			}
+			l.handle(ev)
+		case <-tick:
+			frame(l.draw())
+			continue
+		}
 		// Coalesce: handle everything already queued, then draw once.
 	drain:
 		for !svc.Done() {
@@ -83,10 +103,13 @@ func run(screen tcell.Screen, svc ports.EditorService, theme Theme) (err error) 
 				break drain
 			}
 		}
-		l.draw()
+		frame(l.draw())
 	}
 	return nil
 }
+
+// frameInterval is the time between frames of an animation (about 30 fps).
+const frameInterval = 33 * time.Millisecond
 
 // loop holds the adapter state between events.
 type loop struct {
@@ -143,7 +166,10 @@ func (l *loop) collectPaste(ev *tcell.EventKey) {
 	}
 }
 
-func (l *loop) draw() {
+// draw paints one frame and reports whether the view is animating.
+func (l *loop) draw() bool {
 	l.svc.Poll()
-	paint(l.screen, l.svc.View(), l.theme)
+	vm := l.svc.View()
+	paint(l.screen, vm, l.theme)
+	return vm.Animate
 }

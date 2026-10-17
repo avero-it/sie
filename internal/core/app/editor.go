@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/avero-it/sie/internal/core/app/commands"
 	"github.com/avero-it/sie/internal/core/domain/buffer"
@@ -25,9 +26,11 @@ type Config struct {
 	DefaultEOL buffer.LineEnding
 	Version    string // shown by "About sie"
 
-	ShowInvisibles bool // mark spaces and tabs
-	ShowEmptyCells bool // mark cells holding no character
-	JumpLines      int  // lines moved by Alt+Up/Down; <= 0 means defaultJumpLines
+	ShowInvisibles bool             // mark spaces and tabs
+	ShowEmptyCells bool             // mark cells holding no character
+	ClickRipple    bool             // animate a wave on every click in the text
+	Now            func() time.Time // clock for animations; nil means time.Now
+	JumpLines      int              // lines moved by Alt+Up/Down; <= 0 means defaultJumpLines
 
 	Recent    ports.RecentFiles // optional; nil disables "Open recent…"
 	Validator ports.Validator   // optional; nil disables "Validate"
@@ -98,6 +101,8 @@ type Editor struct {
 
 	showInvisibles bool
 	showEmptyCells bool
+	clickRipple    bool
+	ripples        []ripple
 	showSyntax     bool
 	hl             highlightState
 	validateOnSave bool
@@ -119,6 +124,7 @@ func New(cfg Config) (*Editor, error) {
 
 		showInvisibles: cfg.ShowInvisibles,
 		showEmptyCells: cfg.ShowEmptyCells,
+		clickRipple:    cfg.ClickRipple,
 		showSyntax:     cfg.SyntaxHighlighting,
 		validateOnSave: cfg.ValidateOnSave,
 	}

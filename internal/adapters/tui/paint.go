@@ -55,11 +55,32 @@ func DefaultTheme() Theme {
 	}
 }
 
+// rippleRamp holds the tint backgrounds for levels 1 to 3. RGB values are
+// mapped by tcell to the nearest color on terminals with fewer colors.
+var rippleRamp = [...]tcell.Color{
+	tcell.NewRGBColor(0x1f, 0x3a, 0x5f),
+	tcell.NewRGBColor(0x2f, 0x5d, 0x8a),
+	tcell.NewRGBColor(0x4a, 0x8b, 0xc2),
+}
+
+// tint repaints one cell with a lighter background, keeping its text,
+// foreground and attributes.
+func tint(s tcell.Screen, t ports.Tint) {
+	if t.Level == 0 || int(t.Level) > len(rippleRamp) {
+		return
+	}
+	primary, combining, style, _ := s.GetContent(t.X, t.Y)
+	s.SetContent(t.X, t.Y, primary, combining, style.Background(rippleRamp[t.Level-1]))
+}
+
 // paint draws one frame: clear, runs in order, cursor, Show.
 func paint(s tcell.Screen, vm ports.ViewModel, theme Theme) {
 	s.Clear()
 	for _, r := range vm.Runs {
 		s.PutStrStyled(r.X, r.Y, r.Text, theme[r.Style])
+	}
+	for _, t := range vm.Tints {
+		tint(s, t)
 	}
 	if vm.Cursor.Visible {
 		s.ShowCursor(vm.Cursor.X, vm.Cursor.Y)
