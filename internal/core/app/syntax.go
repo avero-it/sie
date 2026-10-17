@@ -140,6 +140,7 @@ func shiftTokens(tokens []ports.Token, off, removed, inserted int) []ports.Token
 // Poll collects a finished highlight, if any.
 func (e *Editor) Poll() {
 	e.pruneRipples()
+	e.pruneGuide()
 	if e.cfg.Highlighter == nil {
 		return
 	}

@@ -21,6 +21,7 @@ type Settings struct {
 	ShowInvisibles bool   `mapstructure:"show_invisibles"`  // mark spaces and tabs
 	ShowEmptyCells bool   `mapstructure:"show_empty_cells"` // mark cells holding no character
 	ClickRipple    bool   `mapstructure:"click_ripple"`     // wave animation on clicks
+	IndentGuide    bool   `mapstructure:"indent_guide"`     // flash a guide when the line indent moves
 	LineEnding     string `mapstructure:"line_ending"`      // for new files: "lf" or "crlf"
 	JumpLines      int    `mapstructure:"jump_lines"`       // lines moved by Alt+Up/Down
 
@@ -66,6 +67,7 @@ func load(paths []string, mustExist bool) (Settings, []string, error) {
 	v.SetDefault("show_invisibles", d.ShowInvisibles)
 	v.SetDefault("show_empty_cells", d.ShowEmptyCells)
 	v.SetDefault("click_ripple", d.ClickRipple)
+	v.SetDefault("indent_guide", d.IndentGuide)
 	v.SetDefault("line_ending", d.LineEnding)
 	v.SetDefault("jump_lines", d.JumpLines)
 	v.SetDefault("syntax_highlighting", d.SyntaxHighlighting)

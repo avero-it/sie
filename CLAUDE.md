@@ -152,7 +152,7 @@ internal/adapters/
 
 - The prompt line is always a gray bar (`StylePromptBar`, palette bright black with white text), whether idle, showing a message or focused.
 - When there is no message it shows the idle text `write a command…`, with the prompt shortcut right-aligned (`StylePromptIdle`).
-- An echo, info or error stays until the next key, click or paste in editor focus (`clearMessage` in `HandleKey`/`HandleMouse`/`HandlePaste`), then the line goes back to idle. Redraws and resizes don't clear it, and there are no timers for messages (the click ripple is the only animation, see below).
+- An echo, info or error stays until the next key, click or paste in editor focus (`clearMessage` in `HandleKey`/`HandleMouse`/`HandlePaste`), then the line goes back to idle. Redraws and resizes don't clear it, and there are no timers for messages (the click ripple and the indent guide are the only animations, see below).
 - The status line starts with `sie <version> - `, where the version is `buildinfo.Info.Display()`: the release tag (`v0.2.1`) for tagged builds, otherwise `dev-<commit7>[+dirty]`. The left part is truncated with `…` so it never overlaps the right part.
 
 ### Prompt
@@ -185,6 +185,12 @@ internal/adapters/
 - `view.toggleClickRipple` ("Click ripple", ✓ option in the View menu, aliases `ripple`, `click effect`, `click highlight`, config `click_ripple`, default off). A left press in the text area (also Alt+click and column mode, never drags, menus or the prompt) starts a wave: three concentric elliptical rings (a column counts half a row, since cells are twice as tall as wide) spread to about 4 rows over 500 ms and fade. At most 3 waves live at once, and a wave finishes whatever happens to the text.
 - **Core:** `Config.Now` is the clock (nil means `time.Now`), and tests inject a fake one. `ripple.go` turns age and distance into a level 1-3 per cell (`rippleLevel`), clipped to the text rows. `View` adds them as `ViewModel.Tints` and sets `ViewModel.Animate` while any wave is alive. `Poll` drops finished waves.
 - **Adapter:** the painter draws the runs, then `tint` re-puts each tinted cell with a background from `rippleRamp` (RGB, so tcell picks the nearest color on small palettes), keeping its text, foreground and attributes. The loop selects on events and a frame timer (33 ms) that exists only while `Animate` is true, so an idle editor wakes for nothing.
+
+### Indent guide
+
+- `view.toggleIndentGuide` ("Indent guide", ✓ option in the View menu, aliases `alignment guide`, `indent flash`, config `indent_guide`, default off). When an edit moves the cursor line's *top* (the screen column of its first glyph that is not a space or tab, `editor.IndentCol`), a vertical guide is shown at that column over all text rows for 300 ms, to see how the line aligns with the others (Python, YAML).
+- **Trigger** (`trackIndent`, run after every input event next to `syncHighlight`): the document version changed, the cursor line has a top before and after, and the column differs. Moving the cursor and editing blank lines never fire it, and Enter's auto-indent fires only if the indent really changed. Undo and redo count.
+- **Drawing** (`drawGuide`, after the text and the ripple): a line whose top is at the guide column shows that glyph in reverse (`StyleGuideMatch`), other text at that column is only tinted (Tint level 4, gray background), and every other cell (short or blank lines, leading whitespace, rows past the end) shows `|` in `StyleGuide`. The guide uses `Animate` like the ripple and disappears in `Poll`.
 
 ### Multiple cursors
 

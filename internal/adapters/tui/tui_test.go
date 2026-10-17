@@ -321,7 +321,7 @@ func TestPaintTintKeepsTextAndForeground(t *testing.T) {
 	theme[ports.StyleKeyword] = tcell.StyleDefault.Foreground(tcell.ColorPurple).Bold(true)
 	vm := ports.ViewModel{
 		Runs:  []ports.Run{{X: 0, Y: 0, Text: "a世b", Style: ports.StyleKeyword}},
-		Tints: []ports.Tint{{X: 0, Y: 0, Level: 2}, {X: 1, Y: 0, Level: 3}, {X: 3, Y: 0, Level: 1}, {X: 5, Y: 1, Level: 3}},
+		Tints: []ports.Tint{{X: 0, Y: 0, Level: 2}, {X: 1, Y: 0, Level: 3}, {X: 3, Y: 0, Level: 1}, {X: 5, Y: 1, Level: 3}, {X: 7, Y: 0, Level: 4}},
 	}
 	paint(s, vm, theme)
 	s.Show()
@@ -337,11 +337,15 @@ func TestPaintTintKeepsTextAndForeground(t *testing.T) {
 		}
 	}
 	_, bg, _ := cells[0].Style.Decompose()
-	if bg != rippleRamp[1] {
-		t.Errorf("tinted background %v, want %v", bg, rippleRamp[1])
+	if bg != tintRamp[1] {
+		t.Errorf("tinted background %v, want %v", bg, tintRamp[1])
+	}
+	_, guide, _ := cells[7].Style.Decompose()
+	if guide != tintRamp[3] {
+		t.Errorf("guide tint background %v, want %v", guide, tintRamp[3])
 	}
 	_, plain, _ := cells[2].Style.Decompose()
-	if plain == rippleRamp[0] || plain == rippleRamp[1] || plain == rippleRamp[2] {
+	if plain == tintRamp[0] || plain == tintRamp[1] || plain == tintRamp[2] {
 		t.Errorf("untinted cell has a ripple background: %v", plain)
 	}
 }

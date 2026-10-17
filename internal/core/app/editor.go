@@ -28,6 +28,7 @@ type Config struct {
 
 	ShowInvisibles bool             // mark spaces and tabs
 	ShowEmptyCells bool             // mark cells holding no character
+	IndentGuide    bool             // flash a guide when the cursor line's indent moves
 	ClickRipple    bool             // animate a wave on every click in the text
 	Now            func() time.Time // clock for animations; nil means time.Now
 	JumpLines      int              // lines moved by Alt+Up/Down; <= 0 means defaultJumpLines
@@ -102,6 +103,9 @@ type Editor struct {
 	showInvisibles bool
 	showEmptyCells bool
 	clickRipple    bool
+	indentGuide    bool
+	indent         indentState
+	guide          guideState
 	ripples        []ripple
 	showSyntax     bool
 	hl             highlightState
@@ -125,6 +129,7 @@ func New(cfg Config) (*Editor, error) {
 		showInvisibles: cfg.ShowInvisibles,
 		showEmptyCells: cfg.ShowEmptyCells,
 		clickRipple:    cfg.ClickRipple,
+		indentGuide:    cfg.IndentGuide,
 		showSyntax:     cfg.SyntaxHighlighting,
 		validateOnSave: cfg.ValidateOnSave,
 	}
@@ -169,6 +174,7 @@ func (e *Editor) HandleKey(k ports.KeyEvent) {
 	}
 	e.follow()
 	e.syncHighlight()
+	e.trackIndent()
 }
 
 // HandlePaste inserts pasted text as one edit (one undo step).
@@ -186,13 +192,17 @@ func (e *Editor) HandlePaste(text string) {
 		e.follow()
 	}
 	e.syncHighlight()
+	e.trackIndent()
 }
 
 // Dispatch runs a command; it is the single entry point for shortcuts,
 // menus and the prompt. Missing arguments are asked for in the prompt.
 // Non-silent commands are echoed in the prompt line and kept in history.
 func (e *Editor) Dispatch(id string, args ...string) error {
-	defer e.syncHighlight()
+	defer func() {
+		e.syncHighlight()
+		e.trackIndent()
+	}()
 	c, ok := e.reg.Get(id)
 	if !ok {
 		err := fmt.Errorf("unknown command %q", id)

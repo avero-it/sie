@@ -37,6 +37,10 @@ const (
 	StyleEchoHint // shortcut shown right of the echo
 	StyleError
 	StyleStatus
+	// StyleGuide is the gray bar of the indent guide; StyleGuideMatch the
+	// first glyph of a line that starts at the guide column.
+	StyleGuide
+	StyleGuideMatch
 
 	// StyleCount is the number of styles (not a style); themes must cover all.
 	StyleCount
@@ -51,7 +55,7 @@ type Run struct {
 }
 
 // Tint lightens the background of one cell, keeping its text and foreground.
-// Level runs from 1 (faint) to 3 (strong).
+// Levels 1 to 3 are the ripple (faint to strong), 4 is the indent guide.
 type Tint struct {
 	X, Y  int
 	Level uint8

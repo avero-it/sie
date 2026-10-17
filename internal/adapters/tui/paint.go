@@ -52,25 +52,29 @@ func DefaultTheme() Theme {
 		ports.StyleEchoHint:    prompt.Foreground(tcell.ColorSilver),
 		ports.StyleError:       prompt.Foreground(tcell.ColorRed).Bold(true),
 		ports.StyleStatus:      bar,
+		ports.StyleGuide:       d.Foreground(tcell.ColorGray),
+		ports.StyleGuideMatch:  d.Reverse(true),
 	}
 }
 
-// rippleRamp holds the tint backgrounds for levels 1 to 3. RGB values are
+// tintRamp holds the tint backgrounds: levels 1 to 3 for the ripple, 4 for
+// the indent guide. RGB values are
 // mapped by tcell to the nearest color on terminals with fewer colors.
-var rippleRamp = [...]tcell.Color{
+var tintRamp = [...]tcell.Color{
 	tcell.NewRGBColor(0x1f, 0x3a, 0x5f),
 	tcell.NewRGBColor(0x2f, 0x5d, 0x8a),
 	tcell.NewRGBColor(0x4a, 0x8b, 0xc2),
+	tcell.NewRGBColor(0x44, 0x44, 0x44),
 }
 
 // tint repaints one cell with a lighter background, keeping its text,
 // foreground and attributes.
 func tint(s tcell.Screen, t ports.Tint) {
-	if t.Level == 0 || int(t.Level) > len(rippleRamp) {
+	if t.Level == 0 || int(t.Level) > len(tintRamp) {
 		return
 	}
 	primary, combining, style, _ := s.GetContent(t.X, t.Y)
-	s.SetContent(t.X, t.Y, primary, combining, style.Background(rippleRamp[t.Level-1]))
+	s.SetContent(t.X, t.Y, primary, combining, style.Background(tintRamp[t.Level-1]))
 }
 
 // paint draws one frame: clear, runs in order, cursor, Show.

@@ -159,6 +159,7 @@ tab_width: 4            # 1–16
 show_invisibles: false  # mark spaces (␣) and tabs (»)
 show_empty_cells: true  # mark cells holding no character (·)
 click_ripple: false     # a wave animation on every click in the text
+indent_guide: false     # briefly show a vertical guide when a line's indent moves
 line_ending: lf         # for new files: lf or crlf
 jump_lines: 5           # lines moved by Alt+↑/↓ (1–100)
 syntax_highlighting: true

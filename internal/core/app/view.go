@@ -99,6 +99,7 @@ func (e *Editor) HandleMouse(m ports.MouseEvent) {
 	}
 	e.handleMouse(m)
 	e.syncHighlight()
+	e.trackIndent()
 }
 
 func (e *Editor) handleMouse(m ports.MouseEvent) {
@@ -246,6 +247,7 @@ func (e *Editor) View() ports.ViewModel {
 	e.drawMenuBar(vm, r)
 	e.drawText(vm, r)
 	e.drawRipples(vm, r)
+	e.drawGuide(vm, r)
 	e.drawStatus(vm, r)
 	e.drawPrompt(vm, r)
 	switch {

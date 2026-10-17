@@ -198,3 +198,26 @@ func TestWordAndLineRange(t *testing.T) {
 		}
 	}
 }
+
+func TestIndentCol(t *testing.T) {
+	tests := []struct {
+		line string
+		col  int
+		ok   bool
+	}{
+		{"", 0, false},
+		{"    ", 0, false},
+		{"foo", 0, true},
+		{"    foo", 4, true},
+		{"\tfoo", 4, true},
+		{"  \tfoo", 4, true},
+		{" 世", 1, true},
+		{"  \x01", 2, true},
+	}
+	for _, tt := range tests {
+		col, ok := IndentCol([]byte(tt.line), 4)
+		if col != tt.col || ok != tt.ok {
+			t.Errorf("IndentCol(%q) = %d,%v want %d,%v", tt.line, col, ok, tt.col, tt.ok)
+		}
+	}
+}

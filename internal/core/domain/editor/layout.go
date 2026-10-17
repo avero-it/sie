@@ -181,3 +181,14 @@ func classOf(cluster []byte) charClass {
 		return classPunct
 	}
 }
+
+// IndentCol returns the screen column of the first glyph of line that is not
+// a space or tab, and false when the line is blank.
+func IndentCol(line []byte, tabWidth int) (int, bool) {
+	for _, g := range Layout(line, tabWidth) {
+		if g.Kind != GlyphSpace && g.Kind != GlyphTab {
+			return g.Col, true
+		}
+	}
+	return 0, false
+}
