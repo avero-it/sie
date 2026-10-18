@@ -33,34 +33,270 @@
       <a class="btn alt" href="https://github.com/avero-it/sie">View on GitHub</a>
     </div>
 
-    <div class="term" id="demo" role="img" aria-label="Animated demo of sie editing a YAML file: typing, selecting a word and a line, the indent guide, and the command echo">
-<pre>┌ File  Edit  Selection  Search  View  Help ──────────────┐
-│  1 package main                                         │
-│  2                                                      │
-│  3 func main() {█                                       │
-│ > Save file — wrote 3 lines                     Ctrl+S  │
-│ main.go   Ln 3, Col 14   UTF-8   LF                     │
-└─────────────────────────────────────────────────────────┘</pre>
-    </div>
-    <p class="caption" id="demo-caption" aria-live="off"></p>
+    <figure class="demo hero-demo">
+      <div class="term" data-demo="hero" role="img" aria-label="Animated demo of sie editing a YAML file: typing, selecting a word and a line, the indent guide, and the command echo"><div class="screen"><pre> File  Edit  Selection  Search  View  Help
+ 1 server:············································
+ 2   host: localhost··································
+ 3   port: 8080·······································
+ 4   tls:·············································
+ 5     enabled: true··································
+ 6     cert: /etc/ssl/sie.pem·························
+   ···················································
+   ···················································
+   ···················································
+&gt; Save file — wrote 6 lines                    Ctrl+S
+sie v0.9.0 - demo.ya… Ln 5, Col 5   YAML   UTF-8   LF</pre></div></div>
+      <div class="keystrip" aria-hidden="true"></div>
+      <p class="caption" aria-live="off"></p>
+    </figure>
   </div>
 </div>
 
 <section id="features" class="alt">
   <div class="wrap">
     <h2>Everything in reach, nothing to learn first</h2>
-    <p class="sub">Three ways to run any command: a shortcut, the menu bar, or the prompt. The prompt always shows the shortcut, so you pick them up as you go.</p>
-    <div class="grid">
-      <div class="card"><h3>Modeless</h3><p>No modes, no leader keys. Arrows, <kbd>Ctrl+S</kbd>, <kbd>Ctrl+Z</kbd> and the mouse work the way you expect.</p></div>
-      <div class="card"><h3>Command prompt</h3><p>Fuzzy-find any command: <code>goto 42</code>, <code>find foo</code>, <code>trim sel</code>. Your recent commands come first.</p></div>
-      <div class="card"><h3>Multiple cursors</h3><p>Alt+click adds a cursor. Alt+drag or column mode selects a rectangle. Undo restores all of them.</p></div>
-      <div class="card"><h3>Mouse that helps</h3><p>Double-click selects a word, triple-click a line, and dragging extends by word or line.</p></div>
-      <div class="card"><h3>Validation</h3><p>Checks JSON, YAML, TOML and XML, jumps to the first error, and asks before saving a broken file.</p></div>
-      <div class="card"><h3>Syntax highlighting</h3><p>Every language chroma knows, colored in the background so typing never waits.</p></div>
-      <div class="card"><h3>Careful with your files</h3><p>LF and CRLF kept, BOM kept, invalid UTF-8 never corrupted, saves are atomic. Cursor moves by grapheme.</p></div>
-      <div class="card"><h3>Visual helpers</h3><p>Optional click ripple and an indent guide that flashes how a line lines up. Great for Python and YAML.</p></div>
-      <div class="card"><h3>One binary</h3><p>Pure Go, <code>CGO_ENABLED=0</code>, six targets: Linux, macOS and Windows on amd64 and arm64.</p></div>
-    </div>
+    <p class="sub">Three ways to run any command: a shortcut, the menu bar, or the prompt. The prompt always shows the shortcut, so you pick them up as you go. Each demo below plays when you scroll to it.</p>
+    <article class="feature">
+      <div class="ftext">
+        <h3>Modeless</h3>
+        <p>No modes and no leader keys. Arrows, <kbd>Ctrl+S</kbd> and <kbd>Ctrl+Z</kbd> work the way you expect, and so does the mouse.</p>
+        <p class="keys"><kbd>Ctrl+S</kbd> save · <kbd>Ctrl+Z</kbd> undo · <kbd>Ctrl+Y</kbd> redo</p>
+      </div>
+      <figure class="demo">
+        <div class="term" data-demo="modeless" role="img" aria-label="Typing, moving with the arrow keys, undo, redo and save in a YAML file"><div class="screen"><pre> File  Edit  Selection  Search  View  Help
+ 1 title: sie·······································
+ 2 author: you······································
+ 3 tags: 3 ·········································
+   ·················································
+   ·················································
+   ·················································
+   ·················································
+   ·················································
+&gt; Save file — wrote 3 lines                  Ctrl+S
+sie v0.9.0 - notes… Ln 3, Col 8   YAML   UTF-8   LF</pre></div></div>
+        <div class="keystrip" aria-hidden="true"></div>
+        <p class="caption" aria-live="off"></p>
+      </figure>
+    </article>
+    <article class="feature">
+      <div class="ftext">
+        <h3>Command prompt</h3>
+        <p>Press <kbd>Ctrl+Alt+P</kbd> and type part of any command: <code>goto 42</code>, <code>find foo</code>, <code>trim sel</code>. Matching is fuzzy, shortcuts are shown, and your recent commands come first. Every command also lives in the menus (<kbd>Ctrl+Alt+M</kbd>).</p>
+        <p class="keys"><kbd>Ctrl+Alt+P</kbd> prompt · <kbd>Ctrl+Alt+M</kbd> menus</p>
+      </div>
+      <figure class="demo">
+        <div class="term" data-demo="prompt" role="img" aria-label="The command prompt with a fuzzy list of commands, running Trim trailing spaces and Go to line"><div class="screen"><pre> File  Edit  Selection  Search  View  Help
+ 1 x␣=␣1␣␣␣·········································
+ 2 y␣=␣2␣␣··········································
+ 3 z␣=␣3············································
+   ·················································
+   ·················································
+   ·················································
+   ·················································
+  Trim trailing spaces
+&gt; trim
+sie v0.9.0 - note… Ln 3, Col 6   Plain   UTF-8   LF</pre></div></div>
+        <div class="keystrip" aria-hidden="true"></div>
+        <p class="caption" aria-live="off"></p>
+      </figure>
+    </article>
+    <article class="feature">
+      <div class="ftext">
+        <h3>Open recent</h3>
+        <p><kbd>Ctrl+E</kbd> lists the files you opened or saved, newest first. Type a few letters of the path to filter them, and Enter opens the best match.</p>
+        <p class="keys"><kbd>Ctrl+E</kbd> open recent · <kbd>Ctrl+O</kbd> open</p>
+      </div>
+      <figure class="demo">
+        <div class="term" data-demo="recent" role="img" aria-label="Open recent: typing todo selects notes/todo.txt, which then opens"><div class="screen"><pre> File  Edit  Selection  Search  View  Help
+ 1 ·················································
+   ·················································
+   ·················································
+   ·················································
+   ·················································
+   ·················································
+   ·················································
+  notes/todo.txt
+Open recent: todo
+sie v0.9.0 - [No … Ln 1, Col 1   Plain   UTF-8   LF</pre></div></div>
+        <div class="keystrip" aria-hidden="true"></div>
+        <p class="caption" aria-live="off"></p>
+      </figure>
+    </article>
+    <article class="feature">
+      <div class="ftext">
+        <h3>Multiple cursors</h3>
+        <p><kbd>Alt</kbd>+click adds a cursor, and <kbd>Alt</kbd>+drag (or column mode, <kbd>Ctrl+U</kbd>) selects a rectangle. Typing, Backspace, Delete, paste and undo then act on all of them at once.</p>
+        <p class="keys"><kbd>Alt+click</kbd> add a cursor · <kbd>Alt+drag</kbd> rectangle · <kbd>Ctrl+U</kbd> column mode</p>
+      </div>
+      <figure class="demo">
+        <div class="term" data-demo="multicursor" role="img" aria-label="Three cursors typing a semicolon at once, then a rectangle selection deleting a column of bullets"><div class="screen"><pre> File  Edit  Selection  Search  View  Help
+ 1 - alpha; ········································
+ 2 - beta; ·········································
+ 3 - gamma; ········································
+   ·················································
+   ·················································
+   ·················································
+   ·················································
+   ·················································
+write a command…                         Ctrl+Alt+P
+sie v… Ln 3, Col 9 (3 cursors)   Plain   UTF-8   LF</pre></div></div>
+        <div class="keystrip" aria-hidden="true"></div>
+        <p class="caption" aria-live="off"></p>
+      </figure>
+    </article>
+    <article class="feature">
+      <div class="ftext">
+        <h3>Mouse that helps</h3>
+        <p>Double-click selects a word and triple-click a line. Drag afterwards to extend by whole words or lines. <kbd>Shift</kbd>+click extends a selection, and the wheel scrolls.</p>
+        <p class="keys">double-click word · triple-click line</p>
+      </div>
+      <figure class="demo">
+        <div class="term" data-demo="mouse" role="img" aria-label="Double-click selecting a word, triple-click selecting a line, and dragging by words"><div class="screen"><pre> File  Edit  Selection  Search  View  Help
+ 1 the quick brown fox ·····························
+ 2 jumps over the lazy dog··························
+ 3 and runs away····································
+   ·················································
+   ·················································
+   ·················································
+   ·················································
+   ·················································
+write a command…                         Ctrl+Alt+P
+sie v0.9.0 - sto… Ln 2, Col 11   Plain   UTF-8   LF</pre></div></div>
+        <div class="keystrip" aria-hidden="true"></div>
+        <p class="caption" aria-live="off"></p>
+      </figure>
+    </article>
+    <article class="feature">
+      <div class="ftext">
+        <h3>Find and replace</h3>
+        <p><kbd>Ctrl+R</kbd> asks what to replace and with what, then asks about each match: y, n, a (all) or q (quit). The whole session is one undo step. <code>replace all a b</code> in the prompt does it in one go.</p>
+        <p class="keys"><kbd>Ctrl+F</kbd> find · <kbd>Ctrl+R</kbd> replace</p>
+      </div>
+      <figure class="demo">
+        <div class="term" data-demo="replace" role="img" aria-label="Interactive replace answering yes, no, yes, then undoing the whole replacement"><div class="screen"><pre> File  Edit  Selection  Search  View  Help
+ 1 bar bar··········································
+ 2 foo baz··········································
+ 3 foo qux··········································
+   ·················································
+   ·················································
+   ·················································
+   ·················································
+   ·················································
+Replace "foo" with "bar"? (y/n/a/q)
+sie v0.9.0 - todo… Ln 2, Col 4   Plain   UTF-8   LF</pre></div></div>
+        <div class="keystrip" aria-hidden="true"></div>
+        <p class="caption" aria-live="off"></p>
+      </figure>
+    </article>
+    <article class="feature">
+      <div class="ftext">
+        <h3>Validation</h3>
+        <p><kbd>Ctrl+T</kbd> checks JSON, YAML, TOML and XML and jumps to the first problem with its line and column. Saving a broken file asks first: validate, save anyway, or cancel.</p>
+        <p class="keys"><kbd>Ctrl+T</kbd> validate</p>
+      </div>
+      <figure class="demo">
+        <div class="term" data-demo="validate" role="img" aria-label="Validating a JSON file with a missing comma, fixing it, then a save warning when it is broken again"><div class="screen"><pre> File  Edit  Selection  Search  View  Help
+ 1 {··················································
+ 2   "name": "sie"····································
+ 3   "port": 8080·····································
+ 4 }··················································
+   ···················································
+   ···················································
+   ···················································
+   ···················································
+Validate: line 3, col 3: invalid character '"' after …
+sie v0.9.0 - config.… Ln 3, Col 3   JSON   UTF-8   LF</pre></div></div>
+        <div class="keystrip" aria-hidden="true"></div>
+        <p class="caption" aria-live="off"></p>
+      </figure>
+    </article>
+    <article class="feature">
+      <div class="ftext">
+        <h3>Syntax highlighting</h3>
+        <p>Every language chroma knows, chosen by file name. Coloring runs in the background, so typing never waits for it. Turn it off, or pick the language yourself, from the View menu or the prompt.</p>
+        <p class="keys"><code>language yaml</code> · View → Syntax highlighting</p>
+      </div>
+      <figure class="demo">
+        <div class="term" data-demo="syntax" role="img" aria-label="Go code appearing, then colors settling, then highlighting switched off and on"><div class="screen"><pre> File  Edit  Selection  Search  View  Help
+ 1 package main·····································
+ 2 ·················································
+ 3 import "fmt"·····································
+ 4 ·················································
+ 5 // greet says hello.·····························
+ 6 func greet(name string) {························
+ 7     fmt.Println("hi,", name, 42)·················
+ 8 } ···············································
+write a command…                         Ctrl+Alt+P
+sie v0.9.0 - main.go  Ln 8, Col 2   Go   UTF-8   LF</pre></div></div>
+        <div class="keystrip" aria-hidden="true"></div>
+        <p class="caption" aria-live="off"></p>
+      </figure>
+    </article>
+    <article class="feature">
+      <div class="ftext">
+        <h3>Careful with your files</h3>
+        <p>LF and CRLF endings are kept, a BOM is kept, and invalid UTF-8 never corrupts a file: the bytes round-trip unchanged. Saves are atomic, and the cursor moves by grapheme, not by byte.</p>
+        <p class="keys">UTF-8 · BOM · LF / CRLF</p>
+      </div>
+      <figure class="demo">
+        <div class="term" data-demo="files" role="img" aria-label="A Windows file with a BOM: visible control characters, whitespace markers, and a save that keeps CRLF"><div class="screen"><pre> File  Edit  Selection  Search  View  Help
+ 1 hello␣␣world·····································
+ 2 »   second^A�····································
+ 3 ·················································
+   ·················································
+   ·················································
+   ·················································
+   ·················································
+   ·················································
+&gt; ✓ Invisible characters — shown
+sie v0.9.0 … Ln 1, Col 1   Plain   UTF-8 BOM   CRLF</pre></div></div>
+        <div class="keystrip" aria-hidden="true"></div>
+        <p class="caption" aria-live="off"></p>
+      </figure>
+    </article>
+    <article class="feature">
+      <div class="ftext">
+        <h3>Visual helpers</h3>
+        <p>Two optional effects: a click ripple that shows where you clicked, and an indent guide that flashes when a line's indent moves, to see what it lines up with. Great for Python and YAML.</p>
+        <p class="keys"><code>click_ripple</code> · <code>indent_guide</code></p>
+      </div>
+      <figure class="demo">
+        <div class="term" data-demo="visual" role="img" aria-label="The click ripple spreading over text, then the indent guide flashing after an indent change"><div class="screen"><pre> File  Edit  Selection  Search  View  Help
+ 1 server:··········································
+ 2   host: localhost································
+ 3   port: 8080·····································
+ 4   tls:···········································
+ 5   enabled: true··································
+ 6     cert: /etc/ssl/sie.pem·······················
+   ·················································
+   ·················································
+write a command…                         Ctrl+Alt+P
+sie v0.9.0 - demo.… Ln 5, Col 3   YAML   UTF-8   LF</pre></div></div>
+        <div class="keystrip" aria-hidden="true"></div>
+        <p class="caption" aria-live="off"></p>
+      </figure>
+    </article>
+    <article class="feature">
+      <div class="ftext">
+        <h3>One binary</h3>
+        <p>Pure Go with <code>CGO_ENABLED=0</code>: one static file for Linux, macOS and Windows on amd64 and arm64. No runtime, no libraries, nothing to install on the server.</p>
+        <p class="keys">Linux · macOS · Windows · amd64 · arm64</p>
+      </div>
+      <figure class="demo">
+        <div class="term" data-demo="binary" role="img" aria-label="A shell session: listing the binary, showing it is statically linked, and running it on a server"><div class="screen"><pre>$ ls -lh sie
+-rwxr-xr-x 1 you you 11M Oct 18 18:50 sie
+$ ldd sie
+        not a dynamic executable
+$ ssh server sie version | head -1
+sie v0.9.0
+
+
+
+</pre></div></div>
+        <div class="keystrip" aria-hidden="true"></div>
+        <p class="caption" aria-live="off"></p>
+      </figure>
+    </article>
   </div>
 </section>
 
@@ -183,7 +419,8 @@ validate_on_save: true  # check JSON/YAML/TOML/XML before saving</pre></div>
   </div>
 </footer>
 
-<script src="demo.js" defer></script>
+<script src="sie-screen.js" defer></script>
+<script src="demos.js" defer></script>
 <script>
 // Copy buttons for code blocks (progressive enhancement).
 document.querySelectorAll("pre.code").forEach(function (pre) {
