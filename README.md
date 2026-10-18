@@ -2,6 +2,8 @@
 
 **sie** stands for **siMPLE eDITOR**: the lowercase letters spell its name.
 
+Website: <https://avero-it.github.io/sie/>.
+
 A small, modeless terminal text editor written in Go. It ships as a single static binary for Linux, Windows and macOS, with no C dependencies.
 
 ```
@@ -82,19 +84,19 @@ There are three ways to run every command:
 2. **Menus**: `Ctrl+Alt+M`, or click the menu bar.
 3. **Command prompt**: `Ctrl+Alt+P`, then type part of a command's name, such as `trim sel`, `goto 42` or `find foo`. With an empty prompt, your recent commands are listed first.
 
-Whichever way you run a command, its name and shortcut appear in the prompt line.
+Whichever way you run a command, its name and shortcut appear in the prompt line. *Replace all* has no shortcut: type `replace all <text> <with>` in the prompt.
 
 | Key | Command | Key | Command |
 |---|---|---|---|
 | Ctrl+N | New | Ctrl+F | Find |
 | Ctrl+E | Open recent (fuzzy search) | Ctrl+W | Close file |
 | Ctrl+T | Validate (JSON, YAML, TOML, XML) | Ctrl+U | Column selection (on/off) |
-| Ctrl+O | Open | Ctrl+R | Replace all |
+| Ctrl+O | Open | Ctrl+R | Replace… (asks y/n/a/q per match) |
 | Ctrl+S | Save | Ctrl+G | Go to line |
 | Ctrl+Q | Quit | Ctrl+D | Duplicate line |
 | Ctrl+Z / Ctrl+Y | Undo / Redo | Ctrl+K | Delete line |
 | Ctrl+X / C / V | Cut / Copy / Paste | Ctrl+L | Select line |
-| Ctrl+A | Select all | Ctrl+R | Replace… (asks y/n/a/q per match) |
+| Ctrl+A | Select all | | |
 | **Ctrl+Alt+P** | Command prompt | **Ctrl+Alt+M** | Menus |
 | Esc | Back to the editor | | |
 

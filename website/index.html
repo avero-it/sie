@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>sie – a simple terminal editor</title>
+<meta name="description" content="sie (siMPLE eDITOR) is a small, modeless terminal text editor written in Go: one static binary for Linux, macOS and Windows.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#">sie</a>
+    <nav>
+      <a href="#features">Features</a>
+      <a href="#install">Install</a>
+      <a href="#keys">Keys</a>
+      <a href="#config">Config</a>
+      <a href="https://github.com/avero-it/sie">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<div class="wrap">
+  <div class="hero">
+    <p><a class="badge" href="https://github.com/avero-it/sie/releases/tag/__VERSION__">__VERSION__</a></p>
+    <h1>The editor that doesn’t get in your way</h1>
+    <p class="lead"><strong>sie</strong> stands for <strong>siMPLE eDITOR</strong>. A small, modeless terminal editor in Go: open a file, type, save. One static binary for Linux, macOS and Windows, with no C dependencies.</p>
+    <div class="actions">
+      <a class="btn" href="#install">Install</a>
+      <a class="btn alt" href="https://github.com/avero-it/sie">View on GitHub</a>
+    </div>
+
+    <div class="term" id="demo" role="img" aria-label="Animated demo of sie editing a YAML file: typing, selecting a word and a line, the indent guide, and the command echo">
+<pre>┌ File  Edit  Selection  Search  View  Help ──────────────┐
+│  1 package main                                         │
+│  2                                                      │
+│  3 func main() {█                                       │
+│ > Save file — wrote 3 lines                     Ctrl+S  │
+│ main.go   Ln 3, Col 14   UTF-8   LF                     │
+└─────────────────────────────────────────────────────────┘</pre>
+    </div>
+    <p class="caption" id="demo-caption" aria-live="off"></p>
+  </div>
+</div>
+
+<section id="features" class="alt">
+  <div class="wrap">
+    <h2>Everything in reach, nothing to learn first</h2>
+    <p class="sub">Three ways to run any command: a shortcut, the menu bar, or the prompt. The prompt always shows the shortcut, so you pick them up as you go.</p>
+    <div class="grid">
+      <div class="card"><h3>Modeless</h3><p>No modes, no leader keys. Arrows, <kbd>Ctrl+S</kbd>, <kbd>Ctrl+Z</kbd> and the mouse work the way you expect.</p></div>
+      <div class="card"><h3>Command prompt</h3><p>Fuzzy-find any command: <code>goto 42</code>, <code>find foo</code>, <code>trim sel</code>. Your recent commands come first.</p></div>
+      <div class="card"><h3>Multiple cursors</h3><p>Alt+click adds a cursor. Alt+drag or column mode selects a rectangle. Undo restores all of them.</p></div>
+      <div class="card"><h3>Mouse that helps</h3><p>Double-click selects a word, triple-click a line, and dragging extends by word or line.</p></div>
+      <div class="card"><h3>Validation</h3><p>Checks JSON, YAML, TOML and XML, jumps to the first error, and asks before saving a broken file.</p></div>
+      <div class="card"><h3>Syntax highlighting</h3><p>Every language chroma knows, colored in the background so typing never waits.</p></div>
+      <div class="card"><h3>Careful with your files</h3><p>LF and CRLF kept, BOM kept, invalid UTF-8 never corrupted, saves are atomic. Cursor moves by grapheme.</p></div>
+      <div class="card"><h3>Visual helpers</h3><p>Optional click ripple and an indent guide that flashes how a line lines up. Great for Python and YAML.</p></div>
+      <div class="card"><h3>One binary</h3><p>Pure Go, <code>CGO_ENABLED=0</code>, six targets: Linux, macOS and Windows on amd64 and arm64.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap">
+    <h2>Install</h2>
+    <p class="sub">Latest release: <a href="https://github.com/avero-it/sie/releases/tag/__VERSION__">__VERSION__</a>.</p>
+    <div class="install">
+
+      <div class="card">
+        <h3>Homebrew <small>macOS, Linux</small></h3>
+        <div class="codebox"><pre class="code">brew install --cask avero-it/tap/sie</pre></div>
+      </div>
+
+      <div class="card">
+        <h3>Scoop <small>Windows</small></h3>
+        <div class="codebox"><pre class="code">scoop bucket add avero-it https://github.com/avero-it/scoop-bucket
+scoop install sie</pre></div>
+      </div>
+
+      <div class="card">
+        <h3>apt <small>Debian, Ubuntu · amd64, arm64</small></h3>
+        <div class="codebox"><pre class="code">sudo curl -fsSL https://avero-it.github.io/sie/sie.gpg -o /usr/share/keyrings/sie.gpg
+echo "deb [signed-by=/usr/share/keyrings/sie.gpg] https://avero-it.github.io/sie stable main" | sudo tee /etc/apt/sources.list.d/sie.list
+sudo apt update &amp;&amp; sudo apt install sie</pre></div>
+        <p class="sub" style="margin:8px 0 0">The repository is signed and updated with every release; after that, <code>sudo apt upgrade</code> keeps sie current.</p>
+      </div>
+
+      <div class="card">
+        <h3>deb, rpm, apk <small>Linux packages</small></h3>
+        <p class="sub" style="margin:0">Download from the <a href="https://github.com/avero-it/sie/releases/latest">releases page</a>, then:</p>
+        <div class="codebox"><pre class="code">sudo apt install ./sie_&lt;version&gt;_linux_amd64.deb
+sudo dnf install ./sie_&lt;version&gt;_linux_amd64.rpm
+sudo apk add --allow-untrusted ./sie_&lt;version&gt;_linux_amd64.apk</pre></div>
+      </div>
+
+      <div class="card">
+        <h3>Go <small>Go installed</small></h3>
+        <div class="codebox"><pre class="code">go install github.com/avero-it/sie/cmd/sie@latest</pre></div>
+      </div>
+
+      <div class="card">
+        <h3>Binaries</h3>
+        <p class="sub" style="margin:0">Pick the archive for your platform on the <a href="https://github.com/avero-it/sie/releases/latest">releases page</a>, unpack it and put <code>sie</code> (<code>sie.exe</code> on Windows) on your <code>PATH</code>. SHA-256 sums are in <code>checksums.txt</code>. On macOS, allow a browser-downloaded binary once:</p>
+        <div class="codebox"><pre class="code">xattr -d com.apple.quarantine ./sie</pre></div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section id="keys" class="alt">
+  <div class="wrap">
+    <h2>Keys</h2>
+    <p class="sub">Start with <code>sie [file]</code>. Hold <kbd>Shift</kbd> with any movement key to select.</p>
+    <div class="two">
+      <div class="tablewrap">
+        <table>
+          <tr><th>Key</th><th>Command</th></tr>
+          <tr><td><kbd>Ctrl+N</kbd></td><td>New</td></tr>
+          <tr><td><kbd>Ctrl+O</kbd></td><td>Open</td></tr>
+          <tr><td><kbd>Ctrl+E</kbd></td><td>Open recent (fuzzy search)</td></tr>
+          <tr><td><kbd>Ctrl+S</kbd></td><td>Save</td></tr>
+          <tr><td><kbd>Ctrl+W</kbd></td><td>Close file</td></tr>
+          <tr><td><kbd>Ctrl+Q</kbd></td><td>Quit</td></tr>
+          <tr><td><kbd>Ctrl+Z</kbd> / <kbd>Ctrl+Y</kbd></td><td>Undo / Redo</td></tr>
+          <tr><td><kbd>Ctrl+X</kbd> <kbd>C</kbd> <kbd>V</kbd></td><td>Cut / Copy / Paste</td></tr>
+          <tr><td><kbd>Ctrl+A</kbd></td><td>Select all</td></tr>
+          <tr><td><kbd>Ctrl+T</kbd></td><td>Validate (JSON, YAML, TOML, XML)</td></tr>
+        </table>
+      </div>
+      <div class="tablewrap">
+        <table>
+          <tr><th>Key</th><th>Command</th></tr>
+          <tr><td><kbd>Ctrl+F</kbd></td><td>Find</td></tr>
+          <tr><td><kbd>Ctrl+R</kbd></td><td>Replace… (asks y/n/a/q per match)</td></tr>
+          <tr><td><kbd>Ctrl+G</kbd></td><td>Go to line</td></tr>
+          <tr><td><kbd>Ctrl+D</kbd></td><td>Duplicate line</td></tr>
+          <tr><td><kbd>Ctrl+K</kbd></td><td>Delete line</td></tr>
+          <tr><td><kbd>Ctrl+L</kbd></td><td>Select line</td></tr>
+          <tr><td><kbd>Ctrl+U</kbd></td><td>Column selection (on/off)</td></tr>
+          <tr><td><kbd>Ctrl+Alt+P</kbd></td><td>Command prompt</td></tr>
+          <tr><td><kbd>Ctrl+Alt+M</kbd></td><td>Menus</td></tr>
+          <tr><td><kbd>Esc</kbd></td><td>Back to the editor</td></tr>
+        </table>
+      </div>
+    </div>
+    <p class="sub" style="margin-top:16px">Move by word with <kbd>Alt+←/→</kbd> or <kbd>Ctrl+←/→</kbd>, by <code>jump_lines</code> lines with <kbd>Alt+↑/↓</kbd>, to the line ends with <kbd>Home</kbd>/<kbd>End</kbd> and to the file ends with <kbd>Ctrl+Home</kbd>/<kbd>End</kbd>. Add a cursor with <kbd>Alt+click</kbd>.</p>
+  </div>
+</section>
+
+<section id="config">
+  <div class="wrap">
+    <h2>Configuration</h2>
+    <p class="sub">sie reads <code>/etc/sie/config.yaml</code> and then <code>~/.sie/config.yaml</code>; keys in your file win. <code>SIE_*</code> environment variables override both. <code>sie config</code> prints the effective settings.</p>
+    <div class="codebox"><pre class="code">tab_width: 4            # 1–16
+show_invisibles: false  # mark spaces (␣) and tabs (»)
+show_empty_cells: true  # mark cells holding no character (·)
+click_ripple: false     # a wave animation on every click in the text
+indent_guide: false     # briefly show a vertical guide when a line's indent moves
+line_ending: lf         # for new files: lf or crlf
+jump_lines: 5           # lines moved by Alt+↑/↓ (1–100)
+syntax_highlighting: true
+syntax_max_size: 2MB    # larger files are not colored
+validate_on_save: true  # check JSON/YAML/TOML/XML before saving</pre></div>
+    <h3 style="margin-top:24px">Terminal notes</h3>
+    <ul class="sub">
+      <li><strong>macOS:</strong> <kbd>Ctrl+Alt</kbd> and <kbd>Alt+click</kbd> need Option to act as Meta (Terminal.app: <em>Use Option as Meta key</em>; iTerm2: Left Option key = <em>Esc+</em>).</li>
+      <li><strong>Windows:</strong> <kbd>Ctrl+Alt</kbd> is AltGr on many layouts; sie types the character unless that exact combination is bound.</li>
+      <li><strong>Clipboard:</strong> copy goes through the terminal (OSC 52, also over SSH) and the native clipboard.</li>
+    </ul>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>sie __VERSION__ · MIT © 2026 Simone Baglioni</span>
+    <span><a href="https://github.com/avero-it/sie">Source</a> · <a href="https://github.com/avero-it/sie/releases">Releases</a> · <a href="https://github.com/avero-it/sie#readme">Full documentation</a></span>
+  </div>
+</footer>
+
+<script src="demo.js" defer></script>
+<script>
+// Copy buttons for code blocks (progressive enhancement).
+document.querySelectorAll("pre.code").forEach(function (pre) {
+  if (!navigator.clipboard) return;
+  var b = document.createElement("button");
+  b.className = "copy";
+  b.type = "button";
+  b.textContent = "Copy";
+  b.addEventListener("click", function () {
+    navigator.clipboard.writeText(pre.textContent).then(function () {
+      b.textContent = "Copied";
+      setTimeout(function () { b.textContent = "Copy"; }, 1500);
+    }, function () {});
+  });
+  pre.parentNode.appendChild(b);
+});
+</script>
+</body>
+</html>

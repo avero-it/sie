@@ -60,17 +60,4 @@ gpg --batch --yes --pinentry-mode loopback --default-key "$fpr" \
 gpg --batch --export "$fpr" > sie.gpg
 gpg --batch --armor --export "$fpr" > sie.asc
 
-cat > index.html <<HTML
-<!doctype html>
-<meta charset="utf-8">
-<title>sie apt repository</title>
-<h1>sie apt repository</h1>
-<p><a href="https://github.com/avero-it/sie">sie</a> (siMPLE eDITOR) for Debian and Ubuntu, amd64 and arm64.</p>
-<pre>
-sudo curl -fsSL $base_url/sie.gpg -o /usr/share/keyrings/sie.gpg
-echo "deb [signed-by=/usr/share/keyrings/sie.gpg] $base_url stable main" | sudo tee /etc/apt/sources.list.d/sie.list
-sudo apt update &amp;&amp; sudo apt install sie
-</pre>
-HTML
-
 echo "built apt repository in $out with $(ls pool/main/s/sie | wc -l) package file(s), key $fpr"

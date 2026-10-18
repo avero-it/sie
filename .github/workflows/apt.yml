@@ -1,7 +1,8 @@
 name: apt repository
 
-# Publishes a signed apt repository (https://avero-it.github.io/sie) built from
-# the .deb files of every release. It is a separate workflow because releases
+# Publishes the GitHub Pages site (https://avero-it.github.io/sie): a signed apt
+# repository built from the .deb files of every release, plus the project
+# website from website/. It is a separate workflow because releases
 # are immutable: a problem here must never force a new version. Run it by hand
 # (`gh workflow run apt.yml`) to rebuild at any time.
 on:
@@ -9,6 +10,14 @@ on:
     workflows: [Release]
     types: [completed]
   workflow_dispatch:
+  # The project website (website/) is deployed in the same site, so a change
+  # to it rebuilds and redeploys everything.
+  push:
+    branches: [main]
+    paths:
+      - website/**
+      - scripts/build-website.sh
+      - .github/workflows/apt.yml
 
 permissions:
   contents: read
@@ -21,7 +30,7 @@ concurrency:
 
 jobs:
   apt:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -61,6 +70,10 @@ jobs:
       - name: Build the signed repository
         if: steps.gate.outputs.enabled == 'true'
         run: scripts/build-apt-repo.sh debs site
+
+      - name: Build the website
+        if: steps.gate.outputs.enabled == 'true'
+        run: scripts/build-website.sh site "$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)"
 
       # Install from the freshly built repository, exactly as a user would
       # (signature included). A broken index fails here, before deploying.
