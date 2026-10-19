@@ -111,7 +111,7 @@ func TestOpenDetectsChange(t *testing.T) {
 			if err := os.WriteFile(other, pattern(2*chunkSize), 0o644); err != nil {
 				return err
 			}
-			return os.Rename(other, p)
+			return replaceFile(other, p)
 		},
 		"removed": os.Remove,
 	} {

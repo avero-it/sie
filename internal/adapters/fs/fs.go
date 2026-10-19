@@ -115,7 +115,7 @@ func (Store) WriteFrom(path string, src io.WriterTo) (err error) {
 	if err = os.Chmod(tmp.Name(), mode); err != nil {
 		return fmt.Errorf("write: %w", err)
 	}
-	if err = os.Rename(tmp.Name(), target); err != nil {
+	if err = replaceFile(tmp.Name(), target); err != nil {
 		return fmt.Errorf("write: %w", err)
 	}
 	return nil
