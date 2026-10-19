@@ -98,8 +98,7 @@ func (e *Editor) HandleMouse(m ports.MouseEvent) {
 		e.clearMessage()
 	}
 	e.handleMouse(m)
-	e.syncHighlight()
-	e.trackIndent()
+	e.afterInput()
 }
 
 func (e *Editor) handleMouse(m ports.MouseEvent) {

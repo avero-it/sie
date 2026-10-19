@@ -74,6 +74,7 @@ func TestErrors(t *testing.T) {
 		{"line ending", "line_ending: cr\n", "line_ending"},
 		{"jump lines range", "jump_lines: 0\n", "jump_lines"},
 		{"syntax max size", "syntax_max_size: lots\n", "syntax_max_size"},
+		{"large file size", "large_file_size: huge\n", "large_file_size"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

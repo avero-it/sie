@@ -220,14 +220,23 @@ func (d *Document) replace(start, end int, text string, after Selection, key str
 		// One forEachCursor run is one undo step.
 		key = fmt.Sprintf("cursors#%d", d.opSeq)
 	}
-	removed, err := d.buf.Delete(start, end-start)
+	// A change bigger than the undo budget is not copied: it is applied
+	// and the history is dropped, since it could not be kept anyway.
+	untracked := end-start > d.undoBudget || len(text) > d.undoBudget
+	var removed []byte
+	var err error
+	if untracked {
+		err = d.buf.Discard(start, end-start)
+	} else {
+		removed, err = d.buf.Delete(start, end-start)
+	}
 	if err != nil {
 		return fmt.Errorf("edit: %w", err)
 	}
 	if err := d.buf.Insert(start, []byte(text)); err != nil {
 		return fmt.Errorf("edit: %w", err)
 	}
-	d.logChange(start, len(removed), len(text))
+	d.logChange(start, end-start, len(text))
 	// An edit can fuse clusters (e.g. "x" typed before a combining mark),
 	// so move the selection past any cluster it now falls inside.
 	after = Selection{d.snapForward(after.Anchor), d.snapForward(after.Head)}
@@ -243,6 +252,11 @@ func (d *Document) replace(start, end int, text string, after Selection, key str
 		d.mergeCursors()
 	}
 	d.goal = -1
+	if untracked {
+		d.hist.Clear()
+		d.undoLost = true
+		return nil
+	}
 	d.hist.Record(history.Edit{Off: start, Removed: removed, Inserted: []byte(text)}, before, d.state(), key)
 	return nil
 }

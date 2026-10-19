@@ -146,7 +146,7 @@ func (e *Editor) cmdOpen(args []string) error {
 }
 
 func (e *Editor) load(path string) error {
-	data, err := e.cfg.Files.Read(path)
+	f, err := e.cfg.Files.Open(path)
 	if errors.Is(err, fs.ErrNotExist) {
 		e.setDoc(e.newDoc(nil), path)
 		e.note("new file")
@@ -155,7 +155,12 @@ func (e *Editor) load(path string) error {
 	if err != nil {
 		return err
 	}
-	e.setDoc(e.newDoc(data), path)
+	doc, backing, err := e.openDoc(f)
+	if err != nil {
+		return err
+	}
+	e.setDoc(doc, path)
+	e.file = backing
 	e.recordRecent(path)
 	e.note(plural(e.doc.LineCount(), "line"))
 	return nil
@@ -188,7 +193,7 @@ func (e *Editor) cmdSaveAs(args []string) error {
 }
 
 func (e *Editor) write(path string) error {
-	if err := e.cfg.Files.Write(path, e.doc.Bytes()); err != nil {
+	if err := e.cfg.Files.WriteFrom(path, e.doc); err != nil {
 		return err
 	}
 	if path != e.path {
@@ -196,6 +201,7 @@ func (e *Editor) write(path string) error {
 		e.detectLanguage()
 	}
 	e.doc.MarkSaved()
+	e.reopen(path)
 	e.recordRecent(path)
 	e.note(fmt.Sprintf("wrote %s", plural(e.doc.LineCount(), "line")))
 	return nil
@@ -227,19 +233,22 @@ func (e *Editor) cmdRedo([]string) error {
 // copySelection copies the selection, or the whole line when nothing is
 // selected. With several cursors (a rectangle, for one) it copies every
 // selection, one per line, so the block keeps its shape. It reports whether
-// anything was copied.
-func (e *Editor) copySelection() bool {
+// anything was copied, and refuses selections over maxCopySize.
+func (e *Editor) copySelection() (bool, error) {
 	var text string
 	if e.doc.CursorCount() > 1 {
 		texts := e.doc.SelectedTexts()
 		if !slices.ContainsFunc(texts, func(s string) bool { return s != "" }) {
 			e.note("nothing selected")
-			return false
+			return false, nil
 		}
 		text = strings.Join(texts, "\n")
 	} else {
 		if e.doc.Selection().Empty() {
 			e.doc.SelectLine()
+		}
+		if s, en := e.doc.Selection().Range(); en-s > maxCopySize {
+			return false, fmt.Errorf("selection too large to copy (%s, limit %s)", formatSize(en-s), formatSize(maxCopySize))
 		}
 		text = e.doc.SelectedText()
 	}
@@ -249,17 +258,17 @@ func (e *Editor) copySelection() bool {
 			e.note("system clipboard unavailable")
 		}
 	}
-	return true
+	return true, nil
 }
 
 func (e *Editor) cmdCopy([]string) error {
-	e.copySelection()
-	return nil
+	_, err := e.copySelection()
+	return err
 }
 
 func (e *Editor) cmdCut([]string) error {
-	if !e.copySelection() {
-		return nil
+	if ok, err := e.copySelection(); !ok || err != nil {
+		return err
 	}
 	return e.doc.DeleteSelection()
 }
@@ -307,8 +316,10 @@ func (e *Editor) cmdTrim([]string) error {
 
 // findDefault pre-fills the find prompt with a single-line selection or the last query.
 func (e *Editor) findDefault() string {
-	if sel := e.doc.SelectedText(); sel != "" && !strings.ContainsAny(sel, "\r\n") {
-		return sel
+	if s, en := e.doc.Selection().Range(); en-s <= findPrefillMax {
+		if sel := e.doc.SelectedText(); sel != "" && !strings.ContainsAny(sel, "\r\n") {
+			return sel
+		}
 	}
 	return e.lastQuery
 }

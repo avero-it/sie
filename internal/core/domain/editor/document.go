@@ -8,6 +8,9 @@
 package editor
 
 import (
+	"fmt"
+	"io"
+
 	"github.com/avero-it/sie/internal/core/domain/buffer"
 	"github.com/avero-it/sie/internal/core/domain/history"
 )
@@ -17,6 +20,7 @@ type Options struct {
 	TabWidth   int               // cells per tab stop; <= 0 means 4
 	DefaultEOL buffer.LineEnding // used when the content has no line breaks
 	UndoLimit  int               // max undo steps; <= 0 means unlimited
+	UndoBudget int               // max bytes of text the undo history keeps; <= 0 means 256 MB
 }
 
 // Selection is the range between Anchor and Head; Head is the cursor.
@@ -41,41 +45,88 @@ func Cursor(off int) Selection { return Selection{off, off} }
 // Document is an editable text document with undo, a primary selection
 // and optional secondary cursors (see AddCursor).
 type Document struct {
-	buf      *buffer.Buffer
-	hist     *history.History[cursors]
-	sel      Selection
-	extra    []Selection // secondary selections, sorted, never overlapping
-	op       *cursors    // state before the running forEachCursor, if any
-	opSeq    int         // numbers forEachCursor runs, for undo keys
-	rank     int         // document-order index of the cursor forEachCursor is running on
-	rect     *rectState  // the last rectangle made by SelectRect; see activeRect
-	goal     int         // preferred screen column for vertical moves; -1 if unset
-	eol      buffer.LineEnding
-	bom      bool
-	tabWidth int
-	version  uint64   // see Version
-	changes  []Change // recent mutations, oldest first; see ChangesSince
+	buf        *buffer.Buffer
+	hist       *history.History[cursors]
+	sel        Selection
+	extra      []Selection // secondary selections, sorted, never overlapping
+	op         *cursors    // state before the running forEachCursor, if any
+	opSeq      int         // numbers forEachCursor runs, for undo keys
+	rank       int         // document-order index of the cursor forEachCursor is running on
+	rect       *rectState  // the last rectangle made by SelectRect; see activeRect
+	goal       int         // preferred screen column for vertical moves; -1 if unset
+	eol        buffer.LineEnding
+	bom        bool
+	tabWidth   int
+	undoBudget int      // see Options.UndoBudget
+	undoLost   bool     // the last change was too large to undo; see TakeUndoLost
+	version    uint64   // see Version
+	changes    []Change // recent mutations, oldest first; see ChangesSince
 }
 
 // NewDocument creates a document from file content. A UTF-8 BOM is removed
 // from the text and restored by Bytes; the line ending is detected.
 func NewDocument(content []byte, opts Options) *Document {
 	bom, text := buffer.SplitBOM(content)
+	return newDocument(buffer.New(text), bom, buffer.DetectLineEnding(text, opts.DefaultEOL), opts)
+}
+
+// eolSample is how much of a large file is looked at to detect its line ending.
+const eolSample = 1 << 20
+
+// NewDocumentFromSource creates a document over src without loading it:
+// the file stays where it is and is read in ranges as the text is shown or
+// edited. The BOM is detected and skipped as in NewDocument; the line ending
+// is taken from the first megabyte. Check Err after editing: it reports
+// that src can no longer be read.
+func NewDocumentFromSource(src buffer.Source, opts Options) (*Document, error) {
+	head := make([]byte, min(src.Len(), len(buffer.UTF8BOM())))
+	if _, err := src.ReadAt(head, 0); err != nil && len(head) > 0 && err != io.EOF {
+		return nil, fmt.Errorf("read start of file: %w", err)
+	}
+	bom, _ := buffer.SplitBOM(head)
+	text := buffer.Skip(src, bomLen(bom))
+	sample := make([]byte, min(text.Len(), eolSample))
+	if n, err := text.ReadAt(sample, 0); n < len(sample) {
+		return nil, fmt.Errorf("read start of file: %w", err)
+	}
+	buf, err := buffer.NewFromSource(text)
+	if err != nil {
+		return nil, fmt.Errorf("index file: %w", err)
+	}
+	return newDocument(buf, bom, buffer.DetectLineEnding(sample, opts.DefaultEOL), opts), nil
+}
+
+func bomLen(has bool) int {
+	if has {
+		return len(buffer.UTF8BOM())
+	}
+	return 0
+}
+
+func newDocument(buf *buffer.Buffer, bom bool, eol buffer.LineEnding, opts Options) *Document {
 	tw := opts.TabWidth
 	if tw <= 0 {
 		tw = 4
 	}
+	hist := history.New[cursors](opts.UndoLimit)
+	budget := opts.UndoBudget
+	if budget <= 0 {
+		budget = defaultUndoBudget
+	}
+	hist.SetBudget(budget)
 	return &Document{
-		buf:      buffer.New(text),
-		hist:     history.New[cursors](opts.UndoLimit),
-		goal:     -1,
-		eol:      buffer.DetectLineEnding(text, opts.DefaultEOL),
-		bom:      bom,
-		tabWidth: tw,
+		undoBudget: budget,
+		buf:        buf,
+		hist:       hist,
+		goal:       -1,
+		eol:        eol,
+		bom:        bom,
+		tabWidth:   tw,
 	}
 }
 
 // Bytes returns the content to save, including the BOM if the file had one.
+// It holds the whole document in memory: use WriteTo for large ones.
 func (d *Document) Bytes() []byte {
 	text := d.buf.Bytes()
 	if d.bom {
@@ -83,6 +134,42 @@ func (d *Document) Bytes() []byte {
 	}
 	return text
 }
+
+// WriteTo streams the content to save (BOM included) to w, a chunk at a time.
+func (d *Document) WriteTo(w io.Writer) (int64, error) {
+	var total int64
+	if d.bom {
+		n, err := w.Write(buffer.UTF8BOM())
+		total = int64(n)
+		if err != nil {
+			return total, err
+		}
+	}
+	n, err := d.buf.WriteTo(w)
+	return total + n, err
+}
+
+// Rebase points the document at src, the whole file as just saved, whose
+// content must equal Bytes. The undo history and the selection are kept.
+func (d *Document) Rebase(src buffer.Source) error {
+	return d.buf.Rebase(buffer.Skip(src, bomLen(d.bom)))
+}
+
+// defaultUndoBudget is how much text the undo history keeps (removed and
+// inserted). A single change over it cannot be undone, and clears the history.
+const defaultUndoBudget = 256 << 20
+
+// TakeUndoLost reports, once, that a change was too large to keep for undo
+// and the undo history was cleared.
+func (d *Document) TakeUndoLost() bool {
+	lost := d.undoLost
+	d.undoLost = false
+	return lost
+}
+
+// Err reports a failure to read the file behind the document (it changed or
+// vanished). Once set, the text shown and saved can no longer be trusted.
+func (d *Document) Err() error { return d.buf.Err() }
 
 // Text returns the document text (without BOM).
 func (d *Document) Text() string { return string(d.buf.Bytes()) }

@@ -1,8 +1,10 @@
 package app
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"path/filepath"
 	"strings"
@@ -17,6 +19,7 @@ type memFS struct {
 	writeErr error
 	work     string           // relative keys live here (for List)
 	listErr  map[string]error // List errors by directory
+	opened   []*memFile       // every file handed out by Open
 }
 
 // key finds the stored key for path; like the real filesystem, relative
@@ -38,19 +41,56 @@ func (m *memFS) key(path string) (string, bool) {
 	return path, false
 }
 
-func (m *memFS) Read(path string) ([]byte, error) {
-	k, ok := m.key(path)
-	if !ok {
-		return nil, fmt.Errorf("read %s: %w", path, fs.ErrNotExist)
-	}
-	return m.files[k], nil
+// memFile is an open file of memFS. A failure set in err is returned by
+// every read, like a file that changed on disk.
+type memFile struct {
+	data   []byte
+	err    error
+	closed bool
+	reads  int // bytes read through ReadAt
 }
 
-func (m *memFS) Write(path string, data []byte) error {
+func (f *memFile) Len() int { return len(f.data) }
+
+func (f *memFile) Close() error {
+	f.closed = true
+	return nil
+}
+
+func (f *memFile) ReadAt(dst []byte, off int64) (int, error) {
+	if f.err != nil {
+		return 0, f.err
+	}
+	if off >= int64(len(f.data)) {
+		return 0, io.EOF
+	}
+	n := copy(dst, f.data[off:])
+	f.reads += n
+	if n < len(dst) {
+		return n, io.EOF
+	}
+	return n, nil
+}
+
+func (m *memFS) Open(path string) (ports.File, error) {
+	k, ok := m.key(path)
+	if !ok {
+		return nil, fmt.Errorf("open %s: %w", path, fs.ErrNotExist)
+	}
+	f := &memFile{data: m.files[k]}
+	m.opened = append(m.opened, f)
+	return f, nil
+}
+
+func (m *memFS) WriteFrom(path string, src io.WriterTo) error {
 	if m.writeErr != nil {
 		return m.writeErr
 	}
-	m.files[path] = append([]byte(nil), data...)
+	var buf bytes.Buffer
+	if _, err := src.WriteTo(&buf); err != nil {
+		return err
+	}
+	m.files[path] = buf.Bytes()
 	return nil
 }
 

@@ -1,5 +1,7 @@
 package ports
 
+import "io"
+
 // EditorService is the driving port: the TUI adapter feeds normalized input
 // into it and paints the ViewModel it returns. All methods must be called
 // from a single goroutine.
@@ -18,15 +20,28 @@ type EditorService interface {
 	Poll()
 }
 
-// FileStore reads and writes whole files. A missing file is reported with an
+// FileStore opens and writes files. A missing file is reported with an
 // error wrapping io/fs.ErrNotExist.
 type FileStore interface {
-	Read(path string) ([]byte, error)
-	// Write replaces the file atomically, keeping its permissions if it exists.
-	Write(path string, data []byte) error
+	// Open returns a random-access view of the file. It is read in ranges,
+	// so large files are never loaded whole. The view fails with an error
+	// when the file changes or disappears while open.
+	Open(path string) (File, error)
+	// WriteFrom replaces the file atomically with what src writes, keeping
+	// its permissions if it exists. src may read from a File of the same
+	// path.
+	WriteFrom(path string, src io.WriterTo) error
 	Exists(path string) (bool, error)
 	// List returns the entries of a directory in any order.
 	List(dir string) ([]DirEntry, error)
+}
+
+// File is a read-only random-access view of an open file.
+type File interface {
+	io.ReaderAt
+	// Len is the size in bytes when the file was opened.
+	Len() int
+	Close() error
 }
 
 // DirEntry is one entry of a directory listing. Dir is true for

@@ -3,8 +3,10 @@
 package fs
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	iofs "io/fs"
 	"os"
 	"path/filepath"
@@ -64,11 +66,18 @@ func (Store) List(dir string) ([]ports.DirEntry, error) {
 	return out, nil
 }
 
-// Write saves data atomically: it writes a temporary file next to the
-// target, syncs it and renames it over the target, so a crash never leaves
-// a half-written file. Symlinks are followed (the link is kept) and the
-// target's permissions are preserved.
-func (Store) Write(path string, data []byte) (err error) {
+// Write saves data atomically; see WriteFrom.
+func (s Store) Write(path string, data []byte) error {
+	return s.WriteFrom(path, bytes.NewReader(data))
+}
+
+// WriteFrom saves what src writes atomically: it writes a temporary file
+// next to the target, syncs it and renames it over the target, so a crash
+// never leaves a half-written file. Symlinks are followed (the link is kept)
+// and the target's permissions are preserved. src may read from a file
+// opened with Open on the same path: the old contents stay readable until
+// that file is closed.
+func (Store) WriteFrom(path string, src io.WriterTo) (err error) {
 	target := path
 	if resolved, err := filepath.EvalSymlinks(path); err == nil {
 		target = resolved
@@ -94,7 +103,7 @@ func (Store) Write(path string, data []byte) (err error) {
 			_ = os.Remove(tmp.Name())
 		}
 	}()
-	if _, err = tmp.Write(data); err != nil {
+	if _, err = src.WriteTo(tmp); err != nil {
 		return fmt.Errorf("write: %w", err)
 	}
 	if err = tmp.Sync(); err != nil {

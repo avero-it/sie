@@ -29,28 +29,123 @@ type piece struct {
 	start    int // offset into the source buffer
 	length   int
 	newlines int // number of '\n' in the span
+	origNL   int // original pieces: '\n' in the original before start (locates lines without scanning)
 }
 
 // Buffer is a piece-table text buffer. The zero value is an empty buffer.
 type Buffer struct {
-	original []byte
+	original Source
+	nlIndex  []int // newlines in original before each indexStride (see source.go)
+	origNL   int   // newlines in the whole original
 	add      []byte
 	pieces   []piece
 	length   int
 	newlines int
+	err      error // first failed read of the original; sticky
 }
 
 // New returns a buffer holding content. The buffer keeps a reference to
 // content and never modifies it; callers must not modify it either.
 func New(content []byte) *Buffer {
-	b := &Buffer{original: content}
-	if len(content) > 0 {
-		nl := bytes.Count(content, []byte{'\n'})
-		b.pieces = []piece{{src: srcOriginal, start: 0, length: len(content), newlines: nl}}
-		b.length = len(content)
-		b.newlines = nl
-	}
+	b, _ := NewFromSource(memSource(content)) // a memory source cannot fail
 	return b
+}
+
+// NewFromSource returns a buffer over src, scanning it once to index its
+// lines. The buffer never loads src whole; src must not change while in use.
+func NewFromSource(src Source) (*Buffer, error) {
+	b := &Buffer{original: src}
+	if err := b.reset(); err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+// reset makes the original the whole document.
+func (b *Buffer) reset() error {
+	b.add, b.pieces, b.length, b.newlines = nil, nil, 0, 0
+	if err := b.buildIndex(); err != nil {
+		return err
+	}
+	if n := b.original.Len(); n > 0 {
+		b.pieces = []piece{{src: srcOriginal, start: 0, length: n, newlines: b.origNL}}
+		b.length = n
+		b.newlines = b.origNL
+	}
+	return nil
+}
+
+// Rebase replaces the original by src, whose content must equal the current
+// document (e.g. the file just saved), and drops the piece list.
+func (b *Buffer) Rebase(src Source) error {
+	if src.Len() != b.length {
+		return fmt.Errorf("rebase onto %d bytes, document has %d: %w", src.Len(), b.length, ErrOutOfRange)
+	}
+	old := b.original
+	b.original = src
+	if err := b.reset(); err != nil {
+		b.original = old
+		return err
+	}
+	b.err = nil
+	return nil
+}
+
+// Err returns the first error from reading the original (e.g. the file
+// changed on disk). Reads that fail return zero bytes, so callers must check
+// Err and stop editing instead of acting on the result.
+func (b *Buffer) Err() error { return b.err }
+
+func (b *Buffer) fail(err error) {
+	if b.err == nil {
+		b.err = err
+	}
+}
+
+// view returns bytes [lo, hi) of piece p. The result may alias storage and
+// must not be modified. A failed read of the original sets Err and returns
+// zeros of the requested length.
+func (b *Buffer) view(p piece, lo, hi int) []byte {
+	if p.src == srcAdd {
+		return b.add[p.start+lo : p.start+hi]
+	}
+	data, err := b.readOrig(p.start+lo, hi-lo)
+	if err != nil {
+		b.fail(err)
+		return make([]byte, hi-lo)
+	}
+	return data
+}
+
+// countNL counts the '\n' in the first n bytes of piece p without loading
+// it whole.
+func (b *Buffer) countNL(p piece, n int) int {
+	if p.src == srcAdd {
+		return bytes.Count(b.add[p.start:p.start+n], []byte{'\n'})
+	}
+	return b.origNLBefore(p.start+n) - p.origNL
+}
+
+// writeChunk is how much WriteTo reads and writes at a time.
+const writeChunk = 1 << 20
+
+// WriteTo streams the document to w without building it in memory.
+func (b *Buffer) WriteTo(w io.Writer) (int64, error) {
+	var total int64
+	for _, p := range b.pieces {
+		for lo := 0; lo < p.length; lo += writeChunk {
+			data := b.view(p, lo, min(lo+writeChunk, p.length))
+			if b.err != nil {
+				return total, b.err
+			}
+			n, err := w.Write(data)
+			total += int64(n)
+			if err != nil {
+				return total, err
+			}
+		}
+	}
+	return total, nil
 }
 
 // Len returns the document length in bytes.
@@ -64,7 +159,7 @@ func (b *Buffer) LineCount() int { return b.newlines + 1 }
 func (b *Buffer) Bytes() []byte {
 	out := make([]byte, 0, b.length)
 	for _, p := range b.pieces {
-		out = append(out, b.span(p)...)
+		out = append(out, b.view(p, 0, p.length)...)
 	}
 	return out
 }
@@ -81,7 +176,7 @@ func (b *Buffer) Slice(start, end int) ([]byte, error) {
 		if pend > start && pos < end {
 			lo := max(start, pos) - pos
 			hi := min(end, pend) - pos
-			out = append(out, b.span(p)[lo:hi]...)
+			out = append(out, b.view(p, lo, hi)...)
 		}
 		if pend >= end {
 			break
@@ -160,30 +255,51 @@ func (b *Buffer) Delete(off, n int) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	b.cut(off, n)
+	return removed, nil
+}
+
+// Discard removes n bytes starting at off without reading them, for
+// deletions too large to keep a copy of.
+func (b *Buffer) Discard(off, n int) error {
+	if off < 0 || n < 0 || off+n > b.length {
+		return fmt.Errorf("discard [%d,%d) of %d: %w", off, off+n, b.length, ErrOutOfRange)
+	}
+	if n > 0 {
+		b.cut(off, n)
+	}
+	return nil
+}
+
+// cut removes [off, off+n), which must lie inside the document.
+func (b *Buffer) cut(off, n int) {
 	end := off + n
 	out := make([]piece, 0, len(b.pieces)+1)
-	pos := 0
+	pos, removedNL := 0, 0
 	for _, p := range b.pieces {
 		pend := pos + p.length
 		switch {
 		case pend <= off || pos >= end:
 			out = append(out, p)
 		default:
+			kept := 0
 			if pos < off {
 				left, _ := b.split(p, off-pos)
 				out = append(out, left)
+				kept += left.newlines
 			}
 			if pend > end {
 				_, right := b.split(p, end-pos)
 				out = append(out, right)
+				kept += right.newlines
 			}
+			removedNL += p.newlines - kept
 		}
 		pos = pend
 	}
 	b.pieces = out
 	b.length -= n
-	b.newlines -= bytes.Count(removed, []byte{'\n'})
-	return removed, nil
+	b.newlines -= removedNL
 }
 
 // LineStart returns the byte offset where line (0-based) begins.
@@ -197,11 +313,14 @@ func (b *Buffer) LineStart(line int) (int, error) {
 	seen, pos := 0, 0
 	for _, p := range b.pieces {
 		if seen+p.newlines >= line {
-			data := b.span(p)
-			for j, c := range data {
+			k := line - seen // the k-th newline of this piece ends line-1
+			if p.src == srcOriginal {
+				off := b.origLineStart(p.origNL + k)
+				return pos + off - p.start, b.err
+			}
+			for j, c := range b.add[p.start : p.start+p.length] {
 				if c == '\n' {
-					seen++
-					if seen == line {
+					if k--; k == 0 {
 						return pos + j + 1, nil
 					}
 				}
@@ -227,10 +346,10 @@ func (b *Buffer) LineOf(off int) (int, error) {
 			pos += p.length
 			continue
 		}
-		line += bytes.Count(b.span(p)[:off-pos], []byte{'\n'})
+		line += b.countNL(p, off-pos)
 		break
 	}
-	return line, nil
+	return line, b.err
 }
 
 // Line returns a copy of line's content without its terminator ("\n" or
@@ -282,17 +401,10 @@ func (b *Buffer) locate(off int) (index, inner int) {
 
 // split cuts p at inner (0 < inner < p.length) into two pieces.
 func (b *Buffer) split(p piece, inner int) (piece, piece) {
-	leftNL := bytes.Count(b.span(p)[:inner], []byte{'\n'})
-	left := piece{src: p.src, start: p.start, length: inner, newlines: leftNL}
-	right := piece{src: p.src, start: p.start + inner, length: p.length - inner, newlines: p.newlines - leftNL}
+	leftNL := b.countNL(p, inner)
+	left := piece{src: p.src, start: p.start, length: inner, newlines: leftNL, origNL: p.origNL}
+	right := piece{src: p.src, start: p.start + inner, length: p.length - inner, newlines: p.newlines - leftNL, origNL: p.origNL + leftNL}
 	return left, right
-}
-
-func (b *Buffer) span(p piece) []byte {
-	if p.src == srcOriginal {
-		return b.original[p.start : p.start+p.length]
-	}
-	return b.add[p.start : p.start+p.length]
 }
 
 func insertPieces(ps []piece, i int, add ...piece) []piece {

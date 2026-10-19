@@ -146,7 +146,41 @@ func FuzzPieceTable(f *testing.F) {
 	f.Add([]byte("hello\nworld\r\n"), []byte{0, 3, 2, 1, 5, 9, 0, 0, 4})
 	f.Add([]byte(""), []byte{0, 0, 1, 0, 0, 2})
 	f.Fuzz(func(t *testing.T, initial, ops []byte) {
-		b := New(bytes.Clone(initial))
+		t.Run("memory", func(t *testing.T) { runOps(t, New(bytes.Clone(initial)), initial, ops) })
+		t.Run("reader", func(t *testing.T) { runOps(t, newReaderBuffer(t, initial), initial, ops) })
+	})
+}
+
+// readerSource is a Source that is not in memory, so the buffer must read it
+// through ReadAt. It counts the bytes read.
+type readerSource struct {
+	data []byte
+	read int
+}
+
+func (r *readerSource) Len() int { return len(r.data) }
+
+func (r *readerSource) ReadAt(dst []byte, off int64) (int, error) {
+	n := copy(dst, r.data[off:])
+	r.read += n
+	if n < len(dst) {
+		return n, io.EOF
+	}
+	return n, nil
+}
+
+func newReaderBuffer(t *testing.T, content []byte) *Buffer {
+	t.Helper()
+	b, err := NewFromSource(&readerSource{data: bytes.Clone(content)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b
+}
+
+func runOps(t *testing.T, b *Buffer, initial, ops []byte) {
+	t.Helper()
+	{
 		model := bytes.Clone(initial)
 		inserts := [][]byte{[]byte("x"), []byte("\n"), []byte("ab\r\ncd"), []byte("é"), []byte("\n\n")}
 		for i := 0; i+2 < len(ops); i += 3 {
@@ -175,7 +209,7 @@ func FuzzPieceTable(f *testing.F) {
 			}
 		}
 		checkInvariants(t, b, model)
-	})
+	}
 }
 
 // checkInvariants verifies b against a naive model of its content.
@@ -192,8 +226,15 @@ func checkInvariants(t *testing.T, b *Buffer, model []byte) {
 		if p.length <= 0 {
 			t.Fatalf("empty piece %+v", p)
 		}
-		if got := bytes.Count(b.span(p), []byte{'\n'}); got != p.newlines {
+		if got := bytes.Count(b.view(p, 0, p.length), []byte{'\n'}); got != p.newlines {
 			t.Fatalf("piece %+v newlines = %d, want %d", p, p.newlines, got)
+		}
+		if p.src == srcOriginal {
+			orig := make([]byte, b.original.Len())
+			_, _ = b.original.ReadAt(orig, 0)
+			if want := bytes.Count(orig[:p.start], []byte{'\n'}); p.origNL != want {
+				t.Fatalf("piece %+v origNL = %d, want %d", p, p.origNL, want)
+			}
 		}
 		sum += p.length
 		nl += p.newlines

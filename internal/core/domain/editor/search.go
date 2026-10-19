@@ -21,19 +21,19 @@ func (d *Document) Find(query string, forward bool, opts SearchOptions) bool {
 	if query == "" {
 		return false
 	}
-	data := d.buf.Bytes()
 	q := []byte(query)
 	start, end := d.sel.Range()
+	n := d.buf.Len()
 	var at int
 	if forward {
-		at = find(data, q, end, len(data), opts)
+		at = d.scan(q, end, n, opts)
 		if at < 0 {
-			at = find(data, q, 0, end, opts)
+			at = d.scan(q, 0, end, opts)
 		}
 	} else {
-		at = findLast(data, q, 0, start, opts)
+		at = d.scanBack(q, 0, start, opts)
 		if at < 0 {
-			at = findLast(data, q, start, len(data), opts)
+			at = d.scanBack(q, start, n, opts)
 		}
 	}
 	if at < 0 {
@@ -49,7 +49,7 @@ func (d *Document) FindNext(query string, from int, opts SearchOptions) (int, bo
 	if query == "" || from < 0 {
 		return 0, false
 	}
-	at := find(d.buf.Bytes(), []byte(query), from, d.buf.Len(), opts)
+	at := d.scan([]byte(query), from, d.buf.Len(), opts)
 	return at, at >= 0
 }
 
@@ -70,10 +70,10 @@ func (d *Document) ReplaceRange(start, end int, text string) (int, error) {
 // ReplaceCurrent replaces the selection with repl if it matches query, then
 // selects the next match. It reports whether a replacement happened.
 func (d *Document) ReplaceCurrent(query, repl string, opts SearchOptions) (bool, error) {
-	if query == "" || !matches([]byte(d.SelectedText()), []byte(query), opts) {
+	start, end := d.sel.Range()
+	if query == "" || end-start != len(query) || !matches([]byte(d.SelectedText()), []byte(query), opts) {
 		return false, nil
 	}
-	start, end := d.sel.Range()
 	norm := d.normalizeEOL(repl)
 	if err := d.replace(start, end, norm, Cursor(start+len(norm)), ""); err != nil {
 		return false, fmt.Errorf("replace: %w", err)
@@ -88,10 +88,10 @@ func (d *Document) ReplaceAll(query, repl string, opts SearchOptions) (int, erro
 	if query == "" {
 		return 0, nil
 	}
-	data := d.buf.Bytes()
 	q := []byte(query)
 	var hits []int
-	for at := find(data, q, 0, len(data), opts); at >= 0; at = find(data, q, at+len(q), len(data), opts) {
+	n := d.buf.Len()
+	for at := d.scan(q, 0, n, opts); at >= 0; at = d.scan(q, at+len(q), n, opts) {
 		hits = append(hits, at)
 	}
 	if len(hits) == 0 {
@@ -110,6 +110,45 @@ func (d *Document) ReplaceAll(query, repl string, opts SearchOptions) (int, erro
 	}
 	d.hist.Seal()
 	return len(hits), nil
+}
+
+// searchWindow is how many candidate start offsets are read per step, so a
+// search holds one window of the document, not all of it.
+const searchWindow = 1 << 20
+
+// scan returns the first match start in [from, to) (the match may end past
+// to), or -1. A window overlaps the next by len(q)-1 bytes so no match
+// falls between two windows.
+func (d *Document) scan(q []byte, from, to int, opts SearchOptions) int {
+	n := d.buf.Len()
+	for lo := max(from, 0); lo < to && lo+len(q) <= n; lo += searchWindow {
+		hi := min(lo+searchWindow, to)
+		data, err := d.buf.Slice(lo, min(hi+len(q)-1, n))
+		if err != nil {
+			return -1
+		}
+		if at := find(data, q, 0, hi-lo, opts); at >= 0 {
+			return lo + at
+		}
+	}
+	return -1
+}
+
+// scanBack returns the last match start in [from, to), or -1.
+func (d *Document) scanBack(q []byte, from, to int, opts SearchOptions) int {
+	n := d.buf.Len()
+	to = min(to, n-len(q)+1)
+	for hi := to; hi > from; hi -= searchWindow {
+		lo := max(hi-searchWindow, from)
+		data, err := d.buf.Slice(lo, min(hi+len(q)-1, n))
+		if err != nil {
+			return -1
+		}
+		if at := findLast(data, q, 0, hi-lo, opts); at >= 0 {
+			return lo + at
+		}
+	}
+	return -1
 }
 
 // find returns the first match start in [from, to) whose match ends by len(data).

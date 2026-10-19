@@ -43,6 +43,7 @@ type Config struct {
 	Highlighter        ports.Highlighter // optional; nil means plain text only
 	SyntaxHighlighting bool              // color known file types
 	SyntaxMaxSize      int               // bytes; larger documents stay plain; <= 0 means 2 MB
+	LargeFileSize      int               // bytes; larger files stay on disk; <= 0 means 32 MB
 }
 
 const defaultJumpLines = 5
@@ -83,6 +84,7 @@ type Editor struct {
 	menus []Menu
 
 	doc  *editor.Document
+	file ports.File // the open file behind a large doc; nil when the doc is in memory
 	path string
 	view editor.Viewport
 
@@ -110,7 +112,9 @@ type Editor struct {
 	showSyntax     bool
 	hl             highlightState
 	validateOnSave bool
-	columnMode     bool // Shift+arrows and plain drags make rectangles
+
+	skippedValidation bool // the last save was not validated because the file is too large
+	columnMode        bool // Shift+arrows and plain drags make rectangles
 }
 
 var _ ports.EditorService = (*Editor)(nil)
@@ -159,6 +163,13 @@ func (e *Editor) Resize(width, height int) {
 	e.follow()
 }
 
+// afterInput runs after every input event and background result.
+func (e *Editor) afterInput() {
+	e.checkFile()
+	e.syncHighlight()
+	e.trackIndent()
+}
+
 // HandleKey routes a key to the focused component.
 func (e *Editor) HandleKey(k ports.KeyEvent) {
 	if e.focus == focusEditor {
@@ -173,8 +184,7 @@ func (e *Editor) HandleKey(k ports.KeyEvent) {
 		e.editorKey(k)
 	}
 	e.follow()
-	e.syncHighlight()
-	e.trackIndent()
+	e.afterInput()
 }
 
 // HandlePaste inserts pasted text as one edit (one undo step).
@@ -191,8 +201,7 @@ func (e *Editor) HandlePaste(text string) {
 		e.check(e.doc.Insert(text))
 		e.follow()
 	}
-	e.syncHighlight()
-	e.trackIndent()
+	e.afterInput()
 }
 
 // Dispatch runs a command; it is the single entry point for shortcuts,
@@ -200,8 +209,7 @@ func (e *Editor) HandlePaste(text string) {
 // Non-silent commands are echoed in the prompt line and kept in history.
 func (e *Editor) Dispatch(id string, args ...string) error {
 	defer func() {
-		e.syncHighlight()
-		e.trackIndent()
+		e.afterInput()
 	}()
 	c, ok := e.reg.Get(id)
 	if !ok {
@@ -381,10 +389,15 @@ func (e *Editor) follow() {
 }
 
 func (e *Editor) newDoc(content []byte) *editor.Document {
-	return editor.NewDocument(content, editor.Options{TabWidth: e.cfg.TabWidth, DefaultEOL: e.cfg.DefaultEOL})
+	return editor.NewDocument(content, e.docOptions())
 }
 
+// setDoc replaces the document, letting go of the file behind the old one.
 func (e *Editor) setDoc(d *editor.Document, path string) {
+	if e.file != nil {
+		_ = e.file.Close()
+		e.file = nil
+	}
 	e.doc, e.path = d, path
 	e.view.Top, e.view.Left = 0, 0
 	e.hl.manual = false

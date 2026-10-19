@@ -20,7 +20,7 @@ This file is the source of truth for humans and agents. If code and this file di
 cmd/sie/                        composition root (cobra CLI: `sie [file]`, `sie version`, `sie config`): loads settings, wires adapters to ports. Only place that knows concrete adapters.
 internal/buildinfo/             version, commit, commit/build time, Go version (ldflags first, then embedded VCS info)
 internal/core/domain/           pure logic, stdlib only (+ github.com/rivo/uniseg)
-  buffer/   piece table, line index, UTF-8/grapheme-aware positions, line-ending detection (LF/CRLF preserved)
+  buffer/   piece table over a Source (memory or file), sparse line index, UTF-8/grapheme-aware positions, line-ending detection (LF/CRLF preserved)
   history/  undo/redo as reversible piece-table edits, grouped per command / typing burst
   editor/   Document, Cursor, Selection, Viewport math, search
 internal/core/app/              application layer (tcell-free, os-free)
@@ -31,7 +31,7 @@ internal/core/app/              application layer (tcell-free, os-free)
   menu.go / prompt.go / view.go  menus, prompt modes + completions, layout, hit-testing, ViewModel
 internal/core/ports/            interfaces only
   driving:  EditorService (HandleKey, HandleMouse, HandlePaste, Resize, Dispatch, View, Done, Poll)
-  driven:   FileStore (Read, Write, Exists, List), RecentFiles, Validator, Clipboard, Keymap, Highlighter (async: Highlight job → Result)   (settings are read once by cmd/sie and passed as plain app.Config values, so no config port)
+  driven:   FileStore (Open, WriteFrom, Exists, List; Open returns a File: ReaderAt + Len + Close), RecentFiles, Validator, Clipboard, Keymap, Highlighter (async: Highlight job → Result)   (settings are read once by cmd/sie and passed as plain app.Config values, so no config port)
   values:   KeyEvent, MouseEvent, ViewModel{Runs, Tints, Cursor, Animate}, Style, Token/TokenClass, HighlightJob/Result
 internal/adapters/
   tui/        Terminal (owns the tcell screen; New, SetClipboard, Run), event loop, key/mouse/paste normalization, painter + Theme
@@ -39,7 +39,7 @@ internal/adapters/
   recent/     recent files in ~/.sie/recent.json (re-read and merged on every Add, atomic writes, 30 entries)
   validate/   Validator: JSON (encoding/json), YAML (goccy/go-yaml), TOML (go-toml/v2), XML (encoding/xml)
   syntax/     chroma highlighter: background worker (newest job wins), chroma token types → core TokenClass
-  fs/         os-based FileStore (atomic save: temp file + rename, preserves permissions)
+  fs/         os-based FileStore (atomic streaming save: temp file + rename, preserves permissions; Open gives a chunk-cached, change-detecting file view)
   clipboard/  OSC52 (via Terminal.SetClipboard) + native: Win32 API on Windows, pbcopy / wl-copy / xclip / xsel elsewhere (optional)
   config/     viper: /etc/sie/config.yaml merged with ~/.sie/config.yaml (user wins per key), SIE_* env vars, --config overrides
 ```
@@ -261,9 +261,22 @@ internal/adapters/
 - Free Ctrl keys for future commands: **B, P** (E Open recent, T Validate, U Column selection, W Close file). Ctrl+B is the tmux prefix, so prefer P.
 - Alt+B and Alt+F are taken by word moves (readline/macOS Terminal). Plain Alt+letter otherwise does nothing.
 
+### Large files
+
+- **Threshold:** files over `large_file_size` (config, default `32MB`, `Config.LargeFileSize`) are not read into memory. `Editor.load` calls `FileStore.Open`; a small file is read whole and closed, a large one becomes a `File` that backs the document (`Editor.file`, closed when the document is replaced). A 1 GB file opens in about 0.2 s with a few MB of heap.
+- **Buffer:** the piece table's read-only original is a `buffer.Source` (`io.ReaderAt` + `Len`), either a byte slice or a file. `buffer.NewFromSource` scans it once for a **sparse line index** (the newline count before every 64 KB). `LineStart` and `LineOf` binary-search it and count within one stride, so they don't depend on file size. Each original piece caches the newline count before its start (`piece.origNL`), so a lookup reads one stride.
+- **Read failures:** the buffer API has no error on most reads, so a failed read of the original returns zero bytes and sets a sticky `Buffer.Err()` (`Document.Err()`). `Editor.checkFile` runs after every input event; when `Err` is set it asks `File changed on disk (or unreadable)  [r]eload  [q]uit` and asks again on any other key. Saving fails safe, because `WriteTo` returns the error before the target is replaced.
+- **File adapter:** `fs.Store.Open` returns a view with an LRU chunk cache (256 KB chunks, at most 32). Reads of 256 KB or more skip the cache. Whenever it goes to the disk it checks `os.Stat(path)` against the size, mtime and identity from open time and fails with `fs.ErrChangedOnDisk`. That also catches a file replaced by rename, which an open descriptor alone would not notice. On Windows the file is opened with `FILE_SHARE_DELETE` (`open_windows.go`), so our own rename-over-it save works.
+- **Saving:** `FileStore.WriteFrom(path, io.WriterTo)` streams the document (`Document.WriteTo`: BOM, then `Buffer.WriteTo` in 1 MB chunks) into the temp file, reading the old file while it does. Afterwards `Editor.reopen` opens the new file and `Document.Rebase`s onto it (one piece again; undo and selection are kept), then closes the old view. This also lets a document that grew past the threshold by pasting give back its memory.
+- **Search:** `Find`, `FindNext` and `ReplaceAll` scan in 1 MB windows that overlap by `len(query)-1` bytes, never copying the document. Replace-all applies its matches one by one, so it is slow with very many matches.
+- **Undo budget:** the history keeps at most 256 MB of text (`Options.UndoBudget`) and drops the oldest steps first. A single change above the budget is applied without copying the removed text (`Buffer.Discard`), the history is cleared and the app says so (`Document.TakeUndoLost`).
+- **Off above the threshold:** validation (Ctrl+T refuses; saving skips it and notes `not validated: file too large`), Copy/Cut of more than 64 MB (`maxCopySize`; an error), the find prompt pre-fill from long selections. Syntax coloring has its own limit (`syntax_max_size`).
+- **Known limits:** very long lines (minified files) are still scanned whole by layout and movement. Operations that touch every line (trim trailing spaces) are linear in the file. Sorting out an edit session on a file that changed on disk is "reload or quit", not a merge.
+- **Try it:** `SIE_BIG_MB=1024 go test ./cmd/sie -run TestEditBigFile -v` generates a file of that size and times open, goto, typing, paging, find, save and delete-all (default 48 MB, 4 MB with `-short`).
+
 ## Text model
 
-- Text is stored as UTF-8 bytes in a piece table: original file buffer (read-only) + add buffer + piece list (`domain/buffer`). Each piece caches its `\n` count, which drives `LineStart`/`LineOf`. The flat piece slice is O(pieces) per operation; swap in a balanced tree behind the same API if profiling demands it.
+- Text is stored as UTF-8 bytes in a piece table: original source (read-only: memory or file, see Large files) + add buffer + piece list (`domain/buffer`). Each piece caches its `\n` count, which drives `LineStart`/`LineOf`. The flat piece slice is O(pieces) per operation; swap in a balanced tree behind the same API if profiling demands it.
 - Only `\n` terminates a line. In CRLF files the `\r` is part of the line's bytes; `Line()` strips it, and the cursor layer treats `\r\n` as one grapheme (uniseg does too).
 - The BOM is not stored in the buffer: `SplitBOM` on load, and the document remembers it and re-adds it on save.
 - `domain/editor.Document` owns buffer, history, the single `Selection{Anchor, Head}`, line ending, BOM and tab width.

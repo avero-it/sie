@@ -15,7 +15,11 @@ import (
 func (e *Editor) saveValidated(path string) error {
 	p := e.saveProblem(path)
 	if p == nil {
-		return e.write(path)
+		err := e.write(path)
+		if err == nil && e.skippedValidation {
+			e.note("not validated: file too large")
+		}
+		return err
 	}
 	e.choose(fmt.Sprintf("Fails validation (%s)", problemText(p)),
 		choice{key: 'v', label: "[v]alidate", run: func() error {
@@ -33,6 +37,7 @@ func (e *Editor) saveValidated(path string) error {
 // (option off, unsupported type, validator failure).
 func (e *Editor) saveProblem(path string) *ports.Problem {
 	v := e.cfg.Validator
+	e.skippedValidation = false
 	if !e.validateOnSave || v == nil {
 		return nil
 	}
@@ -44,6 +49,10 @@ func (e *Editor) saveProblem(path string) *ports.Problem {
 		}
 	}
 	if !supports(v, lang) {
+		return nil
+	}
+	if e.tooLarge() {
+		e.skippedValidation = true
 		return nil
 	}
 	p, err := v.Validate(lang, []byte(e.doc.Text()))

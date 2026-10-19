@@ -26,6 +26,9 @@ func (e *Editor) cmdValidate([]string) error {
 		}
 		return fmt.Errorf("cannot validate %s (supported: %s)", what, strings.Join(v.Languages(), ", "))
 	}
+	if e.tooLarge() {
+		return fmt.Errorf("file too large to validate (%s, limit %s)", formatSize(e.doc.Len()), formatSize(e.largeFileSize()))
+	}
 	p, err := v.Validate(lang, []byte(e.doc.Text()))
 	switch {
 	case err != nil:

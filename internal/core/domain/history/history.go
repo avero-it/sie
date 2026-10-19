@@ -43,6 +43,10 @@ type History[S any] struct {
 	// group created by the first edit recorded since BeginGroup (0 if none).
 	grouping bool
 	groupID  uint64
+	// budget caps the bytes the groups keep (removed and inserted text);
+	// the oldest undo steps are dropped beyond it. <= 0 means no cap.
+	budget  int
+	payload int // bytes kept by undo and redo groups
 }
 
 const unreachable = ^uint64(0)
@@ -50,6 +54,41 @@ const unreachable = ^uint64(0)
 // New returns a history keeping at most limit undo steps (limit <= 0 means unlimited).
 func New[S any](limit int) *History[S] {
 	return &History[S]{limit: limit, nextID: 1}
+}
+
+// SetBudget caps the text the history keeps at n bytes (n <= 0: no cap).
+// Older undo steps are dropped first.
+func (h *History[S]) SetBudget(n int) { h.budget = n }
+
+// Clear forgets every undo and redo step. The document counts as modified,
+// because the saved state can no longer be reached.
+func (h *History[S]) Clear() {
+	h.undo, h.redo, h.payload = nil, nil, 0
+	h.savedID = unreachable
+	h.sealed = true
+}
+
+func (e Edit) size() int { return len(e.Removed) + len(e.Inserted) }
+
+func (g group[S]) size() int {
+	n := 0
+	for _, e := range g.edits {
+		n += e.size()
+	}
+	return n
+}
+
+// dropOldest removes the oldest undo step.
+func (h *History[S]) dropOldest() {
+	dropped := h.undo[0]
+	h.undo = h.undo[1:]
+	h.payload -= dropped.size()
+	switch h.savedID {
+	case dropped.id:
+		h.savedID = 0
+	case 0:
+		h.savedID = unreachable
+	}
 }
 
 // Record adds an edit that has already been applied to the target. If key is
@@ -61,9 +100,12 @@ func (h *History[S]) Record(e Edit, before, after S, key string) {
 			if g.id == h.savedID {
 				h.savedID = unreachable
 			}
+			h.payload -= g.size()
 		}
 		h.redo = nil
 	}
+	h.payload += e.size()
+	defer h.enforceBudget()
 	if n := len(h.undo); n > 0 {
 		last := &h.undo[n-1]
 		inGroup := h.grouping && h.groupID == last.id
@@ -81,14 +123,13 @@ func (h *History[S]) Record(e Edit, before, after S, key string) {
 	h.nextID++
 	h.sealed = false
 	if h.limit > 0 && len(h.undo) > h.limit {
-		dropped := h.undo[0]
-		h.undo = h.undo[1:]
-		switch h.savedID {
-		case dropped.id:
-			h.savedID = 0
-		case 0:
-			h.savedID = unreachable
-		}
+		h.dropOldest()
+	}
+}
+
+func (h *History[S]) enforceBudget() {
+	for h.budget > 0 && h.payload > h.budget && len(h.undo) > 0 {
+		h.dropOldest()
 	}
 }
 

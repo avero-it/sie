@@ -92,8 +92,8 @@ func newConfigCmd(configPath *string) *cobra.Command {
 			}
 			fmt.Fprintf(out, "tab_width: %d\nshow_invisibles: %t\nshow_empty_cells: %t\nclick_ripple: %t\nindent_guide: %t\nline_ending: %s\njump_lines: %d\n",
 				s.TabWidth, s.ShowInvisibles, s.ShowEmptyCells, s.ClickRipple, s.IndentGuide, s.LineEnding, s.JumpLines)
-			fmt.Fprintf(out, "syntax_highlighting: %t\nsyntax_max_size: %s\nvalidate_on_save: %t\n",
-				s.SyntaxHighlighting, s.SyntaxMaxSize, s.ValidateOnSave)
+			fmt.Fprintf(out, "syntax_highlighting: %t\nsyntax_max_size: %s\nvalidate_on_save: %t\nlarge_file_size: %s\n",
+				s.SyntaxHighlighting, s.SyntaxMaxSize, s.ValidateOnSave, s.LargeFileSize)
 			return nil
 		},
 	}
@@ -143,6 +143,7 @@ func runEditor(configPath string, args []string) error {
 		Highlighter:        highlighter,
 		SyntaxHighlighting: settings.SyntaxHighlighting,
 		SyntaxMaxSize:      settings.SyntaxMaxBytes,
+		LargeFileSize:      settings.LargeFileBytes,
 	})
 	if err != nil {
 		return err

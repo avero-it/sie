@@ -177,3 +177,54 @@ func TestAmend(t *testing.T) {
 		t.Fatalf("redo: cur=%d ok=%v err=%v, want 9", cur, ok, err)
 	}
 }
+
+// textTarget is a minimal Target over a string.
+type textTarget struct{ s string }
+
+func (t *textTarget) Insert(off int, text []byte) error {
+	t.s = t.s[:off] + string(text) + t.s[off:]
+	return nil
+}
+
+func (t *textTarget) Delete(off, n int) ([]byte, error) {
+	removed := []byte(t.s[off : off+n])
+	t.s = t.s[:off] + t.s[off+n:]
+	return removed, nil
+}
+
+func TestBudgetDropsOldestSteps(t *testing.T) {
+	h := New[int](0)
+	h.SetBudget(10)
+	tg := &textTarget{}
+	for i := range 5 { // 5 steps of 4 bytes: only the newest two fit in 10
+		off := len(tg.s)
+		_ = tg.Insert(off, []byte("abcd"))
+		h.Record(Edit{Off: off, Inserted: []byte("abcd")}, i, i+1, "")
+		h.Seal()
+	}
+	steps := 0
+	for h.CanUndo() {
+		if _, ok, err := h.Undo(tg); !ok || err != nil {
+			t.Fatal(ok, err)
+		}
+		steps++
+	}
+	if steps != 2 || tg.s != "abcdabcdabcd"[:4*3] {
+		t.Errorf("undid %d steps leaving %q, want 2 steps leaving 12 bytes", steps, tg.s)
+	}
+	if !h.Modified() {
+		t.Error("document with dropped history should count as modified")
+	}
+}
+
+func TestClearKeepsDocumentModified(t *testing.T) {
+	h := New[int](0)
+	tg := &textTarget{}
+	_ = tg.Insert(0, []byte("x"))
+	h.Record(Edit{Inserted: []byte("x")}, 0, 1, "")
+	h.MarkSaved()
+	h.Clear()
+	if h.CanUndo() || h.CanRedo() || !h.Modified() {
+		t.Errorf("after Clear: undo=%v redo=%v modified=%v", h.CanUndo(), h.CanRedo(), h.Modified())
+	}
+}

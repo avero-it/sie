@@ -127,6 +127,14 @@ The mouse works too: click to place the cursor, drag or Shift+click to select, a
 
 **Ctrl+E** (Open recent) lists the files you opened or saved most recently, newest first. They're kept in `~/.sie/recent.json` (30 files), shared by all sie windows. Type a few letters of the path to filter, then press Enter to open the top match.
 
+### Large files
+
+Files over `large_file_size` (32 MB by default) are not loaded into memory. They stay on disk and sie reads the part you are looking at, so a 1 GB log opens in a fraction of a second and uses a few megabytes of RAM. Editing, going to a line, finding and saving work as usual.
+- Validation, and syntax colors above `syntax_max_size`, are off for these files. Copying more than 64 MB at once is refused.
+- If the file is changed by another program while you have it open, sie asks you to reload it or quit, because the text on screen can no longer be trusted.
+- A change too big to undo (more than 256 MB, like deleting a gigabyte) is applied, and the undo history is cleared.
+- Very long lines (minified files) are still slow.
+
 ### Validating files
 
 **Ctrl+T** (Validate) checks JSON, YAML, TOML and XML files. The type is taken from the file name or from *Set language…*.
@@ -167,6 +175,7 @@ jump_lines: 5           # lines moved by Alt+↑/↓ (1–100)
 syntax_highlighting: true
 syntax_max_size: 2MB    # larger files are not colored
 validate_on_save: true  # check JSON/YAML/TOML/XML before saving
+large_file_size: 32MB   # larger files stay on disk and are read as needed
 ```
 
 `sie config` prints the effective settings and which files they came from. `sie version` prints the version, commit, commit and build time, Go version and platform.
