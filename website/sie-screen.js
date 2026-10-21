@@ -222,6 +222,7 @@
     var W = this.cols, H = this.rows, s = this.s;
     var cells = [];
     var r, c;
+    var G = s.gutter || GUTTER; // wider for files with many lines
     for (r = 0; r < H; r++) {
       cells.push([]);
       for (c = 0; c < W; c++) cells[r].push([" ", ""]);
@@ -255,35 +256,35 @@
       var y = 1 + r;
       var li = s.top + r;
       var line = li < s.lines.length ? expandTabs(s.lines[li]) : null;
-      if (line !== null) puts(y, 0, String(li + 1).padStart(2, " ") + " ", li === cur0.l ? "gc" : "g");
+      if (line !== null) puts(y, 0, String(li + 1 + (s.base || 0)).padStart(G - 1, " ") + " ", li === cur0.l ? "gc" : "g");
       var cls = line !== null && s.colored ? classify(s.lang, line) : [];
       if (line !== null) {
         // control characters and invalid bytes are always visible
         var xm, xre = /\^A|�/g;
         while ((xm = xre.exec(line))) for (var xi = xm.index; xi < xm.index + xm[0].length; xi++) cls[xi] = "x";
       }
-      for (c = 0; c < W - GUTTER; c++) {
+      for (c = 0; c < W - G; c++) {
         var ch = line !== null && c < line.length ? line[c] : null;
         if (ch === null) {
-          put(y, GUTTER + c, "·", "e");
+          put(y, G + c, "·", "e");
         } else if (s.invisibles && ch === " ") {
-          put(y, GUTTER + c, "␣", "e");
+          put(y, G + c, "␣", "e");
         } else if (ch === "\u0000") {
-          put(y, GUTTER + c, " ", "");
+          put(y, G + c, " ", "");
         } else if (ch === "\t") {
-          put(y, GUTTER + c, s.invisibles ? "»" : " ", s.invisibles ? "e" : "");
+          put(y, G + c, s.invisibles ? "»" : " ", s.invisibles ? "e" : "");
         } else {
-          put(y, GUTTER + c, ch, cls[c] || "");
+          put(y, G + c, ch, cls[c] || "");
         }
       }
       s.sels.forEach(function (sl) {
         if (sl.l !== li || line === null) return;
         var b = sl.b < 0 ? line.length + 1 : sl.b;
-        for (var cc = sl.a; cc < b; cc++) put(y, GUTTER + cc, cc < line.length ? (line[cc] === " " ? " " : line[cc]) : " ", "sel");
+        for (var cc = sl.a; cc < b; cc++) put(y, G + cc, cc < line.length ? (line[cc] === " " ? " " : line[cc]) : " ", "sel");
       });
       for (var key in secondary) {
         var pr = key.split(":");
-        if (+pr[0] === li) put(y, GUTTER + +pr[1], +pr[1] < (line || "").length ? line[+pr[1]] : " ", "cur2");
+        if (+pr[0] === li) put(y, G + +pr[1], +pr[1] < (line || "").length ? line[+pr[1]] : " ", "cur2");
       }
     }
 
@@ -301,7 +302,7 @@
       }
     }
     if (guide) {
-      var gx = GUTTER + guide.col;
+      var gx = G + guide.col;
       for (r = 0; r < this.textRows; r++) {
         var gl = s.top + r < s.lines.length ? s.lines[s.top + r] : null;
         var gch = gl !== null && guide.col < gl.length ? gl[guide.col] : " ";
@@ -313,13 +314,13 @@
 
     if (s.pointer) {
       var pl = s.pointer.l - s.top;
-      if (pl >= 0 && pl < this.textRows) cells[1 + pl][GUTTER + s.pointer.c][1] += " ptr";
+      if (pl >= 0 && pl < this.textRows) cells[1 + pl][G + s.pointer.c][1] += " ptr";
     }
 
     // the cursor is a block, hidden while the prompt has the focus
     if (!s.sels.length && !(s.prompt && s.prompt.kind === "input")) {
       var cl = cur0.l < s.lines.length ? s.lines[cur0.l] : "";
-      put(1 + cur0.l - s.top, GUTTER + cur0.c, cur0.c < cl.length ? cl[cur0.c] : " ", "cur");
+      put(1 + cur0.l - s.top, G + cur0.c, cur0.c < cl.length ? cl[cur0.c] : " ", "cur");
     }
 
     // completion popup above the prompt line
@@ -357,7 +358,7 @@
     // status line
     for (c = 0; c < W; c++) put(H - 1, c, " ", "s");
     var left = "sie v0.9.0 - " + s.name + (s.modified ? " ●" : "");
-    var pos = "Ln " + (cur0.l + 1) + ", Col " + (cur0.c + 1) + (s.cursors.length > 1 ? " (" + s.cursors.length + " cursors)" : "");
+    var pos = "Ln " + (cur0.l + 1 + (s.base || 0)) + ", Col " + (cur0.c + 1) + (s.cursors.length > 1 ? " (" + s.cursors.length + " cursors)" : "");
     var right = pos + "   " + s.lang + "   UTF-8" + (s.bom ? " BOM" : "") + "   " + s.eol;
     var room = W - right.length - 2;
     if (left.length > room) left = left.slice(0, Math.max(0, room - 1)) + "…";

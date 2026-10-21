@@ -23,6 +23,8 @@ fi
 src="$(cd "$(dirname "$0")/.." && pwd)/website"
 mkdir -p "$out"
 cp -R "$src"/. "$out"/
+# Templates are filled in by their own scripts (build-changelog.sh).
+rm -f "$out"/*.template.html
 
 if ! grep -rq '__VERSION__' "$out/index.html"; then
   echo "build-website: no __VERSION__ placeholder in index.html" >&2

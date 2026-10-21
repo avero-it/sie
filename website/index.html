@@ -17,6 +17,7 @@
       <a href="#install">Install</a>
       <a href="#keys">Keys</a>
       <a href="#config">Config</a>
+      <a href="changelog.html">Changelog</a>
       <a href="https://github.com/avero-it/sie">GitHub</a>
     </nav>
   </div>
@@ -278,6 +279,28 @@ sie v0.9.0 - demo.… Ln 5, Col 3   YAML   UTF-8   LF</pre></div></div>
     </article>
     <article class="feature">
       <div class="ftext">
+        <h3>Large files</h3>
+        <p>Files over 32&nbsp;MB are not loaded into memory: sie keeps them on disk and reads only the part you are looking at. A 1&nbsp;GB log opens in about 0.2 seconds using a few MB of RAM, and editing, undo, find, replace and save all work. Saving streams to a temporary file and swaps it in, and if another program changes the file meanwhile, sie asks you to reload or quit instead of overwriting it.</p>
+        <p>Above the limit (<code>large_file_size</code>) validation is skipped and copying more than 64&nbsp;MB is refused, each with a clear message.</p>
+        <p class="keys"><kbd>Ctrl+End</kbd> end of file · <kbd>Ctrl+G</kbd> go to line · <kbd>Ctrl+F</kbd> find</p>
+      </div>
+      <figure class="demo">
+        <div class="term" data-demo="largefile" role="img" aria-label="Opening a 13-million-line text file, jumping to the end, adding a line and saving"><div class="screen"><pre> File  Edit  Selection  Search  View  Help                  
+13041770 23:59:57 info  request ok··························
+13041771 23:59:58 error timeout·····························
+13041772 23:59:59 info  shutdown····························
+         ···················································
+         ···················································
+         ···················································
+         ···················································
+&gt; Save file — wrote 13041772 lines                   Ctrl+S 
+sie v0.9.0 - even… Ln 13041772, Col 23   Plain   UTF-8   LF </pre></div></div>
+        <div class="keystrip" aria-hidden="true"></div>
+        <p class="caption" aria-live="off"></p>
+      </figure>
+    </article>
+    <article class="feature">
+      <div class="ftext">
         <h3>One binary</h3>
         <p>Pure Go with <code>CGO_ENABLED=0</code>: one static file for Linux, macOS and Windows on amd64 and arm64. No runtime, no libraries, nothing to install on the server.</p>
         <p class="keys">Linux · macOS · Windows · amd64 · arm64</p>
@@ -416,7 +439,7 @@ large_file_size: 32MB   # larger files stay on disk and are read as needed</pre>
 <footer>
   <div class="wrap">
     <span>sie __VERSION__ · MIT © 2026 Simone Baglioni</span>
-    <span><a href="https://github.com/avero-it/sie">Source</a> · <a href="https://github.com/avero-it/sie/releases">Releases</a> · <a href="https://github.com/avero-it/sie#readme">Full documentation</a></span>
+    <span><a href="https://github.com/avero-it/sie">Source</a> · <a href="changelog.html">Changelog</a> · <a href="https://github.com/avero-it/sie/releases">Releases</a> · <a href="https://github.com/avero-it/sie#readme">Full documentation</a></span>
   </div>
 </footer>
 

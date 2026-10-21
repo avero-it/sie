@@ -2,7 +2,7 @@
 
 **sie** stands for **siMPLE eDITOR**: the lowercase letters spell its name.
 
-Website: <https://avero-it.github.io/sie/>.
+Website: <https://avero-it.github.io/sie/> · Changelog: <https://avero-it.github.io/sie/changelog.html>.
 
 A small, modeless terminal text editor written in Go. It ships as a single static binary for Linux, Windows and macOS, with no C dependencies.
 

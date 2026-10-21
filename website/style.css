@@ -317,6 +317,17 @@ kbd {
 
 .two { display: grid; gap: 24px; grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr)); }
 
+.changelog { padding-top: 32px; padding-bottom: 16px; }
+.changelog h1 { font-size: clamp(1.6rem, 4vw, 2.2rem); margin: 0 0 8px; }
+.changelog .release { margin: 24px 0 0; padding: 0; }
+.release h2 { font-size: 1.3rem; margin: 0 0 8px; }
+.release h2 a { color: var(--fg); text-decoration: none; }
+.release h2 a:hover { color: var(--accent); }
+.release .date { color: var(--muted); font-size: 0.9rem; font-weight: 400; margin-left: 8px; }
+.release ul { margin: 0; padding-left: 1.2rem; }
+.release li { margin: 4px 0; }
+nav a[aria-current="page"] { color: var(--fg); }
+
 footer { padding: 32px 0 48px; color: var(--muted); font-size: 0.9rem; }
 footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
 

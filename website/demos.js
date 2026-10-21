@@ -174,6 +174,50 @@
     }
   };
 
+  // ---- large files --------------------------------------------------------------
+
+  var BIG_HEAD = [
+    "00:00:00 info  start",
+    "00:00:01 info  listen :8080",
+    "00:00:04 warn  slow query"
+  ];
+  var BIG_TAIL = [
+    "23:59:57 info  request ok",
+    "23:59:58 error timeout",
+    "23:59:59 info  shutdown"
+  ];
+  var BIG_LINES = 13041772;
+
+  defs.largefile = {
+    cols: 60,
+    rows: 10,
+    run: async function (d) {
+      d.s.name = "events.txt"; d.s.gutter = 9;
+      d.setLines(BIG_HEAD); d.cursor(0, 0);
+      d.say("A 1 GB file, 13 million lines: it opens at once and stays on disk.");
+      await d.sleep(1800);
+      d.press("Ctrl+End");
+      d.setLines(BIG_TAIL); d.cursor(2, 22);
+      d.s.base = BIG_LINES - 3;
+      d.say("Jumping to the end is instant: only the lines you see are read.");
+      await d.sleep(1700);
+      d.say("Edit as usual.");
+      await d.type("\n", 100);
+      await d.type("23:59:59 info  bye", 40);
+      d.s.modified = true;
+      await d.sleep(1200);
+      d.say("Save streams the file to disk and swaps it in atomically.");
+      d.press("Ctrl+S"); d.s.modified = false;
+      d.echo("Save file — wrote " + (BIG_LINES + 1) + " lines", "Ctrl+S");
+      await d.sleep(3200);
+    },
+    still: function (d) {
+      d.s.name = "events.txt"; d.s.gutter = 9; d.s.base = BIG_LINES - 3;
+      d.setLines(BIG_TAIL); d.cursor(2, 22);
+      d.echo("Save file — wrote " + BIG_LINES + " lines", "Ctrl+S");
+    }
+  };
+
   // ---- multiple cursors ---------------------------------------------------------
 
   var BULLETS = ["- alpha", "- beta", "- gamma"];
