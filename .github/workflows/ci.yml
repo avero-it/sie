@@ -10,13 +10,24 @@ permissions:
   contents: read
 
 jobs:
+  # Where the Linux jobs run: GitHub's runners, or a local one when it is up.
+  pick:
+    uses: ./.github/workflows/pick-runner.yml
+
   test:
     name: Test (${{ matrix.os }})
+    needs: pick
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+        include:
+          - os: ubuntu-latest
+            runner: ${{ needs.pick.outputs.linux }}
+          - os: macos-latest
+            runner: '"macos-latest"'
+          - os: windows-latest
+            runner: '"windows-latest"'
+    runs-on: ${{ fromJSON(matrix.runner) }}
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-go@v7.0.0
@@ -34,12 +45,15 @@ jobs:
 
   checks:
     name: Formatting, modules, cross-compile, no cgo
-    runs-on: ubuntu-latest
+    needs: pick
+    runs-on: ${{ fromJSON(needs.pick.outputs.linux) }}
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-go@v7.0.0
         with:
           go-version-file: go.mod
+      - name: Runner selection rules
+        run: bash scripts/test-pick-runner.sh
       - name: gofmt
         run: |
           out=$(gofmt -l $(git ls-files '*.go' | grep -v '^vendor/'))

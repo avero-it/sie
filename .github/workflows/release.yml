@@ -8,17 +8,27 @@ on:
       tag:
         description: Existing tag to release, e.g. v0.5.1
         required: true
+      runner:
+        description: Where the Linux jobs run (hosted = GitHub's runners, e.g. to redo a failed release)
+        type: choice
+        options: [auto, hosted]
+        default: auto
 
 permissions:
   contents: write # create the GitHub release and upload assets
 
 jobs:
+  pick:
+    uses: ./.github/workflows/pick-runner.yml
+    with:
+      force_hosted: ${{ inputs.runner == 'hosted' }}
+
   ci:
     uses: ./.github/workflows/ci.yml
 
   release:
-    needs: ci
-    runs-on: ubuntu-latest
+    needs: [pick, ci]
+    runs-on: ${{ fromJSON(needs.pick.outputs.linux) }}
     env:
       TAG: ${{ inputs.tag || github.ref_name }}
     steps:

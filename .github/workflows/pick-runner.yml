@@ -1,0 +1,44 @@
+name: Pick runner
+
+# Decides where the Linux jobs of CI and Release run: on GitHub's runners, or
+# on the maintainer's local runner when it has announced itself (repository
+# variable LOCAL_RUNNER_SEEN, refreshed every minute while it is up). With no
+# local runner set up, the answer is always the hosted one. The rules are in
+# scripts/pick-runner.sh, which scripts/test-pick-runner.sh tests.
+on:
+  workflow_call:
+    inputs:
+      force_hosted:
+        description: Use GitHub-hosted runners whatever the heartbeat says
+        type: boolean
+        default: false
+    outputs:
+      linux:
+        description: JSON for runs-on of the Linux jobs
+        value: ${{ jobs.pick.outputs.linux }}
+
+permissions:
+  contents: read
+
+jobs:
+  pick:
+    runs-on: ubuntu-latest
+    outputs:
+      linux: ${{ steps.pick.outputs.linux }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          sparse-checkout: scripts
+      - id: pick
+        env:
+          SEEN: ${{ vars.LOCAL_RUNNER_SEEN }}
+          DISABLED: ${{ vars.LOCAL_RUNNER_DISABLED }}
+          FORCE_HOSTED: ${{ inputs.force_hosted }}
+          EVENT: ${{ github.event_name }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          linux=$(bash scripts/pick-runner.sh 2> reason.txt) || linux='"ubuntu-latest"'
+          [ -n "$linux" ] || linux='"ubuntu-latest"'
+          echo "::notice::$(cat reason.txt)"
+          echo "linux=$linux" >> "$GITHUB_OUTPUT"
