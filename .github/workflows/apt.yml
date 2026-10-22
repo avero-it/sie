@@ -50,6 +50,26 @@ jobs:
             echo "enabled=true" >> "$GITHUB_OUTPUT"
           fi
 
+      # A push to main can start this run before the tag's release exists, and
+      # a Pages deploy replaces the whole site, so first wait until the release
+      # of the tag on this commit has its .deb. No tag on the commit: nothing to wait for.
+      - name: Wait for the release of this commit
+        if: steps.gate.outputs.enabled == 'true'
+        env:
+          SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = push ]; then sleep 45; fi # let a tag pushed right after the commit arrive
+          tag=$(gh api "repos/$GITHUB_REPOSITORY/tags" --paginate \
+            --jq ".[] | select(.commit.sha == \"$SHA\") | .name" | grep '^v' | sort -V | tail -1 || true)
+          if [ -z "$tag" ]; then echo "No release tag on $SHA: nothing to wait for."; exit 0; fi
+          for i in $(seq 1 50); do # 50 x 30 s = 25 min
+            if gh release view "$tag" --json assets -q '.assets[].name' 2>/dev/null | grep -q '\.deb$'; then
+              echo "Release $tag has its .deb."; exit 0
+            fi
+            echo "Waiting for the release of $tag ($i/50)..."; sleep 30
+          done
+          echo "::warning::Release $tag has no .deb after 25 minutes: continuing without it."
+
       - uses: actions/checkout@v7.0.1
         if: steps.gate.outputs.enabled == 'true'
         with:
