@@ -144,13 +144,32 @@ type testKeymap map[ports.KeyEvent]string
 
 func (k testKeymap) Command(e ports.KeyEvent) (string, bool) { id, ok := k[e]; return id, ok }
 
-func (k testKeymap) Binding(id string) (ports.KeyEvent, bool) {
+func (k testKeymap) IsPrefix(e ports.KeyEvent) bool { return e == ports.Ctrl('p') }
+
+// testChords is a subset of the default Ctrl+P chords.
+var testChords = map[rune]string{
+	'l': "selection.trimLeadingSpaces",
+	'p': "selection.alignPrevious",
+	'n': "selection.alignNext",
+}
+
+func (k testKeymap) Chord(prefix, e ports.KeyEvent) (string, bool) {
+	id, ok := testChords[e.Rune]
+	return id, ok && prefix == ports.Ctrl('p') && e.Key == ports.KeyRune && e.Mod == 0
+}
+
+func (k testKeymap) Shortcut(id string) string {
 	for e, c := range k {
 		if c == id {
-			return e, true
+			return e.String()
 		}
 	}
-	return ports.KeyEvent{}, false
+	for r, c := range testChords {
+		if c == id {
+			return "Ctrl+P " + strings.ToUpper(string(r))
+		}
+	}
+	return ""
 }
 
 var keys = testKeymap{

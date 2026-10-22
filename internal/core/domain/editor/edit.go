@@ -1,6 +1,8 @@
 package editor
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -16,6 +18,8 @@ const (
 	keyDelete    = "delete"
 	keyReplace   = "replace-all"
 	keyTrim      = "trim"
+	keyTrimLead  = "trimLead"
+	keyIndent    = "indent"
 )
 
 // Insert replaces each selection with text. Line breaks in text are
@@ -175,6 +179,98 @@ func (d *Document) TrimTrailingSpace() (int, error) {
 	}
 	d.hist.Seal()
 	return n, nil
+}
+
+// TrimLeadingSpace removes spaces and tabs at the start of the lines touched
+// by the selection, or of all lines when nothing is selected, as one undo
+// step. It returns the number of lines changed.
+func (d *Document) TrimLeadingSpace() (int, error) {
+	first, last := 0, d.LineCount()-1
+	if !d.sel.Empty() {
+		first, last = d.selectedLines()
+	}
+	n, err := d.setIndents(first, last, func(int) []byte { return nil })
+	if err != nil {
+		return n, fmt.Errorf("trim leading space: %w", err)
+	}
+	return n, nil
+}
+
+// AlignToPrevious gives the lines touched by the selection the leading
+// whitespace of the nearest non-blank line above them. It returns the number
+// of lines changed.
+func (d *Document) AlignToPrevious() (int, error) {
+	first, last := d.selectedLines()
+	ref := first - 1
+	for ref >= 0 && d.isBlank(ref) {
+		ref--
+	}
+	if ref < 0 {
+		return 0, errors.New("no previous line")
+	}
+	return d.alignTo(first, last, ref)
+}
+
+// AlignToNext gives the lines touched by the selection the leading
+// whitespace of the nearest non-blank line below them. It returns the number
+// of lines changed.
+func (d *Document) AlignToNext() (int, error) {
+	first, last := d.selectedLines()
+	ref := last + 1
+	for ref < d.LineCount() && d.isBlank(ref) {
+		ref++
+	}
+	if ref >= d.LineCount() {
+		return 0, errors.New("no next line")
+	}
+	return d.alignTo(first, last, ref)
+}
+
+func (d *Document) alignTo(first, last, ref int) (int, error) {
+	text := d.Line(ref)
+	indent := text[:leadingSpace(text)]
+	n, err := d.setIndents(first, last, func(int) []byte { return indent })
+	if err != nil {
+		return n, fmt.Errorf("align: %w", err)
+	}
+	return n, nil
+}
+
+// setIndents replaces the leading whitespace of the non-blank lines first..last
+// with indent(line) as one undo step, bottom-up so earlier offsets stay valid.
+func (d *Document) setIndents(first, last int, indent func(line int) []byte) (int, error) {
+	d.hist.Seal()
+	n := 0
+	for line := last; line >= first; line-- {
+		if d.isBlank(line) {
+			continue
+		}
+		start, _ := d.lineRange(line)
+		text := d.Line(line)
+		old := text[:leadingSpace(text)]
+		want := indent(line)
+		if bytes.Equal(old, want) {
+			continue
+		}
+		after := d.sel.mapReplace(start, start+len(old), len(want))
+		if err := d.replace(start, start+len(old), string(want), after, keyIndent); err != nil {
+			return n, err
+		}
+		n++
+	}
+	d.hist.Seal()
+	return n, nil
+}
+
+// isBlank reports whether the line holds only spaces and tabs.
+func (d *Document) isBlank(line int) bool {
+	text := d.Line(line)
+	return leadingSpace(text) == len(text)
+}
+
+// leadingSpace is the length of the run of spaces and tabs at the start of text.
+func leadingSpace(text []byte) int {
+	return len(text) - len(bytes.TrimLeft(text, " \t"))
 }
 
 // SelectLine selects the cursor's line including its line break; repeated

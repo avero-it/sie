@@ -97,9 +97,10 @@ type Editor struct {
 	clip             string
 	lastQuery        string
 	dragging         bool
-	dragUnit         dragUnit  // word/line granularity of the current drag
-	dragFrom, dragTo int       // the unit first selected by a double or triple click
-	rectDrag         *rectDrag // a rectangle being dragged out with the mouse
+	dragUnit         dragUnit        // word/line granularity of the current drag
+	dragFrom, dragTo int             // the unit first selected by a double or triple click
+	rectDrag         *rectDrag       // a rectangle being dragged out with the mouse
+	chordPrefix      *ports.KeyEvent // first key of a two-key shortcut, waiting for the second
 	done             bool
 
 	showInvisibles bool
@@ -189,6 +190,7 @@ func (e *Editor) HandleKey(k ports.KeyEvent) {
 
 // HandlePaste inserts pasted text as one edit (one undo step).
 func (e *Editor) HandlePaste(text string) {
+	e.chordPrefix = nil
 	if e.focus == focusEditor {
 		e.clearMessage()
 	}
@@ -258,6 +260,23 @@ func (e *Editor) checked(id string) bool {
 }
 
 func (e *Editor) editorKey(k ports.KeyEvent) {
+	if e.chordPrefix != nil {
+		prefix := *e.chordPrefix
+		e.chordPrefix = nil
+		switch id, ok := e.cfg.Keymap.Chord(prefix, k); {
+		case k.Key == ports.KeyEsc:
+		case ok:
+			_ = e.Dispatch(id)
+		default:
+			e.setError(fmt.Errorf("%s %s is not bound", prefix, k))
+		}
+		return
+	}
+	if e.cfg.Keymap.IsPrefix(k) {
+		e.chordPrefix = &k
+		e.info(k.String() + " …")
+		return
+	}
 	if id, ok := e.cfg.Keymap.Command(k); ok {
 		_ = e.Dispatch(id) // errors are shown in the prompt line
 		return
@@ -439,10 +458,7 @@ func (e *Editor) check(err error) {
 }
 
 func (e *Editor) shortcut(id string) string {
-	if k, ok := e.cfg.Keymap.Binding(id); ok {
-		return k.String()
-	}
-	return ""
+	return e.cfg.Keymap.Shortcut(id)
 }
 
 func (e *Editor) remember(id string, args []string) {

@@ -7,6 +7,9 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/avero-it/sie/internal/adapters/keymap"
+	"github.com/avero-it/sie/internal/core/app"
 )
 
 func runCLI(t *testing.T, args ...string) (code int, stdout, stderr string) {
@@ -66,5 +69,16 @@ func TestBadConfigFailsBeforeTerminal(t *testing.T) {
 	code, _, errOut := runCLI(t, "--config", path, "file.txt")
 	if code != 1 || !strings.Contains(errOut, "sie: config: tab_width") {
 		t.Errorf("exit %d, stderr %q", code, errOut)
+	}
+}
+
+// TestEveryCommandHasAShortcut: whatever can be run from the prompt can also
+// be run from the keyboard, with one key or a Ctrl+P chord.
+func TestEveryCommandHasAShortcut(t *testing.T) {
+	km := keymap.Default()
+	for _, id := range app.BuiltinIDs() {
+		if km.Shortcut(id) == "" {
+			t.Errorf("%s has no shortcut", id)
+		}
 	}
 }

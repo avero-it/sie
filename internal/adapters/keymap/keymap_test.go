@@ -11,8 +11,14 @@ func TestDefaultIsValid(t *testing.T) {
 	if id, ok := km.Command(ports.Ctrl('s')); !ok || id != "file.save" {
 		t.Errorf("Ctrl+S = %q, %v", id, ok)
 	}
-	if k, ok := km.Binding("ui.prompt"); !ok || k.String() != "Ctrl+Alt+P" {
-		t.Errorf("ui.prompt binding = %v, %v", k, ok)
+	if got := km.Shortcut("ui.prompt"); got != "Ctrl+Alt+P" {
+		t.Errorf("ui.prompt shortcut = %q", got)
+	}
+	if got := km.Shortcut("file.saveAs"); got != "Ctrl+P A" {
+		t.Errorf("file.saveAs shortcut = %q", got)
+	}
+	if id, ok := km.Chord(ports.Ctrl('p'), ports.Ctrl('a')); !ok || id != "file.saveAs" {
+		t.Errorf("Ctrl+P Ctrl+A = %q, %v", id, ok)
 	}
 }
 
@@ -36,16 +42,18 @@ func TestDefaultAvoidsUnsafeKeys(t *testing.T) {
 }
 
 func TestDuplicateKeyRejected(t *testing.T) {
-	_, err := New([]Binding{{ports.Ctrl('s'), "a"}, {ports.Ctrl('s'), "b"}})
+	_, err := New([]Binding{{ports.Ctrl('s'), "a"}, {ports.Ctrl('s'), "b"}}, nil)
 	if err == nil {
 		t.Error("duplicate key accepted")
 	}
 }
 
-func TestPromptOnlyCommandsAreUnbound(t *testing.T) {
-	for _, id := range []string{"edit.deleteToLineEnd"} {
-		if k, ok := Default().Binding(id); ok {
-			t.Errorf("%s is prompt-only but bound to %s", id, k)
-		}
+func TestChordConflicts(t *testing.T) {
+	p, a := ports.Ctrl('p'), ports.KeyEvent{Key: ports.KeyRune, Rune: 'a'}
+	if _, err := New(nil, []Chord{{p, a, "x"}, {p, a, "y"}}); err == nil {
+		t.Error("duplicate chord accepted")
+	}
+	if _, err := New([]Binding{{p, "x"}}, []Chord{{p, a, "y"}}); err == nil {
+		t.Error("chord prefix that is also a single key accepted")
 	}
 }

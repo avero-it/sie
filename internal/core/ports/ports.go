@@ -87,6 +87,11 @@ type Clipboard interface {
 type Keymap interface {
 	// Command returns the command bound to k.
 	Command(k KeyEvent) (id string, ok bool)
-	// Binding returns the key shown as the shortcut of command id.
-	Binding(id string) (KeyEvent, bool)
+	// IsPrefix reports whether k starts a two-key chord (e.g. Ctrl+P).
+	IsPrefix(k KeyEvent) bool
+	// Chord returns the command bound to the key sequence prefix, k.
+	Chord(prefix, k KeyEvent) (id string, ok bool)
+	// Shortcut returns the shortcut of command id as shown to the user
+	// ("Ctrl+S", "Ctrl+P A"), or "" when it has none.
+	Shortcut(id string) string
 }

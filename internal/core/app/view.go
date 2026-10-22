@@ -95,6 +95,7 @@ func (e *Editor) showCompletions() bool {
 // cursor; wheel scrolls).
 func (e *Editor) HandleMouse(m ports.MouseEvent) {
 	if e.focus == focusEditor && m.Action == ports.MousePress {
+		e.chordPrefix = nil
 		e.clearMessage()
 	}
 	e.handleMouse(m)

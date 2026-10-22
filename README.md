@@ -84,7 +84,7 @@ There are three ways to run every command:
 2. **Menus**: `Ctrl+Alt+M`, or click the menu bar.
 3. **Command prompt**: `Ctrl+Alt+P`, then type part of a command's name, such as `trim sel`, `goto 42` or `find foo`. With an empty prompt, your recent commands are listed first.
 
-Whichever way you run a command, its name and shortcut appear in the prompt line. *Replace all* has no shortcut: type `replace all <text> <with>` in the prompt.
+Whichever way you run a command, its name and shortcut appear in the prompt line. Every command has a shortcut: the rarer ones are chords, **Ctrl+P** followed by a letter (below).
 
 | Key | Command | Key | Command |
 |---|---|---|---|
@@ -99,6 +99,19 @@ Whichever way you run a command, its name and shortcut appear in the prompt line
 | Ctrl+A | Select all | | |
 | **Ctrl+Alt+P** | Command prompt | **Ctrl+Alt+M** | Menus |
 | Esc | Back to the editor | | |
+
+Chords (press **Ctrl+P**, release, then the letter; Esc cancels):
+
+| Chord | Command | Chord | Command |
+|---|---|---|---|
+| Ctrl+P A | Save as | Ctrl+P I | Invisible characters |
+| Ctrl+P K | Delete to end of line | Ctrl+P E | Empty cells |
+| Ctrl+P L | Trim leading spaces | Ctrl+P C | Click ripple |
+| Ctrl+P T | Trim trailing spaces | Ctrl+P G | Indent guide |
+| Ctrl+P P | Align to previous line | Ctrl+P S | Syntax highlighting |
+| Ctrl+P N | Align to next line | Ctrl+P Y | Set language… |
+| Ctrl+P F / B | Find next / previous | Ctrl+P W | Validate on save |
+| Ctrl+P R | Replace all… | Ctrl+P H | About |
 
 Moving the cursor (hold **Shift** with any of these to select):
 

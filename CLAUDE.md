@@ -92,7 +92,7 @@ internal/adapters/
   - Every menu item and prompt completion has a 2-cell tick column: `✓ ` (U+2713, width Neutral) when the option is on, otherwise blank, so labels line up.
   - The echo carries the same column: `> ✓ Empty cells — shown`, `>   Empty cells — hidden`.
 - Echo format: `> Title args — result note`, with the shortcut right-aligned. Errors show as `Title args: error`. `Silent` commands (`ui.prompt`, `ui.menu`) are neither echoed nor listed in the prompt.
-- **Prompt-only commands** are registered normally but have no key binding and no menu entry, e.g. `edit.deleteToLineEnd` ("Delete to end of line", aliases "delete till end of line" and "kill line"). To reach a command by another phrase, add an alias; never register a second command for the same action.
+- **Every command has a shortcut** (`TestEveryCommandHasAShortcut` in `cmd/sie`): a single key for the common ones, otherwise a **Ctrl+P chord** (see below). Some commands have no menu entry, e.g. `edit.deleteToLineEnd` ("Delete to end of line", aliases "delete till end of line" and "kill line"). To reach a command by another phrase, add an alias; never register a second command for the same action.
 - Menus are app data (`app.Menu{Title, Items []commandID}`, `"-"` is a separator). `app.New` rejects menus that reference unknown IDs. Commands that take arguments show `…` in menus.
 - Unbound rune keys are typed only with no modifiers, Shift only, or Ctrl+Alt together (AltGr on Windows). Plain Alt+letter is ignored.
 
@@ -237,12 +237,27 @@ internal/adapters/
 
 **Cmd** (`ports.ModSuper`) only arrives from terminals that speak the kitty keyboard protocol. tcell enables it automatically on xterm-like terminals (`CSI > 1 u`), and reports Super as `tcell.ModMeta`, which `tui` maps to `ModSuper`, never to Alt. Cmd+letter never types text.
 
+**Chords** (`keymap.Chord`, `ports.Keymap.IsPrefix/Chord/Shortcut`): **Ctrl+P**, then a plain letter (holding Ctrl through the second key also works). The prefix is held in `Editor.chordPrefix`; the prompt line shows `Ctrl+P …` while waiting, Esc cancels, and an unbound second key shows `Ctrl+P X is not bound`. A mouse press or paste also cancels. A chord prefix cannot also be a single-key binding. Hints read `Ctrl+P A`.
+
+| Chord | Command | Chord | Command |
+|---|---|---|---|
+| Ctrl+P A | Save as | Ctrl+P I | Invisible characters |
+| Ctrl+P K | Delete to end of line | Ctrl+P E | Empty cells |
+| Ctrl+P L | Trim leading spaces | Ctrl+P C | Click ripple |
+| Ctrl+P T | Trim trailing spaces | Ctrl+P G | Indent guide |
+| Ctrl+P P | Align to previous line | Ctrl+P S | Syntax highlighting |
+| Ctrl+P N | Align to next line | Ctrl+P Y | Set language… |
+| Ctrl+P F / B | Find next / previous | Ctrl+P W | Validate on save |
+| Ctrl+P R | Replace all… | Ctrl+P H | About |
+
+**Align to previous/next line** (`selection.alignPrevious`/`alignNext`): the lines touched by the selection get the raw leading spaces/tabs of the nearest non-blank line above/below (error `no previous line`/`no next line` if none); blank lines are left alone. **Trim leading spaces** works like trim trailing (selection, else the whole document). Each is one undo step.
+
 **Interactive replace** (`search.replace`, "Replace…", Ctrl+R, aliases "find and replace" and "query replace"):
 - It asks for the search text and the replacement, starts at the selection or cursor, wraps once, and stops before the starting point.
 - Each match is selected, and the prompt line asks `y/n/a/q`.
 - The whole session is one undo step (`Document.BeginUndoGroup`/`EndUndoGroup`).
 - Closing the prompt in any way (Esc, q, a click, the prompt toggle) ends the session through `promptState.onClose`.
-- `search.replaceAll` ("Replace all…") has no key binding.
+- `search.replaceAll` ("Replace all…") is the chord Ctrl+P R.
 
 **Convention: Ctrl+Alt+letter is reserved for editor-level functions** (prompt, menu, future ones). There are deliberately no F-key fallbacks.
 
@@ -258,7 +273,7 @@ internal/adapters/
 - Linux desktops grab some Ctrl+Alt combinations (T, L, Del, F-keys, arrows). Check new Ctrl+Alt bindings against them.
 - Never bind Ctrl+M (Enter), Ctrl+I (Tab) or Ctrl+[ (Esc). Avoid Ctrl+H (Backspace on some terminals), Ctrl+J (LF) and Ctrl+Shift combinations.
 - Raw mode disables XON/XOFF, so Ctrl+S and Ctrl+Q are usable.
-- Free Ctrl keys for future commands: **B, P** (E Open recent, T Validate, U Column selection, W Close file). Ctrl+B is the tmux prefix, so prefer P.
+- Free Ctrl keys for future commands: **B** (it is the tmux prefix, so avoid it). Ctrl+P is the chord prefix.
 - Alt+B and Alt+F are taken by word moves (readline/macOS Terminal). Plain Alt+letter otherwise does nothing.
 
 ### Large files

@@ -221,3 +221,61 @@ func TestIndentCol(t *testing.T) {
 		}
 	}
 }
+
+func TestTrimLeadingSpace(t *testing.T) {
+	tests := []struct{ in, want string }{
+		{"  a\n\t b\n|c", "a\nb\n|c"},
+		{"  a\n^ b\n |c", "  a\n^b\n|c"},
+		{"  \n|x", "  \n|x"},
+	}
+	for _, tt := range tests {
+		d := doc(t, tt.in)
+		if _, err := d.TrimLeadingSpace(); err != nil {
+			t.Fatal(err)
+		}
+		if got := show(d); got != tt.want {
+			t.Errorf("%q: got %q, want %q", tt.in, got, tt.want)
+		}
+		_, _ = d.Undo()
+		if got := show(d); got != tt.in {
+			t.Errorf("%q: undo gave %q", tt.in, got)
+		}
+	}
+}
+
+func TestAlignToNeighbor(t *testing.T) {
+	tests := []struct {
+		in, want string
+		next     bool
+		wantErr  bool
+	}{
+		{"\t a\n |b", "\t a\n\t |b", false, false},
+		{"  \n    a\n|b", "  \n    a\n    |b", false, false},
+		{"|a\n\n  b", "  |a\n\n  b", true, false},
+		{"|a\nb", "", false, true},
+		{"a\n|b", "", true, true},
+		{"x\n^  a\n  b|\n    c", "x\n^    a\n    b|\n    c", true, false},
+	}
+	for _, tt := range tests {
+		d := doc(t, tt.in)
+		op := d.AlignToPrevious
+		if tt.next {
+			op = d.AlignToNext
+		}
+		_, err := op()
+		if (err != nil) != tt.wantErr {
+			t.Errorf("%q: err %v", tt.in, err)
+			continue
+		}
+		if tt.wantErr {
+			continue
+		}
+		if got := show(d); got != tt.want {
+			t.Errorf("%q: got %q, want %q", tt.in, got, tt.want)
+		}
+		_, _ = d.Undo()
+		if got := show(d); got != tt.in {
+			t.Errorf("%q: undo gave %q", tt.in, got)
+		}
+	}
+}

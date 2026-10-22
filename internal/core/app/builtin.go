@@ -63,6 +63,13 @@ func builtins() []command {
 			Run:         func(e *Editor, _ []string) error { return e.toggleOption(&e.columnMode) }},
 		{ID: "selection.trimTrailingSpaces", Title: "Trim trailing spaces",
 			Aliases: []string{"trim ending spaces", "trim spaces from selection", "trim"}, Run: (*Editor).cmdTrim},
+		{ID: "selection.trimLeadingSpaces", Title: "Trim leading spaces",
+			Aliases: []string{"trim starting spaces", "trim beginning spaces", "trim start"},
+			Run:     lineCountOp((*editor.Document).TrimLeadingSpace, "trimmed")},
+		{ID: "selection.alignPrevious", Title: "Align to previous line", Aliases: []string{"align up"},
+			Run: lineCountOp((*editor.Document).AlignToPrevious, "aligned")},
+		{ID: "selection.alignNext", Title: "Align to next line", Aliases: []string{"align down"},
+			Run: lineCountOp((*editor.Document).AlignToNext, "aligned")},
 
 		{ID: "search.find", Title: "Find", Aliases: []string{"search"},
 			Args: []arg{{Prompt: "Find", Default: (*Editor).findDefault}}, Run: (*Editor).cmdFind},
@@ -117,8 +124,32 @@ func builtins() []command {
 	}
 }
 
+// BuiltinIDs returns the IDs of the built-in commands a user can invoke
+// (everything but the silent ui.* ones). Every one of them needs a shortcut.
+func BuiltinIDs() []string {
+	var ids []string
+	for _, c := range builtins() {
+		if !c.Silent {
+			ids = append(ids, c.ID)
+		}
+	}
+	return ids
+}
+
 func docOp(op func(*editor.Document) error) func(*Editor, []string) error {
 	return func(e *Editor, _ []string) error { return op(e.doc) }
+}
+
+// lineCountOp wraps a line operation that returns the number of lines it
+// changed and reports it as "N lines <verb>".
+func lineCountOp(op func(*editor.Document) (int, error), verb string) func(*Editor, []string) error {
+	return func(e *Editor, _ []string) error {
+		n, err := op(e.doc)
+		if err == nil {
+			e.note(fmt.Sprintf("%s %s", plural(n, "line"), verb))
+		}
+		return err
+	}
 }
 
 // guardUnsaved runs action now, or after confirmation if there are unsaved changes.
