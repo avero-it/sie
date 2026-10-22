@@ -453,7 +453,7 @@ func (e *Editor) drawStatus(vm *viewBuilder, r regions) {
 		name = "[No Name]"
 	}
 	if e.doc.Modified() {
-		name += " ●"
+		name += " [modified]"
 	}
 	line, _, vcol := e.doc.CursorPos()
 	enc := "UTF-8"

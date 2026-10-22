@@ -35,7 +35,7 @@ func TestTypingAndStatus(t *testing.T) {
 	h.wantRow(rowText, " 1 héllo")
 	h.wantRow(rowText+1, " 2   日本")
 	h.Resize(80, 10)
-	h.wantRowPrefix(rowStatus, " sie test - [No Name] ●")
+	h.wantRowPrefix(rowStatus, " sie test - [No Name] [modified]")
 	if !strings.Contains(h.row(rowStatus), "Ln 2, Col 7") {
 		t.Errorf("status: %q", h.row(rowStatus))
 	}

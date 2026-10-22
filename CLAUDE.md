@@ -74,7 +74,7 @@ internal/adapters/
 │  13 │     fmt.Println("hi")█                            │  editor               (all remaining rows)
 │  14 │ }                                                 │
 │ > Save file                                    Ctrl+S   │  command/prompt line  (1 row, gray bar)
-│ sie v0.2.1 - main.go ●      Ln 13, Col 23   UTF-8   LF  │  status line          (1 row)
+│ sie v0.2.1 - main.go [modified] Ln 13, Col 23 UTF-8 LF  │  status line          (1 row)
 └─────────────────────────────────────────────────────────┘
 ```
 

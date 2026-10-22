@@ -357,7 +357,7 @@
 
     // status line
     for (c = 0; c < W; c++) put(H - 1, c, " ", "s");
-    var left = "sie v0.9.0 - " + s.name + (s.modified ? " ●" : "");
+    var left = "sie v0.9.0 - " + s.name + (s.modified ? " [modified]" : "");
     var pos = "Ln " + (cur0.l + 1 + (s.base || 0)) + ", Col " + (cur0.c + 1) + (s.cursors.length > 1 ? " (" + s.cursors.length + " cursors)" : "");
     var right = pos + "   " + s.lang + "   UTF-8" + (s.bom ? " BOM" : "") + "   " + s.eol;
     var room = W - right.length - 2;
