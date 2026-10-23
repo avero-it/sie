@@ -286,13 +286,28 @@ func (e *Editor) editorKey(k ports.KeyEvent) {
 	}
 	switch k.Key {
 	case ports.KeyBackspace:
+		if k.Mod&ports.ModAlt != 0 {
+			e.check(e.doc.DeleteWordBack())
+			return
+		}
 		e.check(e.doc.Backspace())
 	case ports.KeyDelete:
+		if k.Mod&ports.ModAlt != 0 {
+			e.check(e.doc.DeleteWordForward())
+			return
+		}
 		e.check(e.doc.DeleteForward())
 	case ports.KeyEnter:
 		e.check(e.doc.InsertNewline())
 	case ports.KeyTab:
-		e.check(e.doc.Insert("\t"))
+		switch {
+		case k.Mod&ports.ModShift != 0:
+			e.check(e.doc.Outdent())
+		case e.doc.SelectsLines():
+			e.check(e.doc.Indent())
+		default:
+			e.check(e.doc.Insert("\t"))
+		}
 	case ports.KeyEsc:
 		if !e.doc.ClearSecondary() {
 			e.doc.SetSelection(editor.Cursor(e.doc.Selection().Head))

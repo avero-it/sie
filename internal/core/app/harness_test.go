@@ -151,6 +151,11 @@ var testChords = map[rune]string{
 	'l': "selection.trimLeadingSpaces",
 	'p': "selection.alignPrevious",
 	'n': "selection.alignNext",
+	'u': "edit.moveLineUp",
+	'j': "edit.moveLineDown",
+	'm': "edit.toggleComment",
+	'v': "selection.selectNext",
+	'q': "selection.selectPrevious",
 }
 
 func (k testKeymap) Chord(prefix, e ports.KeyEvent) (string, bool) {

@@ -45,6 +45,11 @@ func normalizeKey(ev *tcell.EventKey) (ports.KeyEvent, bool) {
 	case k == tcell.KeyBacktab:
 		return ports.KeyEvent{Key: ports.KeyTab, Mod: mod | ports.ModShift}, true
 
+	case k == tcell.KeyUS || k == tcell.KeyCtrlUnderscore:
+		// Ctrl+/ has no code of its own on legacy terminals: it is 0x1F, the
+		// same as Ctrl+_ and Ctrl+7 (Ctrl+Shift+7 on an Italian layout).
+		return ports.KeyEvent{Key: ports.KeyRune, Rune: '/', Mod: (mod | ports.ModCtrl) &^ ports.ModShift}, true
+
 	case k == tcell.KeyCtrlSpace:
 		return ports.KeyEvent{Key: ports.KeyRune, Rune: ' ', Mod: mod | ports.ModCtrl}, true
 	}

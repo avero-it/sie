@@ -96,7 +96,7 @@ Whichever way you run a command, its name and shortcut appear in the prompt line
 | Ctrl+Q | Quit | Ctrl+D | Duplicate line |
 | Ctrl+Z / Ctrl+Y | Undo / Redo | Ctrl+K | Delete line |
 | Ctrl+X / C / V | Cut / Copy / Paste | Ctrl+L | Select line |
-| Ctrl+A | Select all | | |
+| Ctrl+A | Select all | Ctrl+/ | Toggle comment |
 | **Ctrl+Alt+P** | Command prompt | **Ctrl+Alt+M** | Menus |
 | Esc | Back to the editor | | |
 
@@ -112,6 +112,10 @@ Chords (press **Ctrl+P**, release, then the letter; Esc cancels):
 | Ctrl+P N | Align to next line | Ctrl+P Y | Set language… |
 | Ctrl+P F / B | Find next / previous | Ctrl+P W | Validate on save |
 | Ctrl+P R | Replace all… | Ctrl+P H | About |
+| Ctrl+P U / J | Move line up / down | Ctrl+P M | Toggle comment |
+| Ctrl+P V / Q | Select next / previous occurrence | | |
+
+**Ctrl+/** is the same as Ctrl+P M. On an Italian keyboard that is Ctrl+Shift+7. Some terminals don't send it (macOS Terminal.app may not), so use the chord there. Toggle comment needs a known language (see Set language…).
 
 Moving the cursor (hold **Shift** with any of these to select):
 
@@ -119,6 +123,14 @@ Moving the cursor (hold **Shift** with any of these to select):
 |---|---|---|---|
 | Alt+←/→ (or Ctrl+←/→) | by word | Alt+↑/↓ | 5 lines (`jump_lines`) |
 | Cmd+←/→ or Home/End | line start/end | Cmd+↑/↓ or Ctrl+Home/End | file start/end |
+
+Editing keys:
+
+| Key | Does |
+|---|---|
+| Tab | Insert a tab. With several lines selected, indent them all |
+| Shift+Tab | Delete the tab or spaces left of the cursor; if there are none, outdent the line (a tab, or up to a tab stop of spaces). With several lines selected, outdent them all |
+| Alt+Backspace / Alt+Delete | Delete the word before / after the cursor |
 
 The mouse works too: click to place the cursor, drag or Shift+click to select, and use the wheel to scroll.
 

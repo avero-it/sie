@@ -50,12 +50,22 @@ func builtins() []command {
 			Run: (*Editor).cmdValidate},
 		{ID: "edit.duplicateLine", Title: "Duplicate line", Run: docOp((*editor.Document).DuplicateLine)},
 		{ID: "edit.deleteLine", Title: "Delete line", Run: docOp((*editor.Document).DeleteLine)},
+		{ID: "edit.moveLineUp", Title: "Move line up", Aliases: []string{"move up", "line up"},
+			Run: docOp(func(d *editor.Document) error { return d.MoveLines(true) })},
+		{ID: "edit.moveLineDown", Title: "Move line down", Aliases: []string{"move down", "line down"},
+			Run: docOp(func(d *editor.Document) error { return d.MoveLines(false) })},
+		{ID: "edit.toggleComment", Title: "Toggle comment", Aliases: []string{"comment", "uncomment", "comment line"},
+			Run: (*Editor).cmdToggleComment},
 		// Prompt-only: no default key binding, not in any menu.
 		{ID: "edit.deleteToLineEnd", Title: "Delete to end of line",
 			Aliases: []string{"delete till end of line", "kill line"}, Run: docOp((*editor.Document).DeleteToLineEnd)},
 
 		{ID: "selection.all", Title: "Select all", Run: func(e *Editor, _ []string) error { e.doc.SelectAll(); return nil }},
 		{ID: "selection.line", Title: "Select line", Run: func(e *Editor, _ []string) error { e.doc.SelectLine(); return nil }},
+		{ID: "selection.selectNext", Title: "Select next occurrence", MultiCursor: true,
+			Aliases: []string{"next occurrence", "add next match"}, Run: occurrenceOp(true)},
+		{ID: "selection.selectPrevious", Title: "Select previous occurrence", MultiCursor: true,
+			Aliases: []string{"previous occurrence", "add previous match"}, Run: occurrenceOp(false)},
 		{ID: "selection.toggleColumnMode", Title: "Column selection",
 			Aliases:     []string{"column mode", "block selection", "rectangular selection", "column"},
 			MultiCursor: true,
@@ -149,6 +159,16 @@ func lineCountOp(op func(*editor.Document) (int, error), verb string) func(*Edit
 			e.note(fmt.Sprintf("%s %s", plural(n, "line"), verb))
 		}
 		return err
+	}
+}
+
+// occurrenceOp adds a cursor on the next (or previous) match of the selection.
+func occurrenceOp(forward bool) func(*Editor, []string) error {
+	return func(e *Editor, _ []string) error {
+		if !e.doc.SelectOccurrence(forward) {
+			e.note("no other occurrence")
+		}
+		return nil
 	}
 }
 

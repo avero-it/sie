@@ -222,6 +222,7 @@ internal/adapters/
 | Ctrl+Q | Quit | Ctrl+D | Duplicate line |
 | Ctrl+Z / Ctrl+Y | Undo / Redo | Ctrl+K | Delete line |
 | Ctrl+X / C / V | Cut / Copy / Paste | Ctrl+L | Select line |
+| Ctrl+/ | Toggle comment (also Ctrl+P M) | | |
 | Ctrl+A | Select all | Ctrl+R | Replace… (interactive) |
 | **Ctrl+Alt+P** | Focus prompt | **Ctrl+Alt+M** | Open menus (also: mouse click) |
 | Esc | Back to editor (closes menu, prompt or popup) | | |
@@ -249,6 +250,19 @@ internal/adapters/
 | Ctrl+P N | Align to next line | Ctrl+P Y | Set language… |
 | Ctrl+P F / B | Find next / previous | Ctrl+P W | Validate on save |
 | Ctrl+P R | Replace all… | Ctrl+P H | About |
+| Ctrl+P U / J | Move line up / down | Ctrl+P M | Toggle comment |
+| Ctrl+P V / Q | Select next / previous occurrence | | |
+
+**Indent and word delete** (editing primitives in `editorKey`, not commands, not echoed; domain code in `domain/editor/lineops.go`):
+- **Tab** inserts `\t`; with a selection spanning lines (`Document.SelectsLines`, one selection only) it indents every non-blank touched line (`Indent`), one undo step.
+- **Shift+Tab** (`Outdent`; tui delivers it as `KeyTab`+`ModShift`): with a multi-line selection it removes one indent level from each line. Otherwise, per cursor, it deletes the tab or spaces directly left of the cursor (spaces up to the previous tab stop), and if there are none it removes one indent level from the cursor's line (a leading `\t`, or up to tab-width spaces).
+- **Alt+Backspace / Alt+Delete** delete the previous / next word (`DeleteWordBack`/`DeleteWordForward`, word classes of word movement). Plain Backspace stays a single-grapheme delete.
+
+**Move line up/down** (`edit.moveLineUp`/`edit.moveLineDown`): swaps the lines touched by the selection with the neighbor above/below, keeping the selection on them; one undo step; the line ending between them is preserved.
+
+**Select next/previous occurrence** (`selection.selectNext`/`selectPrevious`, `MultiCursor`): with an empty selection it selects the word under the cursor; otherwise it adds a cursor on the next (previous) case-sensitive match of the primary selection's text, wrapping, skipping text already selected. The new one becomes primary. Chord-only, because Ctrl+Alt+letter is reserved for `ui.*` commands and Ctrl+N/Ctrl+P are taken.
+
+**Toggle comment** (`edit.toggleComment`, **Ctrl+/**, chord Ctrl+P M): adds the language's line-comment prefix plus a space to the non-blank lines touched by the selection (at their common indent), or removes it when all of them carry it; one undo step. The prefix comes from `app/comment.go` (`commentPrefix`, by highlighter language name); no language, or a language without line comments (JSON, HTML), is an error. Ctrl+/ arrives as byte 0x1F (`tcell.KeyUS`, the same as Ctrl+_ and Ctrl+7, which is Ctrl+Shift+7 on an Italian layout), which `tui.normalizeKey` maps to `Ctrl+/`; kitty-protocol terminals send `/` with Ctrl. macOS Terminal.app may send nothing usable, hence the chord.
 
 **Align to previous/next line** (`selection.alignPrevious`/`alignNext`): the lines touched by the selection get the raw leading spaces/tabs of the nearest non-blank line above/below (error `no previous line`/`no next line` if none); blank lines are left alone. **Trim leading spaces** works like trim trailing (selection, else the whole document). Each is one undo step.
 

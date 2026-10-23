@@ -102,6 +102,7 @@ func DefaultBindings() []Binding {
 		{c('g'), "search.gotoLine"},
 		{c('t'), "edit.validate"},
 		{c('u'), "selection.toggleColumnMode"},
+		{c('/'), "edit.toggleComment"},
 		{ports.CtrlAlt('p'), "ui.prompt"},
 		{ports.CtrlAlt('m'), "ui.menu"},
 	}
@@ -119,6 +120,11 @@ func DefaultChords() []Chord {
 	}{
 		{'a', "file.saveAs"},
 		{'k', "edit.deleteToLineEnd"},
+		{'u', "edit.moveLineUp"},
+		{'j', "edit.moveLineDown"},
+		{'m', "edit.toggleComment"},
+		{'v', "selection.selectNext"},
+		{'q', "selection.selectPrevious"},
 		{'l', "selection.trimLeadingSpaces"},
 		{'t', "selection.trimTrailingSpaces"},
 		{'p', "selection.alignPrevious"},
