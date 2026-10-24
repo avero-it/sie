@@ -136,6 +136,7 @@ func DefaultChords() []Chord {
 		{'e', "view.toggleEmptyCells"},
 		{'c', "view.toggleClickRipple"},
 		{'g', "view.toggleIndentGuide"},
+		{'z', "view.toggleWrap"},
 		{'s', "view.toggleSyntax"},
 		{'y', "view.setLanguage"},
 		{'w', "view.toggleValidateOnSave"},

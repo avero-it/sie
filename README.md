@@ -113,7 +113,7 @@ Chords (press **Ctrl+P**, release, then the letter; Esc cancels):
 | Ctrl+P F / B | Find next / previous | Ctrl+P W | Validate on save |
 | Ctrl+P R | Replace all… | Ctrl+P H | About |
 | Ctrl+P U / J | Move line up / down | Ctrl+P M | Toggle comment |
-| Ctrl+P V / Q | Select next / previous occurrence | | |
+| Ctrl+P V / Q | Select next / previous occurrence | Ctrl+P Z | Wrap lines |
 
 **Ctrl+/** is the same as Ctrl+P M. On an Italian keyboard that is Ctrl+Shift+7. Some terminals don't send it (macOS Terminal.app may not), so use the chord there. Toggle comment needs a known language (see Set language…).
 
@@ -195,6 +195,7 @@ show_invisibles: false  # mark spaces (␣) and tabs (»)
 show_empty_cells: true  # mark cells holding no character (·)
 click_ripple: false     # a wave animation on every click in the text
 indent_guide: false     # briefly show a vertical guide when a line's indent moves
+wrap: false             # wrap long lines instead of scrolling sideways
 line_ending: lf         # for new files: lf or crlf
 jump_lines: 5           # lines moved by Alt+↑/↓ (1–100)
 syntax_highlighting: true

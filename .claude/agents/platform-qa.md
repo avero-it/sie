@@ -42,7 +42,7 @@ CGO_ENABLED=0 go list -deps -f '{{if .CgoFiles}}{{.ImportPath}}{{end}}' ./...   
 
 - viper, in `internal/adapters/config` only. The files are `/etc/sie/config.yaml`, then `~/.sie/config.yaml` (`os.UserHomeDir()`), merged so the user file wins key by key. `SIE_<KEY>` environment variables override both. `--config <file>` replaces the search, and that file must exist.
 - Missing files mean defaults. A malformed file, an unknown key (`UnmarshalExact`) or an invalid value makes `sie` exit with `sie: config: …` **before** the terminal is initialized. `sie config` prints the effective settings and their source files.
-- Keys: `tab_width` (1–16), `show_invisibles`, `show_empty_cells`, `click_ripple`, `indent_guide`, `line_ending` (`lf`/`crlf`, for new files), `jump_lines` (1–100), `syntax_highlighting`, `syntax_max_size` (a size like `2MB`, parsed with viper's `GetSizeInBytes`), `validate_on_save`, `large_file_size` (a size like `32MB`). A new key must be added to `Settings`, the defaults, validation, `sie config` output, `app.Config` wiring, README and tests.
+- Keys: `tab_width` (1–16), `show_invisibles`, `show_empty_cells`, `click_ripple`, `indent_guide`, `wrap`, `line_ending` (`lf`/`crlf`, for new files), `jump_lines` (1–100), `syntax_highlighting`, `syntax_max_size` (a size like `2MB`, parsed with viper's `GetSizeInBytes`), `validate_on_save`, `large_file_size` (a size like `32MB`). A new key must be added to `Settings`, the defaults, validation, `sie config` output, `app.Config` wiring, README and tests.
 
 ## Testing
 

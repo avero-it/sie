@@ -70,7 +70,7 @@ func builtins() []command {
 			Aliases:     []string{"column mode", "block selection", "rectangular selection", "column"},
 			MultiCursor: true,
 			Checked:     func(e *Editor) bool { return e.columnMode },
-			Run:         func(e *Editor, _ []string) error { return e.toggleOption(&e.columnMode) }},
+			Run:         (*Editor).cmdToggleColumnMode},
 		{ID: "selection.trimTrailingSpaces", Title: "Trim trailing spaces",
 			Aliases: []string{"trim ending spaces", "trim spaces from selection", "trim"}, Run: (*Editor).cmdTrim},
 		{ID: "selection.trimLeadingSpaces", Title: "Trim leading spaces",
@@ -109,6 +109,10 @@ func builtins() []command {
 			Aliases: []string{"alignment guide", "indent flash"},
 			Checked: func(e *Editor) bool { return e.indentGuide },
 			Run:     func(e *Editor, _ []string) error { return e.toggleOption(&e.indentGuide) }},
+		{ID: "view.toggleWrap", Title: "Wrap lines",
+			Aliases: []string{"wrap", "word wrap", "soft wrap", "line wrap"},
+			Checked: func(e *Editor) bool { return e.wrap },
+			Run:     (*Editor).cmdToggleWrap},
 		{ID: "view.toggleSyntax", Title: "Syntax highlighting",
 			Aliases: []string{"toggle syntax", "highlighting", "colors"},
 			Checked: func(e *Editor) bool { return e.showSyntax },
@@ -421,6 +425,41 @@ func (e *Editor) toggleOption(opt *bool) error {
 		e.note("on")
 	} else {
 		e.note("off")
+	}
+	return nil
+}
+
+// cmdToggleWrap switches line wrapping; the window restarts at the top line.
+func (e *Editor) cmdToggleWrap([]string) error {
+	if e.columnMode && !e.wrap {
+		return errors.New("turn off column selection first")
+	}
+	e.setWrap(!e.wrap)
+	return nil
+}
+
+func (e *Editor) setWrap(on bool) {
+	e.wrap = on
+	e.view.Left, e.view.Skip = 0, 0
+	e.doc.SetSelection(e.doc.Selection()) // forget the preferred column
+	e.follow()
+	if on {
+		e.note("on")
+	} else {
+		e.note("off")
+	}
+}
+
+// cmdToggleColumnMode switches column selection, which needs unwrapped text.
+func (e *Editor) cmdToggleColumnMode([]string) error {
+	if err := e.toggleOption(&e.columnMode); err != nil {
+		return err
+	}
+	if e.columnMode && e.wrap {
+		e.wrap = false
+		e.view.Skip = 0
+		e.follow()
+		e.note("wrap off")
 	}
 	return nil
 }

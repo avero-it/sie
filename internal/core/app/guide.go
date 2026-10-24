@@ -31,7 +31,7 @@ type guideState struct {
 // line's first non-blank glyph to another column, it starts the indent guide.
 // Moving the cursor and edits of blank lines never do.
 func (e *Editor) trackIndent() {
-	if !e.indentGuide {
+	if !e.indentGuide || e.wrap {
 		return
 	}
 	line, _, _ := e.doc.CursorPos()
@@ -55,7 +55,7 @@ func (e *Editor) pruneGuide() {
 // every other cell (blank, short or missing lines) shows a gray bar.
 func (e *Editor) drawGuide(vm *viewBuilder, r regions) {
 	e.pruneGuide()
-	if !e.guide.on {
+	if !e.guide.on || e.wrap {
 		return
 	}
 	cols := e.width - r.gutter
