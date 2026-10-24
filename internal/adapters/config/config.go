@@ -23,6 +23,7 @@ type Settings struct {
 	ClickRipple    bool   `mapstructure:"click_ripple"`     // wave animation on clicks
 	IndentGuide    bool   `mapstructure:"indent_guide"`     // flash a guide when the line indent moves
 	Wrap           bool   `mapstructure:"wrap"`             // wrap long lines
+	ColumnRuler    bool   `mapstructure:"column_ruler"`     // column numbers on the first text row
 	LineEnding     string `mapstructure:"line_ending"`      // for new files: "lf" or "crlf"
 	JumpLines      int    `mapstructure:"jump_lines"`       // lines moved by Alt+Up/Down
 
@@ -37,7 +38,7 @@ type Settings struct {
 
 // Defaults returns the built-in settings.
 func Defaults() Settings {
-	return Settings{TabWidth: 4, ShowInvisibles: false, ShowEmptyCells: true, ClickRipple: false, LineEnding: "lf", JumpLines: 5,
+	return Settings{TabWidth: 4, ShowInvisibles: false, ShowEmptyCells: true, ColumnRuler: true, ClickRipple: false, LineEnding: "lf", JumpLines: 5,
 		SyntaxHighlighting: true, SyntaxMaxSize: "2MB", SyntaxMaxBytes: 2 << 20, ValidateOnSave: true,
 		LargeFileSize: "32MB", LargeFileBytes: 32 << 20}
 }
@@ -74,6 +75,7 @@ func load(paths []string, mustExist bool) (Settings, []string, error) {
 	v.SetDefault("click_ripple", d.ClickRipple)
 	v.SetDefault("indent_guide", d.IndentGuide)
 	v.SetDefault("wrap", d.Wrap)
+	v.SetDefault("column_ruler", d.ColumnRuler)
 	v.SetDefault("line_ending", d.LineEnding)
 	v.SetDefault("jump_lines", d.JumpLines)
 	v.SetDefault("syntax_highlighting", d.SyntaxHighlighting)

@@ -41,6 +41,10 @@ const (
 	// first glyph of a line that starts at the guide column.
 	StyleGuide
 	StyleGuideMatch
+	// StyleRuler is the column ruler row; StyleWrapMark the continuation
+	// marker in the gutter of a wrapped line.
+	StyleRuler
+	StyleWrapMark
 	// StyleMatch marks the other matches of the text typed in the Find prompt.
 	StyleMatch
 

@@ -23,7 +23,7 @@ func wrapHarness(t *testing.T) *harness {
 func TestWrapRender(t *testing.T) {
 	h := wrapHarness(t)
 	h.wantRow(rowText, " 1 aaaaaaaaaa bbbbbbbbbb cccccccccc")
-	h.wantRow(rowText+1, "   dddddddddd")
+	h.wantRow(rowText+1, " ↳ dddddddddd")
 	h.wantRow(rowText+2, " 2 short")
 	h.wantRowContains(rowStatus, "WRAP")
 	_ = h.Dispatch("view.toggleWrap")

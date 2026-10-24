@@ -14,11 +14,15 @@ import (
 // line (1 row), status line (1 row).
 type regions struct {
 	menuY, textTop, textRows, promptY, statusY int
+	rulerY                                     int // column ruler row; 0 when not shown
 	gutter                                     int // line-number column width, incl. trailing space
 }
 
+// minRulerRows is the text height below which the ruler is left out.
+const minRulerRows = 4
+
 func (e *Editor) regions() regions {
-	return regions{
+	r := regions{
 		menuY:    0,
 		textTop:  1,
 		textRows: max(0, e.height-3),
@@ -26,6 +30,11 @@ func (e *Editor) regions() regions {
 		statusY:  e.height - 1,
 		gutter:   len(fmt.Sprint(e.doc.LineCount())) + 2,
 	}
+	// Wrapped text never scrolls sideways, so a ruler would never move.
+	if e.columnRuler && !e.wrap && r.textRows >= minRulerRows {
+		r.rulerY, r.textTop, r.textRows = 1, 2, r.textRows-1
+	}
+	return r
 }
 
 func (e *Editor) layout() {
@@ -278,6 +287,7 @@ func (e *Editor) View() ports.ViewModel {
 	}
 	r := e.regions()
 	e.drawMenuBar(vm, r)
+	e.drawRuler(vm, r)
 	e.drawText(vm, r)
 	e.drawRipples(vm, r)
 	e.drawGuide(vm, r)
@@ -327,6 +337,30 @@ func (e *Editor) drawMenuBar(vm *viewBuilder, r regions) {
 		}
 		vm.add(s.x, r.menuY, " "+e.menus[i].Title+" ", style)
 	}
+}
+
+// drawRuler draws the column numbers: dots, with the number of every tenth
+// column starting at that column. Columns are screen cells, 1-based, and
+// follow the horizontal scroll.
+func (e *Editor) drawRuler(vm *viewBuilder, r regions) {
+	if r.rulerY == 0 {
+		return
+	}
+	cols := e.width - r.gutter
+	vm.fill(r.rulerY, ports.StyleRuler)
+	if cols <= 0 {
+		return
+	}
+	cells := []byte(strings.Repeat(".", cols))
+	// Start a few columns early: a number cut by the left edge still shows its tail.
+	for col := (max(e.view.Left-3, 0)/10 + 1) * 10; col-e.view.Left <= cols; col += 10 {
+		num, x := fmt.Sprint(col), col-1-e.view.Left
+		if x < 0 {
+			num, x = num[min(-x, len(num)):], 0
+		}
+		copy(cells[x:], num)
+	}
+	vm.add(r.gutter, r.rulerY, string(cells), ports.StyleRuler)
 }
 
 func (e *Editor) drawText(vm *viewBuilder, r regions) {
@@ -384,6 +418,8 @@ func (e *Editor) drawText(vm *viewBuilder, r regions) {
 				gutterStyle = ports.StyleGutterCurrent
 			}
 			vm.add(0, y, fmt.Sprintf("%*d ", r.gutter-1, line+1), gutterStyle)
+		} else {
+			vm.add(r.gutter-2, y, wrapMark, ports.StyleWrapMark)
 		}
 
 		start := e.doc.OffsetAt(line, 0)
@@ -468,6 +504,9 @@ func truncate(s string, cells int) string {
 	}
 	return b.String() + "…"
 }
+
+// wrapMark sits in the gutter of the continuation rows of a wrapped line.
+const wrapMark = "↳"
 
 // Faint markers (all one cell wide, East Asian width neutral or Latin-1).
 const (

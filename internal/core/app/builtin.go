@@ -109,6 +109,10 @@ func builtins() []command {
 			Aliases: []string{"alignment guide", "indent flash"},
 			Checked: func(e *Editor) bool { return e.indentGuide },
 			Run:     func(e *Editor, _ []string) error { return e.toggleOption(&e.indentGuide) }},
+		{ID: "view.toggleColumnRuler", Title: "Column ruler",
+			Aliases: []string{"ruler", "columns", "column numbers"},
+			Checked: func(e *Editor) bool { return e.columnRuler },
+			Run:     (*Editor).cmdToggleColumnRuler},
 		{ID: "view.toggleWrap", Title: "Wrap lines",
 			Aliases: []string{"wrap", "word wrap", "soft wrap", "line wrap"},
 			Checked: func(e *Editor) bool { return e.wrap },
@@ -427,6 +431,14 @@ func (e *Editor) toggleOption(opt *bool) error {
 		e.note("off")
 	}
 	return nil
+}
+
+// cmdToggleColumnRuler shows or hides the ruler; the text area gains or
+// loses its first row.
+func (e *Editor) cmdToggleColumnRuler([]string) error {
+	err := e.toggleOption(&e.columnRuler)
+	e.follow()
+	return err
 }
 
 // cmdToggleWrap switches line wrapping; the window restarts at the top line.

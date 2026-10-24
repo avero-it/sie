@@ -30,6 +30,7 @@ type Config struct {
 	ShowEmptyCells bool             // mark cells holding no character
 	IndentGuide    bool             // flash a guide when the cursor line's indent moves
 	Wrap           bool             // wrap long lines instead of scrolling sideways
+	ColumnRuler    bool             // column numbers on the first text row (not while wrapping)
 	ClickRipple    bool             // animate a wave on every click in the text
 	Now            func() time.Time // clock for animations; nil means time.Now
 	JumpLines      int              // lines moved by Alt+Up/Down; <= 0 means defaultJumpLines
@@ -110,6 +111,7 @@ type Editor struct {
 	clickRipple    bool
 	indentGuide    bool
 	wrap           bool
+	columnRuler    bool
 	indent         indentState
 	guide          guideState
 	ripples        []ripple
@@ -139,6 +141,7 @@ func New(cfg Config) (*Editor, error) {
 		clickRipple:    cfg.ClickRipple,
 		indentGuide:    cfg.IndentGuide,
 		wrap:           cfg.Wrap,
+		columnRuler:    cfg.ColumnRuler,
 		showSyntax:     cfg.SyntaxHighlighting,
 		validateOnSave: cfg.ValidateOnSave,
 	}

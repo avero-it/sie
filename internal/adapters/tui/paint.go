@@ -37,6 +37,8 @@ func DefaultTheme() Theme {
 		ports.StyleBuiltin:          d.Foreground(tcell.ColorBlue),
 		ports.StyleMeta:             d.Foreground(tcell.ColorFuchsia),
 		ports.StyleGutter:           d.Foreground(tcell.ColorGray),
+		ports.StyleRuler:            d.Foreground(tcell.ColorGray),
+		ports.StyleWrapMark:         d.Foreground(tcell.ColorGray),
 		ports.StyleGutterCurrent:    d.Bold(true),
 		ports.StyleMenuBar:          bar,
 		ports.StyleMenuTitleActive:  active,

@@ -198,8 +198,14 @@ internal/adapters/
 
 - `view.toggleWrap` ("Wrap lines", ✓ option in the View menu, **Ctrl+P Z**, aliases `wrap`, `word wrap`, `soft wrap`, `line wrap`, config `wrap`, default off). Long lines continue on the next screen row instead of scrolling sideways; the status line shows `WRAP`.
 - **Domain:** `editor.Segments(glyphs, cols)` (`domain/editor/wrap.go`) splits a laid-out line into rows: after the last space or tab that fits, else before the glyph that overflows; wide glyphs are never split. A line that fills its last row exactly gets an empty extra row for the end-of-line cursor. `Document.WrapPos`, `OffsetAtRow`, `WrapRows` and `MoveRows` convert between offsets and (line, row, cell). `Viewport.Top` stays a line and `Viewport.Skip` is the wrapped row of it shown first (`FollowWrap`, `ScrollRows`); `Left` is 0.
-- **App:** `drawText` walks screen rows (line number only on a line's first row); Up/Down, Alt+Up/Down and PgUp/PgDn move by screen row (`MoveRows`, preferred cell kept), Home/End stay logical. Clicks map through `rowAt` + `OffsetAtRow`. The wheel scrolls rows.
+- **App:** `drawText` walks screen rows (line number only on a line's first row; continuation rows show `↳` in the gutter); Up/Down, Alt+Up/Down and PgUp/PgDn move by screen row (`MoveRows`, preferred cell kept), Home/End stay logical. Clicks map through `rowAt` + `OffsetAtRow`. The wheel scrolls rows.
 - **Not while wrapping:** the indent guide is hidden, and Alt+drag rectangles are ignored (Alt+click still adds a cursor). Turning on Column selection turns wrap off, and wrap refuses to turn on during column mode.
+
+### Column ruler
+
+- `view.toggleColumnRuler` ("Column ruler", ✓ option in the View menu, **Ctrl+P O**, aliases `ruler`, `columns`, `column numbers`, config `column_ruler`, default on). The first text row shows the column numbers (`drawRuler`): dots, and the number of every tenth column starting at that column. Columns are 1-based screen cells and follow `view.Left`, so the numbers move when the text scrolls sideways. `StyleRuler`.
+- The ruler is part of the layout: `regions.rulerY` is 1 and `textTop` 2 while it shows, so hit-testing, ripple, guide and completions all follow. It is hidden while wrapping (`Left` is always 0) and when there are fewer than `minRulerRows` (4) text rows.
+- While wrapping, the continuation rows of a line show a faint `↳` (`wrapMark`, `StyleWrapMark`) in the last gutter cell, and no line number.
 
 ### Indent guide
 
@@ -267,6 +273,7 @@ internal/adapters/
 | Ctrl+P R | Replace all… | Ctrl+P H | About |
 | Ctrl+P U / J | Move line up / down | Ctrl+P M | Toggle comment |
 | Ctrl+P V / Q | Select next / previous occurrence | Ctrl+P Z | Wrap lines |
+| Ctrl+P O | Column ruler | | |
 
 **Indent and word delete** (editing primitives in `editorKey`, not commands, not echoed; domain code in `domain/editor/lineops.go`):
 - **Tab** inserts `\t`; with a selection spanning lines (`Document.SelectsLines`, one selection only) it indents every non-blank touched line (`Indent`), one undo step.
