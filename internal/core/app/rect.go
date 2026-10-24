@@ -15,6 +15,9 @@ type rectDrag struct {
 // is over.
 func (e *Editor) dragRect(line, vcol int) {
 	d := e.rectDrag
+	if e.wrap {
+		return // rectangles need unwrapped text; an Alt press still adds a cursor
+	}
 	if !d.moved && line == d.line && vcol == d.vcol {
 		return // still on the pressed cell: this may be a click
 	}

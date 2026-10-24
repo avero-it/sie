@@ -12,7 +12,7 @@ This file is the source of truth for humans and agents. If code and this file di
 
 **v0 goals**: single buffer, open/edit/save, undo/redo, selection (keyboard + mouse), multiple cursors (Alt+click), rectangular selection (Alt+drag, column mode), clipboard, find/replace, go to line, menu bar, command prompt, status line, horizontal scroll, LF/CRLF preserved, UTF-8 with grapheme-correct cursor movement.
 
-**Non-goals for v0** (future work, don't build them yet): tabs/splits/multiple buffers, soft wrap, syntax highlighting, LSP, plugins, modal (vim) editing, F-key fallbacks for Ctrl+Alt bindings.
+**Non-goals for v0** (future work, don't build them yet): tabs/splits/multiple buffers, syntax highlighting, LSP, plugins, modal (vim) editing, F-key fallbacks for Ctrl+Alt bindings.
 
 ## Architecture
 
@@ -194,6 +194,13 @@ internal/adapters/
 - **Core:** `Config.Now` is the clock (nil means `time.Now`), and tests inject a fake one. `ripple.go` turns age and distance into a level 1-3 per cell (`rippleLevel`), clipped to the text rows. `View` adds them as `ViewModel.Tints` and sets `ViewModel.Animate` while any wave is alive. `Poll` drops finished waves.
 - **Adapter:** the painter draws the runs, then `tint` re-puts each tinted cell with a background from `rippleRamp` (RGB, so tcell picks the nearest color on small palettes), keeping its text, foreground and attributes. The loop selects on events and a frame timer (33 ms) that exists only while `Animate` is true, so an idle editor wakes for nothing.
 
+### Wrap lines
+
+- `view.toggleWrap` ("Wrap lines", ✓ option in the View menu, **Ctrl+P Z**, aliases `wrap`, `word wrap`, `soft wrap`, `line wrap`, config `wrap`, default off). Long lines continue on the next screen row instead of scrolling sideways; the status line shows `WRAP`.
+- **Domain:** `editor.Segments(glyphs, cols)` (`domain/editor/wrap.go`) splits a laid-out line into rows: after the last space or tab that fits, else before the glyph that overflows; wide glyphs are never split. A line that fills its last row exactly gets an empty extra row for the end-of-line cursor. `Document.WrapPos`, `OffsetAtRow`, `WrapRows` and `MoveRows` convert between offsets and (line, row, cell). `Viewport.Top` stays a line and `Viewport.Skip` is the wrapped row of it shown first (`FollowWrap`, `ScrollRows`); `Left` is 0.
+- **App:** `drawText` walks screen rows (line number only on a line's first row); Up/Down, Alt+Up/Down and PgUp/PgDn move by screen row (`MoveRows`, preferred cell kept), Home/End stay logical. Clicks map through `rowAt` + `OffsetAtRow`. The wheel scrolls rows.
+- **Not while wrapping:** the indent guide is hidden, and Alt+drag rectangles are ignored (Alt+click still adds a cursor). Turning on Column selection turns wrap off, and wrap refuses to turn on during column mode.
+
 ### Indent guide
 
 - `view.toggleIndentGuide` ("Indent guide", ✓ option in the View menu, aliases `alignment guide`, `indent flash`, config `indent_guide`, default off). When an edit moves the cursor line's *top* (the screen column of its first glyph that is not a space or tab, `editor.IndentCol`), a vertical guide is shown at that column over all text rows for 300 ms, to see how the line aligns with the others (Python, YAML).
@@ -259,7 +266,7 @@ internal/adapters/
 | Ctrl+P F / B | Find next / previous | Ctrl+P W | Validate on save |
 | Ctrl+P R | Replace all… | Ctrl+P H | About |
 | Ctrl+P U / J | Move line up / down | Ctrl+P M | Toggle comment |
-| Ctrl+P V / Q | Select next / previous occurrence | | |
+| Ctrl+P V / Q | Select next / previous occurrence | Ctrl+P Z | Wrap lines |
 
 **Indent and word delete** (editing primitives in `editorKey`, not commands, not echoed; domain code in `domain/editor/lineops.go`):
 - **Tab** inserts `\t`; with a selection spanning lines (`Document.SelectsLines`, one selection only) it indents every non-blank touched line (`Indent`), one undo step.

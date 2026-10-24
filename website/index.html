@@ -408,7 +408,7 @@ sudo apk add --allow-untrusted ./sie_&lt;version&gt;_linux_amd64.apk</pre></div>
         </table>
       </div>
     </div>
-    <p class="sub" style="margin-top:16px">Every other command is a chord: press <kbd>Ctrl+P</kbd>, then a letter. <kbd>Ctrl+P L</kbd> trims leading spaces, <kbd>Ctrl+P T</kbd> trailing ones, <kbd>Ctrl+P P</kbd> / <kbd>Ctrl+P N</kbd> align the line to the previous / next one, <kbd>Ctrl+P A</kbd> is Save as, <kbd>Ctrl+P F</kbd> / <kbd>B</kbd> find next / previous, <kbd>Ctrl+P U</kbd> / <kbd>J</kbd> move the line up / down, <kbd>Ctrl+P V</kbd> / <kbd>Q</kbd> select the next / previous occurrence, <kbd>Ctrl+P M</kbd> toggles comments (as <kbd>Ctrl+/</kbd>). <kbd>Shift+Tab</kbd> outdents and <kbd>Alt+Backspace</kbd> deletes a word. The full list is in the README.</p>
+    <p class="sub" style="margin-top:16px">Every other command is a chord: press <kbd>Ctrl+P</kbd>, then a letter. <kbd>Ctrl+P L</kbd> trims leading spaces, <kbd>Ctrl+P T</kbd> trailing ones, <kbd>Ctrl+P P</kbd> / <kbd>Ctrl+P N</kbd> align the line to the previous / next one, <kbd>Ctrl+P A</kbd> is Save as, <kbd>Ctrl+P F</kbd> / <kbd>B</kbd> find next / previous, <kbd>Ctrl+P U</kbd> / <kbd>J</kbd> move the line up / down, <kbd>Ctrl+P V</kbd> / <kbd>Q</kbd> select the next / previous occurrence, <kbd>Ctrl+P M</kbd> toggles comments (as <kbd>Ctrl+/</kbd>). <kbd>Ctrl+P Z</kbd> wraps long lines. <kbd>Shift+Tab</kbd> outdents and <kbd>Alt+Backspace</kbd> deletes a word. The full list is in the README.</p>
     <p class="sub" style="margin-top:16px">Move by word with <kbd>Alt+←/→</kbd> or <kbd>Ctrl+←/→</kbd>, by <code>jump_lines</code> lines with <kbd>Alt+↑/↓</kbd>, to the line ends with <kbd>Home</kbd>/<kbd>End</kbd> and to the file ends with <kbd>Ctrl+Home</kbd>/<kbd>End</kbd>. Add a cursor with <kbd>Alt+click</kbd>.</p>
   </div>
 </section>
@@ -422,6 +422,7 @@ show_invisibles: false  # mark spaces (␣) and tabs (»)
 show_empty_cells: true  # mark cells holding no character (·)
 click_ripple: false     # a wave animation on every click in the text
 indent_guide: false     # briefly show a vertical guide when a line's indent moves
+wrap: false             # wrap long lines instead of scrolling sideways
 line_ending: lf         # for new files: lf or crlf
 jump_lines: 5           # lines moved by Alt+↑/↓ (1–100)
 syntax_highlighting: true

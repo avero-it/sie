@@ -115,6 +115,10 @@ func (e *Editor) handleMouse(m ports.MouseEvent) {
 			e.selectCompletion(e.prompt.selected + delta/3)
 			return
 		}
+		if e.wrap {
+			e.view.ScrollRows(delta, e.doc.LineCount(), e.rowsOf)
+			return
+		}
 		e.view.ScrollBy(delta, e.doc.LineCount())
 		return
 	}
@@ -226,14 +230,42 @@ func (e *Editor) menuTitleAt(x int) int {
 }
 
 func (e *Editor) textOffsetAt(x, y int, r regions) int {
+	if e.wrap {
+		line, seg := e.rowAt(max(0, min(y-r.textTop, r.textRows-1)))
+		return e.doc.OffsetAtRow(line, seg, max(0, x-r.gutter), e.view.Cols)
+	}
 	line, vcol := e.textCellAt(x, y, r)
 	return e.doc.OffsetAt(line, vcol)
 }
+
+// rowAt maps a text-area row to a document line and wrapped row within it
+// while wrapping. Rows past the end map to the last row of the document.
+func (e *Editor) rowAt(row int) (line, seg int) {
+	line, seg = e.view.Top, e.view.Skip
+	for ; row > 0; row-- {
+		if seg+1 < e.rowsOf(line) {
+			seg++
+		} else if line < e.doc.LineCount()-1 {
+			line, seg = line+1, 0
+		} else {
+			break
+		}
+	}
+	return line, seg
+}
+
+// rowsOf is how many screen rows a line takes while wrapping.
+func (e *Editor) rowsOf(line int) int { return e.doc.WrapRows(line, e.view.Cols) }
 
 // textCellAt maps a screen cell to a document line and screen column. The
 // column is not clamped to the line, so it can lie past a short line's end.
 func (e *Editor) textCellAt(x, y int, r regions) (line, vcol int) {
 	row := max(0, min(y-r.textTop, r.textRows-1))
+	if e.wrap {
+		line, seg := e.rowAt(row)
+		segs := editor.Segments(editor.Layout(e.doc.Line(line), e.doc.TabWidth()), e.view.Cols)
+		return line, segs[min(seg, len(segs)-1)].StartCol + max(0, x-r.gutter)
+	}
 	return e.view.LineAt(row), e.view.ColAt(max(0, x-r.gutter))
 }
 
@@ -327,25 +359,38 @@ func (e *Editor) drawText(vm *viewBuilder, r regions) {
 	}
 	curLine, _, curVcol := e.doc.CursorPos()
 	tw := e.doc.TabWidth()
+	line, seg := e.view.Top, 0
+	if e.wrap {
+		seg = e.view.Skip
+	}
 	for row := 0; row < r.textRows; row++ {
-		line, y := e.view.Top+row, r.textTop+row
+		y := r.textTop + row
 		if line >= e.doc.LineCount() {
 			e.drawEmptyCells(vm, r, y, 0)
 			continue
 		}
-		gutterStyle := ports.StyleGutter
-		if line == curLine {
-			gutterStyle = ports.StyleGutterCurrent
-		}
-		vm.add(0, y, fmt.Sprintf("%*d ", r.gutter-1, line+1), gutterStyle)
-
 		text := e.doc.Line(line)
+		glyphs := editor.Layout(text, tw)
+		startCol, last, width := e.view.Left, true, 0
+		if e.wrap {
+			segs := editor.Segments(glyphs, cols)
+			seg = min(seg, len(segs)-1)
+			s := segs[seg]
+			glyphs, startCol, last, width = glyphs[s.First:s.End], s.StartCol, seg == len(segs)-1, s.StartCol
+		}
+		if seg == 0 {
+			gutterStyle := ports.StyleGutter
+			if line == curLine {
+				gutterStyle = ports.StyleGutterCurrent
+			}
+			vm.add(0, y, fmt.Sprintf("%*d ", r.gutter-1, line+1), gutterStyle)
+		}
+
 		start := e.doc.OffsetAt(line, 0)
 		tokens := e.cursorAt(start)
-		width := 0
-		for _, g := range editor.Layout(text, tw) {
+		for _, g := range glyphs {
 			width = g.Col + g.Width
-			x := g.Col - e.view.Left
+			x := g.Col - startCol
 			if x+g.Width <= 0 {
 				continue
 			}
@@ -366,24 +411,37 @@ func (e *Editor) drawText(vm *viewBuilder, r regions) {
 			}
 			vm.add(r.gutter+x, y, disp, style)
 		}
-		// A selected line break shows as one selected cell after the text.
-		end := start + len(text)
-		fill := max(0, width-e.view.Left)
-		breakCell := line < e.doc.LineCount()-1 && selected(end)
-		switch {
-		case secondary[end] && width >= e.view.Left && fill < cols:
-			vm.add(r.gutter+fill, y, " ", ports.StyleCursorSecondary)
-			fill++
-		case breakCell:
-			if fill < cols {
-				vm.add(r.gutter+fill, y, " ", ports.StyleSelection)
+		if last {
+			// A selected line break shows as one selected cell after the text.
+			end := start + len(text)
+			fill := max(0, width-startCol)
+			breakCell := line < e.doc.LineCount()-1 && selected(end)
+			switch {
+			case secondary[end] && width >= startCol && fill < cols:
+				vm.add(r.gutter+fill, y, " ", ports.StyleCursorSecondary)
+				fill++
+			case breakCell:
+				if fill < cols {
+					vm.add(r.gutter+fill, y, " ", ports.StyleSelection)
+				}
+				fill++
 			}
-			fill++
+			e.drawEmptyCells(vm, r, y, fill)
 		}
-		e.drawEmptyCells(vm, r, y, fill)
+		if e.wrap && !last {
+			seg++
+		} else {
+			line, seg = line+1, 0
+		}
 	}
 	if e.focus == focusEditor {
-		x, y := r.gutter+curVcol-e.view.Left, r.textTop+curLine-e.view.Top
+		var x, y int
+		if e.wrap {
+			cl, cs, cx := e.doc.WrapPos(e.doc.Selection().Head, cols)
+			x, y = r.gutter+cx, r.textTop+e.view.RowOf(cl, cs, e.rowsOf)
+		} else {
+			x, y = r.gutter+curVcol-e.view.Left, r.textTop+curLine-e.view.Top
+		}
 		vm.Cursor = ports.Cursor{X: x, Y: y, Visible: x >= r.gutter && x < e.width && y >= r.textTop && y < r.textTop+r.textRows}
 	}
 }
@@ -483,6 +541,9 @@ func (e *Editor) drawStatus(vm *viewBuilder, r regions) {
 	}
 	if e.columnMode {
 		cursors += "   COLUMN"
+	}
+	if e.wrap {
+		cursors += "   WRAP"
 	}
 	right := fmt.Sprintf("Ln %d, Col %d%s   %s   %s   %s ", line+1, vcol+1, cursors, e.languageLabel(), enc, e.doc.LineEnding())
 	vm.row(r.statusY, " sie "+e.version()+" - "+name, right, ports.StyleStatus, ports.StyleStatus)

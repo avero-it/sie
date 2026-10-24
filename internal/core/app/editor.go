@@ -29,6 +29,7 @@ type Config struct {
 	ShowInvisibles bool             // mark spaces and tabs
 	ShowEmptyCells bool             // mark cells holding no character
 	IndentGuide    bool             // flash a guide when the cursor line's indent moves
+	Wrap           bool             // wrap long lines instead of scrolling sideways
 	ClickRipple    bool             // animate a wave on every click in the text
 	Now            func() time.Time // clock for animations; nil means time.Now
 	JumpLines      int              // lines moved by Alt+Up/Down; <= 0 means defaultJumpLines
@@ -108,6 +109,7 @@ type Editor struct {
 	showEmptyCells bool
 	clickRipple    bool
 	indentGuide    bool
+	wrap           bool
 	indent         indentState
 	guide          guideState
 	ripples        []ripple
@@ -136,6 +138,7 @@ func New(cfg Config) (*Editor, error) {
 		showEmptyCells: cfg.ShowEmptyCells,
 		clickRipple:    cfg.ClickRipple,
 		indentGuide:    cfg.IndentGuide,
+		wrap:           cfg.Wrap,
 		showSyntax:     cfg.SyntaxHighlighting,
 		validateOnSave: cfg.ValidateOnSave,
 	}
@@ -339,6 +342,14 @@ func (e *Editor) navigate(k ports.KeyEvent) bool {
 		e.doc.Move(m, shift)
 		return true
 	}
+	moveRows := func(n int) bool {
+		if e.wrap {
+			e.doc.MoveRows(n, e.view.Cols, shift)
+		} else {
+			e.doc.MovePage(n, shift)
+		}
+		return true
+	}
 	pick := func(plain, wordwise, withCmd editor.Motion) bool {
 		switch {
 		case cmd:
@@ -366,8 +377,11 @@ func (e *Editor) navigate(k ports.KeyEvent) bool {
 			if up {
 				n = -n
 			}
-			e.doc.MovePage(n, shift)
-			return true
+			return moveRows(n)
+		case e.wrap && up:
+			return moveRows(-1)
+		case e.wrap:
+			return moveRows(1)
 		case up:
 			return move(editor.MoveUp)
 		default:
@@ -378,11 +392,9 @@ func (e *Editor) navigate(k ports.KeyEvent) bool {
 	case ports.KeyEnd:
 		return pick(editor.MoveLineEnd, editor.MoveDocEnd, editor.MoveLineEnd)
 	case ports.KeyPgUp:
-		e.doc.MovePage(-max(1, e.view.Rows-1), shift)
-		return true
+		return moveRows(-max(1, e.view.Rows-1))
 	case ports.KeyPgDn:
-		e.doc.MovePage(max(1, e.view.Rows-1), shift)
-		return true
+		return moveRows(max(1, e.view.Rows-1))
 	case ports.KeyRune:
 		// Readline word moves; Shift arrives as an upper-case rune.
 		if k.Mod&^ports.ModShift == ports.ModAlt {
@@ -419,6 +431,11 @@ func isText(k ports.KeyEvent) bool {
 // follow scrolls the viewport so the cursor stays visible.
 func (e *Editor) follow() {
 	e.layout()
+	if e.wrap {
+		line, seg, _ := e.doc.WrapPos(e.doc.Selection().Head, e.view.Cols)
+		e.view.FollowWrap(line, seg, e.doc.LineCount(), e.rowsOf)
+		return
+	}
 	line, _, vcol := e.doc.CursorPos()
 	e.view.Follow(line, vcol)
 }
@@ -434,7 +451,7 @@ func (e *Editor) setDoc(d *editor.Document, path string) {
 		e.file = nil
 	}
 	e.doc, e.path = d, path
-	e.view.Top, e.view.Left = 0, 0
+	e.view.Top, e.view.Left, e.view.Skip = 0, 0, 0
 	e.hl.manual = false
 	e.resetHighlight()
 	e.detectLanguage()
