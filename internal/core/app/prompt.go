@@ -100,7 +100,12 @@ func (e *Editor) askArgs(c *commands.Command[*Editor], args []string) {
 	if arg.Default != nil {
 		e.prompt.input.Set(arg.Default(e))
 	}
+	if c.ID == "search.find" {
+		e.startLive()
+	}
 	switch {
+	case e.live.active:
+		e.liveSearch()
 	case e.prompt.browse:
 		e.refreshFiles()
 	case e.prompt.recent:
@@ -213,6 +218,8 @@ func (e *Editor) promptKey(k ports.KeyEvent) {
 
 func (e *Editor) promptChanged() {
 	switch {
+	case e.live.active:
+		e.liveSearch()
 	case e.prompt.browse:
 		e.refreshFiles()
 	case e.prompt.recent:

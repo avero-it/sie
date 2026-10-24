@@ -54,6 +54,7 @@ func DefaultTheme() Theme {
 		ports.StyleStatus:      bar,
 		ports.StyleGuide:       d.Foreground(tcell.ColorGray),
 		ports.StyleGuideMatch:  d.Reverse(true),
+		ports.StyleMatch:       d.Underline(true).Bold(true),
 	}
 }
 
