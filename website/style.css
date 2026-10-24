@@ -189,6 +189,8 @@ nav a:hover { color: var(--fg); }
 .term .v { color: var(--term-str); }
 .term .n { color: var(--term-num); }
 .term .gd { color: var(--term-dim); }
+.term .r { color: var(--term-dim); }
+.term .mt { text-decoration: underline; font-weight: 700; }
 .term .t1 { background: var(--term-ripple1); }
 .term .t2 { background: var(--term-ripple2); }
 .term .t3 { background: var(--term-ripple3); }

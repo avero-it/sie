@@ -326,6 +326,61 @@
     }
   };
 
+  // ---- live search ---------------------------------------------------------------
+
+  var PROSE = [
+    "The quick brown fox",
+    "jumps over the lazy dog.",
+    "The dog barks; the fox runs.",
+    "Another fox appears here.",
+    "The end."
+  ];
+
+  defs.search = {
+    run: async function (d) {
+      d.s.name = "story.txt"; d.setLines(PROSE); d.cursor(0, 0);
+      d.say("Ctrl+F searches as you type: the view jumps to the nearest match.");
+      await d.sleep(800);
+      d.press("Ctrl+F"); d.input("Find: ", "");
+      await d.sleep(500);
+      var q = "";
+      // each step: the text typed, the match it selects, and where the cursor ends
+      var steps = [["f", 0, 16, 17], ["fo", 0, 16, 18], ["fox", 0, 16, 19]];
+      for (var i = 0; i < steps.length; i++) {
+        q = steps[i][0]; d.find(q); d.input("Find: ", q);
+        d.select(steps[i][1], steps[i][2], steps[i][3]); d.cursor(steps[i][1], steps[i][3]);
+        await d.sleep(600);
+      }
+      d.say("Every other match stays underlined.");
+      await d.sleep(1200);
+      d.say("Keep typing: it moves on to the match that fits.");
+      q = "fox r"; d.find(q); d.input("Find: ", q);
+      d.select(2, 19, 24); d.cursor(2, 24);
+      await d.sleep(1500);
+      d.say("Backspace searches again from where you started.");
+      d.press("Backspace"); q = "fox"; d.find(q); d.input("Find: ", q);
+      d.select(0, 16, 19); d.cursor(0, 19);
+      await d.sleep(1300);
+      d.say("No match: the cursor stays where it was.");
+      q = "foxx"; d.find(q); d.input("Find: ", q, "not found");
+      d.noSel(); d.cursor(0, 0);
+      await d.sleep(1700);
+      d.say("Esc puts everything back. Enter keeps the match.");
+      d.press("Esc"); d.find(null); d.idle();
+      await d.sleep(1500);
+      d.press("Ctrl+F"); d.input("Find: ", "the");
+      d.find("the"); d.select(0, 0, 3); d.cursor(0, 3);
+      await d.sleep(800);
+      d.press("Enter"); d.find(null); d.echo("Find the", "Ctrl+F");
+      await d.sleep(2200);
+    },
+    still: function (d) {
+      d.s.name = "story.txt"; d.setLines(PROSE);
+      d.find("fox"); d.input("Find: ", "fox");
+      d.select(0, 16, 19); d.cursor(0, 19);
+    }
+  };
+
   // ---- validation ---------------------------------------------------------------
 
   defs.validate = {
@@ -438,11 +493,51 @@
     }
   };
 
+  // ---- column ruler and wrap ---------------------------------------------------
+
+  var LONG = [
+    "The ruler follows the scroll: columns stay right even when a long line is cut off.",
+    "A short line.",
+    "Wrapped lines break at spaces, and the rows after the first one are marked in the gutter."
+  ];
+
+  defs.wrap = {
+    run: async function (d) {
+      d.s.name = "notes.txt"; d.setLines(LONG); d.cursor(0, 0);
+      d.say("The column ruler on the top row shows where you are.");
+      await d.sleep(1200);
+      d.say("Scroll sideways and its numbers move with the text.");
+      d.press("End");
+      var end = LONG[0].length, width = d.cols - (d.s.gutter || 3);
+      var target = end - width + 1;
+      d.cursor(0, end);
+      for (var x = 0; x <= target; x += 3) { d.s.left = Math.min(x, target); await d.sleep(60); }
+      d.s.left = target;
+      await d.sleep(1600);
+      d.say("Wrap lines (optional): long lines continue on the next row, marked with ↳.");
+      d.press("Ctrl+P Z");
+      d.s.wrap = true; d.s.left = 0; d.cursor(0, 0);
+      d.echo("✓ Wrap lines — on", "Ctrl+P Z");
+      await d.sleep(2800);
+      d.say("The ruler gives its row back while wrapping. Ctrl+P Z again turns it off.");
+      d.press("Ctrl+P Z");
+      d.s.wrap = false;
+      d.echo("  Wrap lines — off", "Ctrl+P Z");
+      await d.sleep(2200);
+    },
+    still: function (d) {
+      d.s.name = "notes.txt"; d.setLines(LONG); d.cursor(0, 0);
+      d.s.wrap = true;
+      d.echo("✓ Wrap lines — on", "Ctrl+P Z");
+    }
+  };
+
   // ---- one binary ----------------------------------------------------------------
 
   defs.binary = {
     cols: 56,
     rows: 10,
+    shell: true,
     run: async function (d) {
       d.shell();
       d.say("One file. Build it once for any platform, copy it, run it.");

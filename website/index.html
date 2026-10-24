@@ -36,6 +36,7 @@
 
     <figure class="demo hero-demo">
       <div class="term" data-demo="hero" role="img" aria-label="Animated demo of sie editing a YAML file: typing, selecting a word and a line, the indent guide, and the command echo"><div class="screen"><pre> File  Edit  Selection  Search  View  Help
+   .........10........20........30........40........50
  1 server:············································
  2   host: localhost··································
  3   port: 8080·······································
@@ -65,6 +66,7 @@ sie v0.9.0 - demo.ya… Ln 5, Col 5   YAML   UTF-8   LF</pre></div></div>
       </div>
       <figure class="demo">
         <div class="term" data-demo="modeless" role="img" aria-label="Typing, moving with the arrow keys, undo, redo and save in a YAML file"><div class="screen"><pre> File  Edit  Selection  Search  View  Help
+   .........10........20........30........40........
  1 title: sie·······································
  2 author: you······································
  3 tags: 3 ·········································
@@ -87,6 +89,7 @@ sie v0.9.0 - notes… Ln 3, Col 8   YAML   UTF-8   LF</pre></div></div>
       </div>
       <figure class="demo">
         <div class="term" data-demo="prompt" role="img" aria-label="The command prompt with a fuzzy list of commands, running Trim trailing spaces and Go to line"><div class="screen"><pre> File  Edit  Selection  Search  View  Help
+   .........10........20........30........40........
  1 x␣=␣1␣␣␣·········································
  2 y␣=␣2␣␣··········································
  3 z␣=␣3············································
@@ -109,6 +112,7 @@ sie v0.9.0 - note… Ln 3, Col 6   Plain   UTF-8   LF</pre></div></div>
       </div>
       <figure class="demo">
         <div class="term" data-demo="recent" role="img" aria-label="Open recent: typing todo selects notes/todo.txt, which then opens"><div class="screen"><pre> File  Edit  Selection  Search  View  Help
+   .........10........20........30........40........
  1 ·················································
    ·················································
    ·················································
@@ -131,6 +135,7 @@ sie v0.9.0 - [No … Ln 1, Col 1   Plain   UTF-8   LF</pre></div></div>
       </div>
       <figure class="demo">
         <div class="term" data-demo="multicursor" role="img" aria-label="Three cursors typing a semicolon at once, then a rectangle selection deleting a column of bullets"><div class="screen"><pre> File  Edit  Selection  Search  View  Help
+   .........10........20........30........40........
  1 - alpha; ········································
  2 - beta; ·········································
  3 - gamma; ········································
@@ -153,11 +158,12 @@ sie v… Ln 3, Col 9 (3 cursors)   Plain   UTF-8   LF</pre></div></div>
       </div>
       <figure class="demo">
         <div class="term" data-demo="mouse" role="img" aria-label="Double-click selecting a word, triple-click selecting a line, and dragging by words"><div class="screen"><pre> File  Edit  Selection  Search  View  Help
- 1 the quick brown fox ·····························
- 2 jumps over the lazy dog··························
- 3 and runs away····································
-   ·················································
-   ·················································
+   .........10........20........30........40........
+ 1 The quick brown fox ·····························
+ 2 jumps over the lazy dog.·························
+ 3 The dog barks; the fox runs.·····················
+ 4 Another fox appears here.························
+ 5 The end.·········································
    ·················································
    ·················································
    ·················································
@@ -169,12 +175,35 @@ sie v0.9.0 - sto… Ln 2, Col 11   Plain   UTF-8   LF</pre></div></div>
     </article>
     <article class="feature">
       <div class="ftext">
+        <h3>Live search</h3>
+        <p><kbd>Ctrl+F</kbd> searches as you type. The view jumps to the nearest match from where you started and every other visible match is underlined. Backspace searches again from the start point, Esc puts the cursor back, and Enter keeps the match. <kbd>Ctrl+P F</kbd> / <kbd>B</kbd> go to the next / previous one.</p>
+      </div>
+      <figure class="demo">
+        <div class="term" data-demo="search" role="img" aria-label="Searching as you type: the view jumps to the nearest match, the other matches are underlined, Backspace searches again, a missing match leaves the cursor in place, Esc restores it and Enter keeps the match"><div class="screen"><pre> File  Edit  Selection  Search  View  Help
+   .........10........20........30........40........
+ 1 The quick brown fox······························
+ 2 jumps over the lazy dog.·························
+ 3 The dog barks; the fox runs.·····················
+ 4 Another fox appears here.························
+ 5 The end.·········································
+   ·················································
+   ·················································
+   ·················································
+Find: fox
+sie v0.9.0 - sto… Ln 1, Col 20   Plain   UTF-8   LF</pre></div></div>
+        <div class="keystrip" aria-hidden="true"></div>
+        <p class="caption" aria-live="off"></p>
+      </figure>
+    </article>
+    <article class="feature">
+      <div class="ftext">
         <h3>Find and replace</h3>
         <p><kbd>Ctrl+R</kbd> asks what to replace and with what, then asks about each match: y, n, a (all) or q (quit). The whole session is one undo step. <code>replace all a b</code> in the prompt does it in one go.</p>
-        <p class="keys"><kbd>Ctrl+F</kbd> find · <kbd>Ctrl+R</kbd> replace</p>
+        <p class="keys"><kbd>Ctrl+F</kbd> find (as you type) · <kbd>Ctrl+R</kbd> replace</p>
       </div>
       <figure class="demo">
         <div class="term" data-demo="replace" role="img" aria-label="Interactive replace answering yes, no, yes, then undoing the whole replacement"><div class="screen"><pre> File  Edit  Selection  Search  View  Help
+   .........10........20........30........40........
  1 bar bar··········································
  2 foo baz··········································
  3 foo qux··········································
@@ -197,6 +226,7 @@ sie v0.9.0 - todo… Ln 2, Col 4   Plain   UTF-8   LF</pre></div></div>
       </div>
       <figure class="demo">
         <div class="term" data-demo="validate" role="img" aria-label="Validating a JSON file with a missing comma, fixing it, then a save warning when it is broken again"><div class="screen"><pre> File  Edit  Selection  Search  View  Help
+   .........10........20........30........40........50
  1 {··················································
  2   "name": "sie"····································
  3   "port": 8080·····································
@@ -219,6 +249,7 @@ sie v0.9.0 - config.… Ln 3, Col 3   JSON   UTF-8   LF</pre></div></div>
       </div>
       <figure class="demo">
         <div class="term" data-demo="syntax" role="img" aria-label="Go code appearing, then colors settling, then highlighting switched off and on"><div class="screen"><pre> File  Edit  Selection  Search  View  Help
+   .........10........20........30........40........
  1 package main·····································
  2 ·················································
  3 import "fmt"·····································
@@ -241,6 +272,7 @@ sie v0.9.0 - main.go  Ln 8, Col 2   Go   UTF-8   LF</pre></div></div>
       </div>
       <figure class="demo">
         <div class="term" data-demo="files" role="img" aria-label="A Windows file with a BOM: visible control characters, whitespace markers, and a save that keeps CRLF"><div class="screen"><pre> File  Edit  Selection  Search  View  Help
+   .........10........20........30........40........
  1 hello␣␣world·····································
  2 »   second^A�····································
  3 ·················································
@@ -263,6 +295,7 @@ sie v0.9.0 … Ln 1, Col 1   Plain   UTF-8 BOM   CRLF</pre></div></div>
       </div>
       <figure class="demo">
         <div class="term" data-demo="visual" role="img" aria-label="The click ripple spreading over text, then the indent guide flashing after an indent change"><div class="screen"><pre> File  Edit  Selection  Search  View  Help
+   .........10........20........30........40........
  1 server:··········································
  2   host: localhost································
  3   port: 8080·····································
@@ -279,13 +312,37 @@ sie v0.9.0 - demo.… Ln 5, Col 3   YAML   UTF-8   LF</pre></div></div>
     </article>
     <article class="feature">
       <div class="ftext">
+        <h3>Column ruler and wrapping</h3>
+        <p>The top row of the editor is a column ruler. Its numbers move when you scroll sideways, so you always know which column you are on. Turn on <em>Wrap lines</em> to see long lines in full: they continue on the next row, marked with a faint <code>↳</code>, and the ruler gives its row back.</p>
+        <p class="keys"><kbd>Ctrl+P O</kbd> ruler · <kbd>Ctrl+P Z</kbd> wrap · <code>column_ruler</code> · <code>wrap</code></p>
+      </div>
+      <figure class="demo">
+        <div class="term" data-demo="wrap" role="img" aria-label="The column ruler following a sideways scroll, then Wrap lines continuing a long line on the next row with an arrow in the gutter"><div class="screen"><pre> File  Edit  Selection  Search  View  Help
+ 1 The ruler follows the scroll: columns stay right
+ ↳ even when a long line is cut off.················
+ 2 A short line.····································
+ 3 Wrapped lines break at spaces, and the rows
+ ↳ after the first one are marked in the gutter.····
+   ·················································
+   ·················································
+   ·················································
+   ·················································
+&gt; ✓ Wrap lines — on                        Ctrl+P Z
+sie v0.9.0… Ln 1, Col 1   WRAP   Plain   UTF-8   LF</pre></div></div>
+        <div class="keystrip" aria-hidden="true"></div>
+        <p class="caption" aria-live="off"></p>
+      </figure>
+    </article>
+    <article class="feature">
+      <div class="ftext">
         <h3>Large files</h3>
         <p>Files over 32&nbsp;MB are not loaded into memory: sie keeps them on disk and reads only the part you are looking at. A 1&nbsp;GB log opens in about 0.2 seconds using a few MB of RAM, and editing, undo, find, replace and save all work. Saving streams to a temporary file and swaps it in, and if another program changes the file meanwhile, sie asks you to reload or quit instead of overwriting it.</p>
         <p>Above the limit (<code>large_file_size</code>) validation is skipped and copying more than 64&nbsp;MB is refused, each with a clear message.</p>
         <p class="keys"><kbd>Ctrl+End</kbd> end of file · <kbd>Ctrl+G</kbd> go to line · <kbd>Ctrl+F</kbd> find</p>
       </div>
       <figure class="demo">
-        <div class="term" data-demo="largefile" role="img" aria-label="Opening a 13-million-line text file, jumping to the end, adding a line and saving"><div class="screen"><pre> File  Edit  Selection  Search  View  Help                  
+        <div class="term" data-demo="largefile" role="img" aria-label="Opening a 13-million-line text file, jumping to the end, adding a line and saving"><div class="screen"><pre> File  Edit  Selection  Search  View  Help
+         .........10........20........30........40........50
 13041770 23:59:57 info  request ok··························
 13041771 23:59:58 error timeout·····························
 13041772 23:59:59 info  shutdown····························
@@ -293,8 +350,8 @@ sie v0.9.0 - demo.… Ln 5, Col 3   YAML   UTF-8   LF</pre></div></div>
          ···················································
          ···················································
          ···················································
-&gt; Save file — wrote 13041772 lines                   Ctrl+S 
-sie v0.9.0 - even… Ln 13041772, Col 23   Plain   UTF-8   LF </pre></div></div>
+&gt; Save file — wrote 13041772 lines                   Ctrl+S
+sie v0.9.0 - even… Ln 13041772, Col 23   Plain   UTF-8   LF</pre></div></div>
         <div class="keystrip" aria-hidden="true"></div>
         <p class="caption" aria-live="off"></p>
       </figure>

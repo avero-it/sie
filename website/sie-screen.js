@@ -86,14 +86,33 @@
     return out;
   }
 
+  // wrapParts splits a line into screen rows like editor.Segments: after the
+  // last space or tab that fits, else at the width. A line that fills its last
+  // row exactly gets an empty extra row for the end-of-line cursor.
+  function wrapParts(line, width) {
+    var parts = [], from = 0;
+    for (;;) {
+      var rem = line.length - from;
+      if (rem < width) { parts.push([from, line.length]); return parts; }
+      if (rem === width) { parts.push([from, line.length], [line.length, line.length]); return parts; }
+      var to = from + width;
+      for (var j = from + width - 1; j > from; j--) {
+        if (line[j] === " " || line[j] === "\t") { to = j + 1; break; }
+      }
+      parts.push([from, to]);
+      from = to;
+    }
+  }
+
   // ---- one demo screen ----------------------------------------------------
 
   function Demo(el, def) {
     this.el = el;
     this.def = def;
     this.cols = def.cols || 52;
-    this.rows = def.rows || 11;
-    this.textRows = this.rows - 3;
+    // One more row than the definition says: the column ruler takes the first
+    // text row, so the text keeps the height the scenario was written for.
+    this.rows = (def.rows || 11) + (def.shell ? 0 : 1);
     this.host = el.querySelector(".screen") || el;
     this.caption = el.parentNode && el.parentNode.querySelector(".caption");
     this.keysEl = el.parentNode && el.parentNode.querySelector(".keystrip");
@@ -113,6 +132,10 @@
       bom: false,
       modified: false,
       invisibles: false,
+      ruler: true, // column ruler (hidden while wrapping)
+      wrap: false,
+      left: 0, // horizontal scroll, in cells
+      find: null, // live search: the text typed in the Find prompt
       cursors: [{ l: 0, c: 0 }],
       sels: [],
       pointer: null,
@@ -193,12 +216,18 @@
     this.rippleAt(l, c);
   };
 
+  // textTop is the first text row: the ruler is above it while it shows.
+  Demo.prototype.textTop = function () { return this.rulerOn() ? 2 : 1; };
+  Demo.prototype.rulerOn = function () { return !!(this.s.ruler && !this.s.wrap && !this.s.shell); };
+
   Demo.prototype.rippleAt = function (l, c) {
-    this.s.ripple = { x: GUTTER + c, y: 1 + l - this.s.top, t0: performance.now() };
+    this.s.ripple = { x: (this.s.gutter || GUTTER) + c - this.s.left, y: this.textTop() + l - this.s.top, t0: performance.now() };
   };
 
   Demo.prototype.echo = function (text, hint) { this.s.prompt = { kind: "echo", text: text, hint: hint || "" }; };
-  Demo.prototype.input = function (label, text) { this.s.prompt = { kind: "input", text: label + text, hint: "" }; };
+  Demo.prototype.input = function (label, text, note) { this.s.prompt = { kind: "input", text: label + text, hint: "", note: note || "" }; };
+  // find sets the text of the live search: its other matches are underlined.
+  Demo.prototype.find = function (q) { this.s.find = q || null; };
   Demo.prototype.error = function (text) { this.s.prompt = { kind: "error", text: text, hint: "" }; };
   Demo.prototype.choice = function (text) { this.s.prompt = { kind: "choice", text: text, hint: "" }; };
   Demo.prototype.idle = function () { this.s.prompt = null; this.s.popup = null; };
@@ -247,26 +276,61 @@
     for (c = 0; c < W; c++) put(0, c, " ", "m");
     puts(0, 0, " File  Edit  Selection  Search  View  Help", "m");
 
-    // text rows
-    var guide = s.guide && now - s.guide.t0 < GUIDE_MS ? s.guide : null;
+    // column ruler: dots, and the number of every tenth column starting at that column
+    var T = this.textTop(), TR = H - 2 - T;
+    var width = W - G;
+    if (this.rulerOn()) {
+      for (c = 0; c < W; c++) put(1, c, c < G ? " " : ".", "r");
+      for (var col = (Math.max(s.left - 3, 0) / 10 | 0) * 10 + 10; col - s.left <= width; col += 10) {
+        var num = String(col), rx = col - 1 - s.left;
+        if (rx < 0) { num = num.slice(Math.min(-rx, num.length)); rx = 0; }
+        puts(1, G + rx, num.slice(0, Math.max(0, width - rx)), "r");
+      }
+    }
+
+    // text rows: one segment per screen row (a whole line, or a piece of it while wrapping)
+    var guide = s.guide && !s.wrap && now - s.guide.t0 < GUIDE_MS ? s.guide : null;
     var cur0 = s.cursors[0];
     var secondary = {};
     s.cursors.slice(1).forEach(function (p) { secondary[p.l + ":" + p.c] = true; });
-    for (r = 0; r < this.textRows; r++) {
-      var y = 1 + r;
-      var li = s.top + r;
-      var line = li < s.lines.length ? expandTabs(s.lines[li]) : null;
-      if (line !== null) puts(y, 0, String(li + 1 + (s.base || 0)).padStart(G - 1, " ") + " ", li === cur0.l ? "gc" : "g");
-      var cls = line !== null && s.colored ? classify(s.lang, line) : [];
-      if (line !== null) {
+    var segs = [];
+    for (var sl0 = s.top; segs.length < TR && sl0 < s.lines.length; sl0++) {
+      var sline = expandTabs(s.lines[sl0]);
+      if (!s.wrap) {
+        segs.push({ li: sl0, line: sline, from: s.left, to: s.left + width, first: true, last: true });
+        continue;
+      }
+      var parts = wrapParts(sline, width);
+      for (var pi = 0; pi < parts.length; pi++) {
+        segs.push({ li: sl0, line: sline, from: parts[pi][0], to: parts[pi][1], first: pi === 0, last: pi === parts.length - 1 });
+      }
+    }
+    var qlow = s.find ? (/[A-Z]/.test(s.find) ? s.find : s.find.toLowerCase()) : "";
+    for (r = 0; r < TR; r++) {
+      var y = T + r;
+      var sg = r < segs.length ? segs[r] : null;
+      var li = sg ? sg.li : -1;
+      var line = sg ? sg.line : null;
+      if (sg && sg.first) puts(y, 0, String(li + 1 + (s.base || 0)).padStart(G - 1, " ") + " ", li === cur0.l ? "gc" : "g");
+      else if (sg) put(y, G - 2, "\u21b3", "g"); // continuation row of a wrapped line
+      var cls = sg && s.colored ? classify(s.lang, line) : [];
+      if (sg) {
         // control characters and invalid bytes are always visible
         var xm, xre = /\^A|�/g;
         while ((xm = xre.exec(line))) for (var xi = xm.index; xi < xm.index + xm[0].length; xi++) cls[xi] = "x";
+        // the other matches of the live search (smart case, like Find)
+        if (qlow) {
+          var hay = /[A-Z]/.test(s.find) ? line : line.toLowerCase();
+          for (var mi = hay.indexOf(qlow); mi >= 0; mi = hay.indexOf(qlow, mi + qlow.length)) {
+            for (xi = mi; xi < mi + qlow.length; xi++) cls[xi] = "mt";
+          }
+        }
       }
-      for (c = 0; c < W - G; c++) {
-        var ch = line !== null && c < line.length ? line[c] : null;
+      for (c = 0; c < width; c++) {
+        var ix = sg ? sg.from + c : -1;
+        var ch = sg && ix < line.length && ix < sg.to ? line[ix] : null;
         if (ch === null) {
-          put(y, G + c, "·", "e");
+          put(y, G + c, sg && sg.last ? "·" : sg ? " " : "·", sg && sg.last || !sg ? "e" : "");
         } else if (s.invisibles && ch === " ") {
           put(y, G + c, "␣", "e");
         } else if (ch === "\u0000") {
@@ -274,17 +338,21 @@
         } else if (ch === "\t") {
           put(y, G + c, s.invisibles ? "»" : " ", s.invisibles ? "e" : "");
         } else {
-          put(y, G + c, ch, cls[c] || "");
+          put(y, G + c, ch, cls[ix] || "");
         }
       }
+      if (!sg) continue;
+      var reach = sg.last ? sg.from + width : sg.to; // cells this row can show
       s.sels.forEach(function (sl) {
-        if (sl.l !== li || line === null) return;
+        if (sl.l !== li) return;
         var b = sl.b < 0 ? line.length + 1 : sl.b;
-        for (var cc = sl.a; cc < b; cc++) put(y, G + cc, cc < line.length ? (line[cc] === " " ? " " : line[cc]) : " ", "sel");
+        for (var cc = Math.max(sl.a, sg.from); cc < Math.min(b, reach); cc++) {
+          put(y, G + cc - sg.from, cc < line.length ? (line[cc] === " " ? " " : line[cc]) : " ", "sel");
+        }
       });
       for (var key in secondary) {
         var pr = key.split(":");
-        if (+pr[0] === li) put(y, G + +pr[1], +pr[1] < (line || "").length ? line[+pr[1]] : " ", "cur2");
+        if (+pr[0] === li && +pr[1] >= sg.from && +pr[1] < reach) put(y, G + +pr[1] - sg.from, +pr[1] < line.length ? line[+pr[1]] : " ", "cur2");
       }
     }
 
@@ -293,7 +361,7 @@
       var age = now - s.ripple.t0;
       if (age >= RIPPLE_MS) s.ripple = null;
       else {
-        for (r = 1; r < 1 + this.textRows; r++) {
+        for (r = T; r < T + TR; r++) {
           for (c = 0; c < W; c++) {
             var lv = rippleLevel(c - s.ripple.x, r - s.ripple.y, age);
             if (lv) cells[r][c][1] = (cells[r][c][1] + " t" + lv).trim();
@@ -303,28 +371,34 @@
     }
     if (guide) {
       var gx = G + guide.col;
-      for (r = 0; r < this.textRows; r++) {
+      for (r = 0; r < TR; r++) {
         var gl = s.top + r < s.lines.length ? s.lines[s.top + r] : null;
         var gch = gl !== null && guide.col < gl.length ? gl[guide.col] : " ";
-        if (gl !== null && indentCol(gl) === guide.col) put(1 + r, gx, gch, "gm");
-        else if (gl !== null && gch !== " ") cells[1 + r][gx][1] += " t4";
-        else put(1 + r, gx, "|", "gd");
+        if (gl !== null && indentCol(gl) === guide.col) put(T + r, gx, gch, "gm");
+        else if (gl !== null && gch !== " ") cells[T + r][gx][1] += " t4";
+        else put(T + r, gx, "|", "gd");
       }
     }
 
     if (s.pointer) {
       var pl = s.pointer.l - s.top;
-      if (pl >= 0 && pl < this.textRows) cells[1 + pl][G + s.pointer.c][1] += " ptr";
+      if (pl >= 0 && pl < TR) cells[T + pl][G + s.pointer.c][1] += " ptr";
     }
 
     // the cursor is a block, hidden while the prompt has the focus
     if (!s.sels.length && !(s.prompt && s.prompt.kind === "input")) {
-      var cl = cur0.l < s.lines.length ? s.lines[cur0.l] : "";
-      put(1 + cur0.l - s.top, G + cur0.c, cur0.c < cl.length ? cl[cur0.c] : " ", "cur");
+      var cl = cur0.l < s.lines.length ? expandTabs(s.lines[cur0.l]) : "";
+      for (r = 0; r < segs.length; r++) {
+        var cg = segs[r];
+        if (cg.li === cur0.l && cur0.c >= cg.from && (cur0.c < cg.to || cg.last)) {
+          put(T + r, G + cur0.c - cg.from, cur0.c < cl.length ? cl[cur0.c] : " ", "cur");
+          break;
+        }
+      }
     }
 
     // completion popup above the prompt line
-    var py = 1 + this.textRows;
+    var py = H - 2;
     if (s.popup) {
       var n = s.popup.rows.length;
       for (var i = 0; i < n; i++) {
@@ -351,6 +425,7 @@
       puts(py, 0, p.text, "p");
       var cx = p.text.length;
       put(py, cx, " ", "cur");
+      if (p.note) puts(py, cx + 1, " " + p.note, "perr");
     } else {
       puts(py, 0, p.text.length > W ? p.text.slice(0, W - 1) + "…" : p.text, pcls);
     }
@@ -358,7 +433,7 @@
     // status line
     for (c = 0; c < W; c++) put(H - 1, c, " ", "s");
     var left = "sie v0.9.0 - " + s.name + (s.modified ? " [modified]" : "");
-    var pos = "Ln " + (cur0.l + 1 + (s.base || 0)) + ", Col " + (cur0.c + 1) + (s.cursors.length > 1 ? " (" + s.cursors.length + " cursors)" : "");
+    var pos = "Ln " + (cur0.l + 1 + (s.base || 0)) + ", Col " + (cur0.c + 1) + (s.cursors.length > 1 ? " (" + s.cursors.length + " cursors)" : "") + (s.wrap ? "   WRAP" : "");
     var right = pos + "   " + s.lang + "   UTF-8" + (s.bom ? " BOM" : "") + "   " + s.eol;
     var room = W - right.length - 2;
     if (left.length > room) left = left.slice(0, Math.max(0, room - 1)) + "…";
