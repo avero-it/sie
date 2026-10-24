@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/avero-it/sie/internal/core/domain/editor"
@@ -307,6 +308,19 @@ func (e *Editor) drawText(vm *viewBuilder, r regions) {
 		}
 		return false
 	}
+	matches := e.liveMatches(r)
+	matched := func(off int) bool {
+		i, _ := slices.BinarySearchFunc(matches, off, func(m [2]int, off int) int {
+			if off >= m[1] {
+				return -1
+			}
+			if off < m[0] {
+				return 1
+			}
+			return 0
+		})
+		return i < len(matches) && off >= matches[i][0] && off < matches[i][1]
+	}
 	secondary := map[int]bool{} // heads of the secondary cursors
 	for _, s := range sels[1:] {
 		secondary[s.Head] = true
@@ -339,6 +353,9 @@ func (e *Editor) drawText(vm *viewBuilder, r regions) {
 				break
 			}
 			disp, style := e.glyphLook(g, text, selected(start+g.Off), tokens.class(start+g.Off))
+			if len(matches) > 0 && (style == ports.StyleDefault || style >= ports.StyleKeyword && style <= ports.StyleMeta) && matched(start+g.Off) {
+				style = ports.StyleMatch
+			}
 			if secondary[start+g.Off] {
 				style = ports.StyleCursorSecondary
 			}
@@ -525,6 +542,12 @@ func (e *Editor) drawPrompt(vm *viewBuilder, r regions) {
 	lw := uniseg.StringWidth(label)
 	vm.add(0, y, label, ports.StylePromptLabel)
 	vm.add(lw, y, p.input.String(), ports.StylePromptInput)
+	if e.live.active && e.live.miss {
+		const note = "  not found"
+		if x := lw + uniseg.StringWidth(p.input.String()); x+len(note) <= e.width {
+			vm.add(x, y, note, ports.StyleError)
+		}
+	}
 	vm.Cursor = ports.Cursor{X: lw + p.input.CursorCells(), Y: y, Visible: true}
 }
 

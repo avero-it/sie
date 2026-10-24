@@ -96,6 +96,7 @@ type Editor struct {
 	history          []invocation // most recent first
 	clip             string
 	lastQuery        string
+	live             liveFind // incremental search while the Find prompt is open
 	dragging         bool
 	dragUnit         dragUnit        // word/line granularity of the current drag
 	dragFrom, dragTo int             // the unit first selected by a double or triple click

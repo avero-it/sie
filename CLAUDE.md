@@ -104,7 +104,7 @@ internal/adapters/
   - Job IDs are `epoch<<40 | document version`. The epoch changes when the document or language changes, so late results for an older document are discarded.
 - **Between results:** the kept tokens are mapped through `Document.ChangesSince` (a change log covering edits, undo and redo). Tokens before an edit stay, tokens after it shift, and tokens touched by it are dropped and drawn plain until the next result. Typing latency doesn't depend on file size; colors settle about one scan later (about 50 ms for 130 KB of Go).
 - **Limits and toggle:** documents over `syntax_max_size` (default `2MB`) are never sent to the highlighter. "Syntax highlighting" (`view.toggleSyntax`, ✓ option, config `syntax_highlighting`, default on) turns it off.
-- **Classes and precedence:** keyword, string, number, comment, constant, key, type, builtin and meta, mapped in `syntax.classify`. Precedence: whitespace markers > selection > control/invalid glyphs > syntax class.
+- **Classes and precedence:** keyword, string, number, comment, constant, key, type, builtin and meta, mapped in `syntax.classify`. Precedence: whitespace markers > selection > live-search match > control/invalid glyphs > syntax class.
 
 ### File dialog (Open, Save as)
 
@@ -121,6 +121,14 @@ internal/adapters/
   - Paths are shown relative to `Config.WorkDir` when inside it, else as `~/…` (`Config.HomeDir`), else absolute.
   - `~` is expanded in `cmdOpen`/`cmdSaveAs`, so it also works inline: `open ~/notes.txt`.
   - The core only uses `path/filepath`. Listing goes through `FileStore.List`, and `cmd/sie` supplies the working and home directories (`os.Getwd`, `os.UserHomeDir`).
+
+### Live search
+
+- The Find prompt (`search.find`, Ctrl+F) searches as you type (`app/livefind.go`). `askArgs` calls `startLive`, which saves the selection and scroll; `promptChanged` calls `liveSearch`, which restores them and selects the first match from there (wrapping, `smartCase`, like Find), then `follow()`s it.
+- No match: the cursor stays where it started and the prompt line shows `not found`.
+- Other matches on the visible lines (up to 500) are drawn with `StyleMatch` (underline + bold, so syntax colors stay), below selection in precedence.
+- Any close (Esc, Enter, click, prompt toggle) goes through `promptState.onClose` = `endLive`, which restores the cursor and scroll. Enter then runs the normal Find from there, so it lands on the same match.
+- Replace… does not search live.
 
 ### Open recent
 

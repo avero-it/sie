@@ -41,6 +41,8 @@ const (
 	// first glyph of a line that starts at the guide column.
 	StyleGuide
 	StyleGuideMatch
+	// StyleMatch marks the other matches of the text typed in the Find prompt.
+	StyleMatch
 
 	// StyleCount is the number of styles (not a style); themes must cover all.
 	StyleCount
