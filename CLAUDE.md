@@ -203,6 +203,14 @@ internal/adapters/
 - **App:** `drawText` walks screen rows (line number only on a line's first row; continuation rows show `↳` in the gutter); Up/Down, Alt+Up/Down and PgUp/PgDn move by screen row (`MoveRows`, preferred cell kept), Home/End stay logical. Clicks map through `rowAt` + `OffsetAtRow`. The wheel scrolls rows.
 - **Not while wrapping:** the indent guide is hidden, and Alt+drag rectangles are ignored (Alt+click still adds a cursor). Turning on Column selection turns wrap off, and wrap refuses to turn on during column mode.
 
+### Split view
+
+- `view.toggleSplit` ("Split view", ✓ option in the View menu, **Ctrl+P X**, aliases `split`, `horizontal split`, `two panes`, config `split`, default off) shows two stacked panes onto the **same document**: one cursor and selection, in the focused pane. `view.focusOtherPane` ("Switch pane", **Ctrl+P 2**) moves the cursor's pane to the other half; a click or the wheel also works on the pane under the pointer.
+- **Model:** a pane is only a `editor.Viewport`. `Editor.view` is always the *focused* pane's viewport, `Editor.other` the other one, `focusBottom` tells which half is focused, and `swapPanes` exchanges them. `regions` describes the focused pane in `textTop/textRows/rulerY` (so the ripple, guide, live search and hit-testing code is unchanged) and the other in `regions.other`, with `dividerY` between. Sizes are fixed: the upper pane gets `rows/2`, the lower the rest. Each pane has its own ruler and scroll position.
+- **Drawing:** `drawOtherPane` swaps the viewports for a moment and reuses `drawRuler`/`drawText`; the divider is `StyleDivider`. The terminal cursor is only drawn in the focused pane. `layout` clamps the other pane's `Top` after edits.
+- **Small screens:** below `minSplitRows` (9 text rows) the split is not drawn; the setting is kept. Wrap is global; both panes reset their `Left`/`Skip` when it changes.
+- **Not done:** movable dividers, more than two panes, own cursors per pane, mapping the other pane's `Top` through edits (it is clamped only).
+
 ### Column ruler
 
 - `view.toggleColumnRuler` ("Column ruler", ✓ option in the View menu, **Ctrl+P O**, aliases `ruler`, `columns`, `column numbers`, config `column_ruler`, default on). The first text row shows the column numbers (`drawRuler`): dots, and the number of every tenth column starting at that column. Columns are 1-based screen cells and follow `view.Left`, so the numbers move when the text scrolls sideways. `StyleRuler`.
@@ -291,6 +299,7 @@ Lets an agent (Claude Code) work on the live buffer, unsaved changes included. I
 | Ctrl+P U / J | Move line up / down | Ctrl+P M | Toggle comment |
 | Ctrl+P V / Q | Select next / previous occurrence | Ctrl+P Z | Wrap lines |
 | Ctrl+P O | Column ruler | Ctrl+P D | Detach MCP |
+| Ctrl+P X | Split view | Ctrl+P 2 | Switch pane |
 
 **Indent and word delete** (editing primitives in `editorKey`, not commands, not echoed; domain code in `domain/editor/lineops.go`):
 - **Tab** inserts `\t`; with a selection spanning lines (`Document.SelectsLines`, one selection only) it indents every non-blank touched line (`Indent`), one undo step.

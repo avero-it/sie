@@ -12,14 +12,27 @@ import (
 
 // Screen layout, top to bottom: menu bar (1 row), text area (rest), prompt
 // line (1 row), status line (1 row).
+//
+// textTop, textRows and rulerY describe the focused pane. While the view is
+// split, the other pane is in other and dividerY is the row between them.
 type regions struct {
 	menuY, textTop, textRows, promptY, statusY int
 	rulerY                                     int // column ruler row; 0 when not shown
 	gutter                                     int // line-number column width, incl. trailing space
+	split                                      bool
+	dividerY                                   int
+	other                                      pane // the unfocused pane; only when split
 }
+
+// pane is the screen rows of one text pane.
+type pane struct{ rulerY, textTop, textRows int }
 
 // minRulerRows is the text height below which the ruler is left out.
 const minRulerRows = 4
+
+// minSplitRows is the text height (menu, prompt and status excluded) below
+// which a split is not drawn: two panes of minRulerRows plus the divider.
+const minSplitRows = 2*minRulerRows + 1
 
 func (e *Editor) regions() regions {
 	r := regions{
@@ -31,15 +44,50 @@ func (e *Editor) regions() regions {
 		gutter:   len(fmt.Sprint(e.doc.LineCount())) + 2,
 	}
 	// Wrapped text never scrolls sideways, so a ruler would never move.
-	if e.columnRuler && !e.wrap && r.textRows >= minRulerRows {
-		r.rulerY, r.textTop, r.textRows = 1, 2, r.textRows-1
+	ruler := e.columnRuler && !e.wrap
+	withRuler := func(p pane) pane {
+		if ruler && p.textRows >= minRulerRows {
+			p.rulerY, p.textTop, p.textRows = p.textTop, p.textTop+1, p.textRows-1
+		}
+		return p
 	}
+	if e.split && r.textRows >= minSplitRows {
+		topRows := r.textRows / 2
+		top := withRuler(pane{textTop: 1, textRows: topRows})
+		r.dividerY = 1 + topRows
+		bottom := withRuler(pane{textTop: r.dividerY + 1, textRows: r.textRows - 1 - topRows})
+		r.split = true
+		focused, other := top, bottom
+		if e.focusBottom {
+			focused, other = bottom, top
+		}
+		r.rulerY, r.textTop, r.textRows, r.other = focused.rulerY, focused.textTop, focused.textRows, other
+		return r
+	}
+	p := withRuler(pane{textTop: 1, textRows: r.textRows})
+	r.rulerY, r.textTop, r.textRows = p.rulerY, p.textTop, p.textRows
 	return r
 }
 
 func (e *Editor) layout() {
 	r := e.regions()
 	e.view.Resize(r.textRows, e.width-r.gutter)
+	if r.split {
+		e.other.Resize(r.other.textRows, e.width-r.gutter)
+		e.other.Top = max(0, min(e.other.Top, e.doc.LineCount()-1))
+	}
+}
+
+// swapPanes makes the other pane the focused one. The cursor stays where it
+// is: the pane's viewport is all that moves.
+func (e *Editor) swapPanes() {
+	e.view, e.other = e.other, e.view
+	e.focusBottom = !e.focusBottom
+}
+
+// inOtherPane reports whether row y lies in the unfocused pane (the split drawn).
+func (e *Editor) inOtherPane(y int, r regions) bool {
+	return r.split && y >= r.other.textTop && y < r.other.textTop+r.other.textRows
 }
 
 // rect is a screen rectangle; popups list their rows from first.
@@ -125,11 +173,18 @@ func (e *Editor) handleMouse(m ports.MouseEvent) {
 			e.selectCompletion(e.prompt.selected + delta/3)
 			return
 		}
+		swapped := e.inOtherPane(m.Y, r)
+		if swapped {
+			e.view, e.other = e.other, e.view // scroll the pane under the pointer
+		}
 		if e.wrap {
 			e.view.ScrollRows(delta, e.doc.LineCount(), e.rowsOf)
-			return
+		} else {
+			e.view.ScrollBy(delta, e.doc.LineCount())
 		}
-		e.view.ScrollBy(delta, e.doc.LineCount())
+		if swapped {
+			e.view, e.other = e.other, e.view
+		}
 		return
 	}
 	switch m.Action {
@@ -190,6 +245,10 @@ func (e *Editor) handleMouse(m ports.MouseEvent) {
 			e.openPrompt()
 		}
 		return
+	}
+	if e.inOtherPane(m.Y, r) {
+		e.swapPanes()
+		r = e.regions()
 	}
 	if m.Y >= r.textTop && m.Y < r.textTop+r.textRows {
 		if e.focus == focusPrompt {
@@ -288,6 +347,10 @@ func (e *Editor) View() ports.ViewModel {
 	}
 	r := e.regions()
 	e.drawMenuBar(vm, r)
+	if r.split {
+		e.drawOtherPane(vm, r)
+		vm.fill(r.dividerY, ports.StyleDivider)
+	}
 	e.drawRuler(vm, r)
 	e.drawText(vm, r)
 	e.drawRipples(vm, r)
@@ -301,6 +364,19 @@ func (e *Editor) View() ports.ViewModel {
 		e.drawCompletions(vm)
 	}
 	return vm.ViewModel
+}
+
+// drawOtherPane draws the unfocused pane by letting it take the focused
+// pane's place for a moment. It never shows the terminal cursor.
+func (e *Editor) drawOtherPane(vm *viewBuilder, r regions) {
+	o := r
+	o.rulerY, o.textTop, o.textRows = r.other.rulerY, r.other.textTop, r.other.textRows
+	cursor := vm.Cursor
+	e.view, e.other = e.other, e.view
+	e.drawRuler(vm, o)
+	e.drawText(vm, o)
+	e.view, e.other = e.other, e.view
+	vm.Cursor = cursor
 }
 
 type viewBuilder struct{ ports.ViewModel }

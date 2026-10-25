@@ -57,6 +57,7 @@ func DefaultTheme() Theme {
 		ports.StyleGuide:       d.Foreground(tcell.ColorGray),
 		ports.StyleGuideMatch:  d.Reverse(true),
 		ports.StyleMatch:       d.Underline(true).Bold(true),
+		ports.StyleDivider:     d.Foreground(tcell.ColorGray).Reverse(true),
 	}
 }
 

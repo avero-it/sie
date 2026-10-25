@@ -25,7 +25,7 @@ func DefaultMenus() []Menu {
 			separator, "selection.alignPrevious", "selection.alignNext"}},
 		{"Search", []string{"search.find", "search.next", "search.prev", separator,
 			"search.replace", "search.replaceAll", separator, "search.gotoLine"}},
-		{"View", []string{"view.toggleInvisibles", "view.toggleEmptyCells", "view.toggleClickRipple", "view.toggleIndentGuide", "view.toggleColumnRuler", "view.toggleWrap", separator,
+		{"View", []string{"view.toggleInvisibles", "view.toggleEmptyCells", "view.toggleClickRipple", "view.toggleIndentGuide", "view.toggleColumnRuler", "view.toggleWrap", "view.toggleSplit", "view.focusOtherPane", separator,
 			"view.toggleSyntax", "view.setLanguage", separator, "view.toggleValidateOnSave"}},
 		{"Help", []string{"ui.prompt", "mcp.detach", "help.about"}},
 	}

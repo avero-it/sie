@@ -117,6 +117,13 @@ func builtins() []command {
 			Aliases: []string{"wrap", "word wrap", "soft wrap", "line wrap"},
 			Checked: func(e *Editor) bool { return e.wrap },
 			Run:     (*Editor).cmdToggleWrap},
+		{ID: "view.toggleSplit", Title: "Split view",
+			Aliases: []string{"split", "horizontal split", "two panes", "split screen"},
+			Checked: func(e *Editor) bool { return e.split },
+			Run:     (*Editor).cmdToggleSplit},
+		{ID: "view.focusOtherPane", Title: "Switch pane",
+			Aliases: []string{"other pane", "next pane", "focus pane"},
+			Run:     (*Editor).cmdFocusOtherPane},
 		{ID: "view.toggleSyntax", Title: "Syntax highlighting",
 			Aliases: []string{"toggle syntax", "highlighting", "colors"},
 			Checked: func(e *Editor) bool { return e.showSyntax },
@@ -451,9 +458,36 @@ func (e *Editor) cmdToggleWrap([]string) error {
 	return nil
 }
 
+// cmdToggleSplit shows or hides the second pane. The new pane starts at the
+// same place as the focused one.
+func (e *Editor) cmdToggleSplit([]string) error {
+	e.split = !e.split
+	if e.split {
+		e.follow()
+		e.other = e.view
+		e.focusBottom = false
+		e.note("on")
+	} else {
+		e.note("off")
+	}
+	e.follow()
+	return nil
+}
+
+// cmdFocusOtherPane moves the cursor's pane to the other half of the split.
+func (e *Editor) cmdFocusOtherPane([]string) error {
+	if !e.split || !e.regions().split {
+		return errors.New("view is not split")
+	}
+	e.swapPanes()
+	e.follow()
+	return nil
+}
+
 func (e *Editor) setWrap(on bool) {
 	e.wrap = on
 	e.view.Left, e.view.Skip = 0, 0
+	e.other.Left, e.other.Skip = 0, 0
 	e.doc.SetSelection(e.doc.Selection()) // forget the preferred column
 	e.follow()
 	if on {

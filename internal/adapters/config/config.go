@@ -23,6 +23,7 @@ type Settings struct {
 	ClickRipple    bool   `mapstructure:"click_ripple"`     // wave animation on clicks
 	IndentGuide    bool   `mapstructure:"indent_guide"`     // flash a guide when the line indent moves
 	Wrap           bool   `mapstructure:"wrap"`             // wrap long lines
+	Split          bool   `mapstructure:"split"`            // two stacked panes
 	ColumnRuler    bool   `mapstructure:"column_ruler"`     // column numbers on the first text row
 	LineEnding     string `mapstructure:"line_ending"`      // for new files: "lf" or "crlf"
 	JumpLines      int    `mapstructure:"jump_lines"`       // lines moved by Alt+Up/Down
@@ -77,6 +78,7 @@ func load(paths []string, mustExist bool) (Settings, []string, error) {
 	v.SetDefault("click_ripple", d.ClickRipple)
 	v.SetDefault("indent_guide", d.IndentGuide)
 	v.SetDefault("wrap", d.Wrap)
+	v.SetDefault("split", d.Split)
 	v.SetDefault("column_ruler", d.ColumnRuler)
 	v.SetDefault("line_ending", d.LineEnding)
 	v.SetDefault("jump_lines", d.JumpLines)

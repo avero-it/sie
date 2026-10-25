@@ -47,6 +47,8 @@ const (
 	StyleWrapMark
 	// StyleMatch marks the other matches of the text typed in the Find prompt.
 	StyleMatch
+	// StyleDivider is the row between the two panes of a split view.
+	StyleDivider
 
 	// StyleCount is the number of styles (not a style); themes must cover all.
 	StyleCount

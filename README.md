@@ -114,6 +114,7 @@ Chords (press **Ctrl+P**, release, then the letter; Esc cancels):
 | Ctrl+P R | Replace all… | Ctrl+P H | About |
 | Ctrl+P U / J | Move line up / down | Ctrl+P M | Toggle comment |
 | Ctrl+P V / Q | Select next / previous occurrence | Ctrl+P Z | Wrap lines |
+| Ctrl+P X | Split view (two stacked panes) | Ctrl+P 2 | Switch pane |
 | Ctrl+P O | Column ruler | Ctrl+P D | Detach MCP |
 
 **Ctrl+/** is the same as Ctrl+P M. On an Italian keyboard that is Ctrl+Shift+7. Some terminals don't send it (macOS Terminal.app may not), so use the chord there. Toggle comment needs a known language (see Set language…).
@@ -223,6 +224,7 @@ show_empty_cells: true  # mark cells holding no character (·)
 click_ripple: false     # a wave animation on every click in the text
 indent_guide: false     # briefly show a vertical guide when a line's indent moves
 wrap: false             # wrap long lines instead of scrolling sideways
+split: false            # two stacked panes onto the same document
 column_ruler: true      # column numbers on the first text row (not while wrapping)
 line_ending: lf         # for new files: lf or crlf
 jump_lines: 5           # lines moved by Alt+↑/↓ (1–100)

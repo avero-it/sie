@@ -137,6 +137,8 @@ func DefaultChords() []Chord {
 		{'c', "view.toggleClickRipple"},
 		{'g', "view.toggleIndentGuide"},
 		{'z', "view.toggleWrap"},
+		{'x', "view.toggleSplit"},
+		{'2', "view.focusOtherPane"},
 		{'o', "view.toggleColumnRuler"},
 		{'s', "view.toggleSyntax"},
 		{'y', "view.setLanguage"},

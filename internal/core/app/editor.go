@@ -31,6 +31,7 @@ type Config struct {
 	IndentGuide    bool             // flash a guide when the cursor line's indent moves
 	Wrap           bool             // wrap long lines instead of scrolling sideways
 	ColumnRuler    bool             // column numbers on the first text row (not while wrapping)
+	Split          bool             // two stacked panes onto the same document
 	ClickRipple    bool             // animate a wave on every click in the text
 	Now            func() time.Time // clock for animations; nil means time.Now
 	JumpLines      int              // lines moved by Alt+Up/Down; <= 0 means defaultJumpLines
@@ -89,6 +90,10 @@ type Editor struct {
 	file ports.File // the open file behind a large doc; nil when the doc is in memory
 	path string
 	view editor.Viewport
+	// other is the unfocused pane's viewport while the view is split; focusBottom
+	// tells whether the focused pane is the lower one.
+	other       editor.Viewport
+	focusBottom bool
 
 	width, height    int
 	focus            focus
@@ -112,6 +117,7 @@ type Editor struct {
 	indentGuide    bool
 	wrap           bool
 	columnRuler    bool
+	split          bool
 	indent         indentState
 	guide          guideState
 	ripples        []ripple
@@ -137,6 +143,7 @@ func New(cfg Config) (*Editor, error) {
 		reg:   commands.NewRegistry[*Editor](),
 		menus: cfg.Menus,
 		view:  editor.Viewport{ScrollOff: 2, SideScrollOff: 4},
+		other: editor.Viewport{ScrollOff: 2, SideScrollOff: 4},
 
 		showInvisibles: cfg.ShowInvisibles,
 		showEmptyCells: cfg.ShowEmptyCells,
@@ -144,6 +151,7 @@ func New(cfg Config) (*Editor, error) {
 		indentGuide:    cfg.IndentGuide,
 		wrap:           cfg.Wrap,
 		columnRuler:    cfg.ColumnRuler,
+		split:          cfg.Split,
 		showSyntax:     cfg.SyntaxHighlighting,
 		validateOnSave: cfg.ValidateOnSave,
 	}
@@ -461,6 +469,7 @@ func (e *Editor) setDoc(d *editor.Document, path string) {
 	}
 	e.doc, e.path = d, path
 	e.view.Top, e.view.Left, e.view.Skip = 0, 0, 0
+	e.other.Top, e.other.Left, e.other.Skip = 0, 0, 0
 	e.hl.manual = false
 	e.resetHighlight()
 	e.detectLanguage()
