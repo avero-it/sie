@@ -190,6 +190,7 @@ nav a:hover { color: var(--fg); }
 .term .n { color: var(--term-num); }
 .term .gd { color: var(--term-dim); }
 .term .r { color: var(--term-dim); }
+.term .dv { background: var(--term-bar); color: #b9bec7; }
 .term .mt { text-decoration: underline; font-weight: 700; }
 .term .t1 { background: var(--term-ripple1); }
 .term .t2 { background: var(--term-ripple2); }

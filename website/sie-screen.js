@@ -134,6 +134,9 @@
       invisibles: false,
       ruler: true, // column ruler (hidden while wrapping)
       wrap: false,
+      split: false, // two stacked panes; top2 is the other pane's first line, focus2 tells the cursor is in the lower one
+      top2: 0,
+      focus2: false,
       left: 0, // horizontal scroll, in cells
       find: null, // live search: the text typed in the Find prompt
       cursors: [{ l: 0, c: 0 }],
@@ -217,7 +220,19 @@
   };
 
   // textTop is the first text row: the ruler is above it while it shows.
-  Demo.prototype.textTop = function () { return this.rulerOn() ? 2 : 1; };
+  Demo.prototype.textTop = function () { return this.panes().list[this.focusIdx()].T; };
+  Demo.prototype.focusIdx = function () { return this.s.split && this.panes().list.length > 1 && this.s.focus2 ? 1 : 0; };
+  // panes mirrors app.regions: with a split, the text rows around one divider
+  // row, the upper pane getting rows/2; each pane has its own ruler.
+  Demo.prototype.panes = function () {
+    var n = this.rows - 3, ru = this.rulerOn();
+    function mk(y, rows) { return ru && rows >= 4 ? { ruler: y, T: y + 1, TR: rows - 1 } : { ruler: 0, T: y, TR: rows }; }
+    if (this.s.split && !this.s.shell && n >= 9) {
+      var up = n >> 1;
+      return { list: [mk(1, up), mk(up + 2, n - 1 - up)], div: up + 1 };
+    }
+    return { list: [mk(1, n)], div: 0 };
+  };
   Demo.prototype.rulerOn = function () { return !!(this.s.ruler && !this.s.wrap && !this.s.shell); };
 
   Demo.prototype.rippleAt = function (l, c) {
@@ -276,25 +291,27 @@
     for (c = 0; c < W; c++) put(0, c, " ", "m");
     puts(0, 0, " File  Edit  Selection  Search  View  Help", "m");
 
-    // column ruler: dots, and the number of every tenth column starting at that column
-    var T = this.textTop(), TR = H - 2 - T;
     var width = W - G;
-    if (this.rulerOn()) {
-      for (c = 0; c < W; c++) put(1, c, c < G ? " " : ".", "r");
-      for (var col = (Math.max(s.left - 3, 0) / 10 | 0) * 10 + 10; col - s.left <= width; col += 10) {
-        var num = String(col), rx = col - 1 - s.left;
-        if (rx < 0) { num = num.slice(Math.min(-rx, num.length)); rx = 0; }
-        puts(1, G + rx, num.slice(0, Math.max(0, width - rx)), "r");
-      }
-    }
-
-    // text rows: one segment per screen row (a whole line, or a piece of it while wrapping)
     var guide = s.guide && !s.wrap && now - s.guide.t0 < GUIDE_MS ? s.guide : null;
     var cur0 = s.cursors[0];
     var secondary = {};
     s.cursors.slice(1).forEach(function (p) { secondary[p.l + ":" + p.c] = true; });
-    var segs = [];
-    for (var sl0 = s.top; segs.length < TR && sl0 < s.lines.length; sl0++) {
+    var lay = this.panes();
+    var panes = lay.list, fi = this.focusIdx(), segsOf = [];
+    panes.forEach(function (pn, pidx) {
+      var T = pn.T, TR = pn.TR, top = pidx === fi ? s.top : (s.top2 || 0), segs;
+      // column ruler: dots, and the number of every tenth column starting at that column
+      if (pn.ruler) {
+        for (c = 0; c < W; c++) put(pn.ruler, c, c < G ? " " : ".", "r");
+        for (var col = (Math.max(s.left - 3, 0) / 10 | 0) * 10 + 10; col - s.left <= width; col += 10) {
+          var num = String(col), rx = col - 1 - s.left;
+          if (rx < 0) { num = num.slice(Math.min(-rx, num.length)); rx = 0; }
+          puts(pn.ruler, G + rx, num.slice(0, Math.max(0, width - rx)), "r");
+        }
+      }
+      // text rows: one segment per screen row (a whole line, or a piece of it while wrapping)
+    segs = [];
+    for (var sl0 = top; segs.length < TR && sl0 < s.lines.length; sl0++) {
       var sline = expandTabs(s.lines[sl0]);
       if (!s.wrap) {
         segs.push({ li: sl0, line: sline, from: s.left, to: s.left + width, first: true, last: true });
@@ -356,6 +373,10 @@
       }
     }
 
+      segsOf.push(segs);
+    });
+    if (lay.div) for (c = 0; c < W; c++) put(lay.div, c, " ", "dv");
+    var T = panes[fi].T, TR = panes[fi].TR, segs = segsOf[fi];
     // ripple, then the indent guide, over the text
     if (s.ripple) {
       var age = now - s.ripple.t0;

@@ -335,6 +335,32 @@ sie v0.9.0… Ln 1, Col 1   WRAP   Plain   UTF-8   LF</pre></div></div>
     </article>
     <article class="feature">
       <div class="ftext">
+        <h3>Split view</h3>
+        <p>See two places of the same file at once. <em>Split view</em> stacks two panes, each with its own scroll position and column ruler, so you can keep a definition in view while you edit where it is used. It is still one document with one cursor: click a pane or press <kbd>Ctrl+P 2</kbd> to move the cursor there, and every edit shows up in both. The panes are always the same height, and on a very small terminal the split steps aside until there is room.</p>
+        <p class="keys"><kbd>Ctrl+P X</kbd> split · <kbd>Ctrl+P 2</kbd> switch pane · <code>split</code></p>
+      </div>
+      <figure class="demo">
+        <div class="term" data-demo="split" role="img" aria-label="Splitting the view into two panes, scrolling the lower one to main, clicking in it to edit, switching panes with the keyboard and going back to one pane"><div class="screen"><pre> File  Edit  Selection  Search  View  Help
+   .........10........20........30........40........50
+ 4 type Config struct {·······························
+ 5     Host string····································
+ 6     Port int ······································
+ 7 }··················································
+ 8 ···················································
+
+   .........10........20........30........40........50
+13 func main() {······································
+14     cfg := load()··································
+15     fmt.Println(cfg.Host)··························
+16     fmt.Println(cfg.Port)··························
+&gt; ✓ Split view — on                          Ctrl+P X
+sie v0.9.0 - main.go   Ln 6, Col 13   Go   UTF-8   LF</pre></div></div>
+        <div class="keystrip" aria-hidden="true"></div>
+        <p class="caption" aria-live="off"></p>
+      </figure>
+    </article>
+    <article class="feature">
+      <div class="ftext">
         <h3>Large files</h3>
         <p>Files over 32&nbsp;MB are not loaded into memory: sie keeps them on disk and reads only the part you are looking at. A 1&nbsp;GB log opens in about 0.2 seconds using a few MB of RAM, and editing, undo, find, replace and save all work. Saving streams to a temporary file and swaps it in, and if another program changes the file meanwhile, sie asks you to reload or quit instead of overwriting it.</p>
         <p>Above the limit (<code>large_file_size</code>) validation is skipped and copying more than 64&nbsp;MB is refused, each with a clear message.</p>
@@ -485,7 +511,7 @@ sudo apk add --allow-untrusted ./sie_&lt;version&gt;_linux_amd64.apk</pre></div>
         </table>
       </div>
     </div>
-    <p class="sub" style="margin-top:16px">Every other command is a chord: press <kbd>Ctrl+P</kbd>, then a letter. <kbd>Ctrl+P L</kbd> trims leading spaces, <kbd>Ctrl+P T</kbd> trailing ones, <kbd>Ctrl+P P</kbd> / <kbd>Ctrl+P N</kbd> align the line to the previous / next one, <kbd>Ctrl+P A</kbd> is Save as, <kbd>Ctrl+P F</kbd> / <kbd>B</kbd> find next / previous, <kbd>Ctrl+P U</kbd> / <kbd>J</kbd> move the line up / down, <kbd>Ctrl+P V</kbd> / <kbd>Q</kbd> select the next / previous occurrence, <kbd>Ctrl+P M</kbd> toggles comments (as <kbd>Ctrl+/</kbd>). <kbd>Ctrl+P Z</kbd> wraps long lines, <kbd>Ctrl+P O</kbd> toggles the column ruler. <kbd>Ctrl+P D</kbd> detaches an AI agent (MCP). <kbd>Shift+Tab</kbd> outdents and <kbd>Alt+Backspace</kbd> deletes a word. The full list is in the README.</p>
+    <p class="sub" style="margin-top:16px">Every other command is a chord: press <kbd>Ctrl+P</kbd>, then a letter. <kbd>Ctrl+P L</kbd> trims leading spaces, <kbd>Ctrl+P T</kbd> trailing ones, <kbd>Ctrl+P P</kbd> / <kbd>Ctrl+P N</kbd> align the line to the previous / next one, <kbd>Ctrl+P A</kbd> is Save as, <kbd>Ctrl+P F</kbd> / <kbd>B</kbd> find next / previous, <kbd>Ctrl+P U</kbd> / <kbd>J</kbd> move the line up / down, <kbd>Ctrl+P V</kbd> / <kbd>Q</kbd> select the next / previous occurrence, <kbd>Ctrl+P M</kbd> toggles comments (as <kbd>Ctrl+/</kbd>). <kbd>Ctrl+P Z</kbd> wraps long lines, <kbd>Ctrl+P O</kbd> toggles the column ruler. <kbd>Ctrl+P X</kbd> splits the view into two panes and <kbd>Ctrl+P 2</kbd> switches between them. <kbd>Ctrl+P D</kbd> detaches an AI agent (MCP). <kbd>Shift+Tab</kbd> outdents and <kbd>Alt+Backspace</kbd> deletes a word. The full list is in the README.</p>
     <p class="sub" style="margin-top:16px">Move by word with <kbd>Alt+←/→</kbd> or <kbd>Ctrl+←/→</kbd>, by <code>jump_lines</code> lines with <kbd>Alt+↑/↓</kbd>, to the line ends with <kbd>Home</kbd>/<kbd>End</kbd> and to the file ends with <kbd>Ctrl+Home</kbd>/<kbd>End</kbd>. Add a cursor with <kbd>Alt+click</kbd>.</p>
   </div>
 </section>

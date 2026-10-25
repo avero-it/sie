@@ -532,6 +532,61 @@
     }
   };
 
+  // ---- split view ----------------------------------------------------------------
+
+  var GOSPLIT = [
+    "package main", "", "// Config holds the server settings.", "type Config struct {",
+    "    Host string", "    Port int", "}", "", "func load() Config {",
+    "    return Config{\"localhost\", 8080}", "}", "", "func main() {",
+    "    cfg := load()", "    fmt.Println(cfg.Host)", "    fmt.Println(cfg.Port)", "}"
+  ];
+
+  // swapPane moves the cursor to the other pane: each pane keeps its own scroll.
+  function swapPane(d) {
+    var s = d.s, t = s.top;
+    s.top = s.top2; s.top2 = t; s.focus2 = !s.focus2;
+  }
+
+  defs.split = {
+    cols: 54,
+    rows: 14,
+    run: async function (d) {
+      d.s.name = "main.go"; d.s.lang = "Go"; d.setLines(GOSPLIT);
+      d.s.top = 3; d.cursor(5, 12);
+      d.say("One file, one cursor. Sometimes you want to see two places at once.");
+      await d.sleep(1600);
+      d.say("Split view shows the same document in two stacked panes.");
+      d.press("Ctrl+P X");
+      d.s.split = true; d.s.top2 = 3;
+      d.echo("✓ Split view — on", "Ctrl+P X");
+      await d.sleep(1800);
+      d.say("Each pane scrolls on its own: the lower one goes to main(), the upper keeps the struct.");
+      for (var t = 3; t <= 12; t += 3) { d.s.top2 = t; await d.sleep(260); }
+      await d.sleep(1500);
+      d.say("Click in the lower pane and the cursor moves there. Edits go to the one document.");
+      swapPane(d); d.click(15, 25);
+      d.idle();
+      await d.sleep(900);
+      await d.type(" // TCP", 70);
+      await d.sleep(1200);
+      d.say("Ctrl+P 2 switches pane without the mouse.");
+      d.press("Ctrl+P 2");
+      swapPane(d); d.cursor(5, 12);
+      d.echo("Switch pane", "Ctrl+P 2");
+      await d.sleep(2000);
+      d.say("Ctrl+P X again goes back to one pane.");
+      d.press("Ctrl+P X");
+      d.s.split = false;
+      d.echo("  Split view — off", "Ctrl+P X");
+      await d.sleep(2200);
+    },
+    still: function (d) {
+      d.s.name = "main.go"; d.s.lang = "Go"; d.setLines(GOSPLIT);
+      d.s.split = true; d.s.top = 3; d.s.top2 = 12; d.cursor(5, 12);
+      d.echo("✓ Split view — on", "Ctrl+P X");
+    }
+  };
+
   // ---- one binary ----------------------------------------------------------------
 
   defs.binary = {
