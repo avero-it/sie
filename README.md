@@ -192,7 +192,7 @@ or on unsaved changes, use the mcp__sie__* tools. For everything else
 - **Its edits are yours to review.** An edit goes into the open buffer and marks it modified. One edit is one undo step, so **Ctrl+Z** takes it back. The agent can't save, quit or open files, so you save with **Ctrl+S** when you are happy.
 - **It never overwrites what you just typed.** Every edit names the revision of the text the agent read. If you typed in between, the edit is refused and the agent reads again.
 - **Only you can reach it.** Each running sie listens on `~/.sie/sock/<pid>.sock` (directory mode 0700, socket 0600), so only your user can connect. There is no network port. Set `mcp: false` (or `SIE_MCP=false`) to turn the socket off.
-- **Unix only for now:** Linux and macOS. On Windows the socket is not opened yet.
+- **Unix only for now:** Linux and macOS. On Windows the socket is not opened (the `mcp` setting has no effect), `sie mcp` says it is not available, and *Detach MCP* does nothing.
 
 With several sie running, the agent attaches to the one you used last, or to the one it picks with `list_sessions`. Text that isn't valid UTF-8 is handed to the agent with `\xNN` escapes so it can't be damaged by an edit.
 

@@ -1,3 +1,5 @@
+//go:build !windows
+
 package main
 
 import (
@@ -5,7 +7,6 @@ import (
 	"io"
 	"os"
 	"os/signal"
-	"runtime"
 	"syscall"
 
 	"github.com/avero-it/sie/internal/adapters/ipc"
@@ -17,9 +18,6 @@ import (
 // and returns the function that closes it. A socket that cannot be opened
 // is reported on warn and never stops the editor.
 func startControl(remote ports.Remote, term *tui.Terminal, warn io.Writer) (stop func()) {
-	if runtime.GOOS == "windows" {
-		return func() {} // named pipes are not implemented yet
-	}
 	dir, err := ipc.DefaultDir()
 	if err == nil {
 		var srv *ipc.Server

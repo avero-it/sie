@@ -1,3 +1,5 @@
+//go:build !windows
+
 package ipc
 
 const instructions = `sie is a terminal text editor the user is working in. These tools act on the buffer open in it, including unsaved changes, so you and the user edit the same text live. Use them when the user asks about the file open in sie, their selection, or unsaved changes; use your normal file tools for everything else.
