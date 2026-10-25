@@ -119,6 +119,8 @@ type Editor struct {
 	hl             highlightState
 	validateOnSave bool
 
+	remote remoteState // the control API: attached session, pending question
+
 	skippedValidation bool // the last save was not validated because the file is too large
 	columnMode        bool // Shift+arrows and plain drags make rectangles
 }
@@ -159,6 +161,7 @@ func New(cfg Config) (*Editor, error) {
 		}
 	}
 	e.doc = e.newDoc(nil)
+	e.remote.input = e.now()
 	return e, nil
 }
 
@@ -176,10 +179,12 @@ func (e *Editor) afterInput() {
 	e.checkFile()
 	e.syncHighlight()
 	e.trackIndent()
+	e.settleAttach()
 }
 
 // HandleKey routes a key to the focused component.
 func (e *Editor) HandleKey(k ports.KeyEvent) {
+	e.remote.input = e.now()
 	if e.focus == focusEditor {
 		e.clearMessage()
 	}
@@ -197,6 +202,7 @@ func (e *Editor) HandleKey(k ports.KeyEvent) {
 
 // HandlePaste inserts pasted text as one edit (one undo step).
 func (e *Editor) HandlePaste(text string) {
+	e.remote.input = e.now()
 	e.chordPrefix = nil
 	if e.focus == focusEditor {
 		e.clearMessage()

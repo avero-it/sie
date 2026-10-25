@@ -32,6 +32,8 @@ type Settings struct {
 	SyntaxMaxSize      string `mapstructure:"syntax_max_size"` // e.g. "2MB", "512KB"
 	SyntaxMaxBytes     int    `mapstructure:"-"`               // SyntaxMaxSize parsed
 
+	MCP bool `mapstructure:"mcp"` // open the control socket for `sie mcp` (SIE_MCP)
+
 	LargeFileSize  string `mapstructure:"large_file_size"` // e.g. "32MB": larger files stay on disk
 	LargeFileBytes int    `mapstructure:"-"`               // LargeFileSize parsed
 }
@@ -39,7 +41,7 @@ type Settings struct {
 // Defaults returns the built-in settings.
 func Defaults() Settings {
 	return Settings{TabWidth: 4, ShowInvisibles: false, ShowEmptyCells: true, ColumnRuler: true, ClickRipple: false, LineEnding: "lf", JumpLines: 5,
-		SyntaxHighlighting: true, SyntaxMaxSize: "2MB", SyntaxMaxBytes: 2 << 20, ValidateOnSave: true,
+		SyntaxHighlighting: true, SyntaxMaxSize: "2MB", SyntaxMaxBytes: 2 << 20, ValidateOnSave: true, MCP: true,
 		LargeFileSize: "32MB", LargeFileBytes: 32 << 20}
 }
 
@@ -80,6 +82,7 @@ func load(paths []string, mustExist bool) (Settings, []string, error) {
 	v.SetDefault("jump_lines", d.JumpLines)
 	v.SetDefault("syntax_highlighting", d.SyntaxHighlighting)
 	v.SetDefault("validate_on_save", d.ValidateOnSave)
+	v.SetDefault("mcp", d.MCP)
 	v.SetDefault("syntax_max_size", d.SyntaxMaxSize)
 	v.SetDefault("large_file_size", d.LargeFileSize)
 	v.SetEnvPrefix("SIE")

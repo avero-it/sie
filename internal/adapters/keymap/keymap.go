@@ -142,6 +142,7 @@ func DefaultChords() []Chord {
 		{'y', "view.setLanguage"},
 		{'w', "view.toggleValidateOnSave"},
 		{'h', "help.about"},
+		{'d', "mcp.detach"},
 	} {
 		out = append(out, Chord{p, r(c.key), c.cmd})
 	}

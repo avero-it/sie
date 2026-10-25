@@ -17,7 +17,7 @@ This file is the source of truth for humans and agents. If code and this file di
 ## Architecture
 
 ```
-cmd/sie/                        composition root (cobra CLI: `sie [file]`, `sie version`, `sie config`): loads settings, wires adapters to ports. Only place that knows concrete adapters.
+cmd/sie/                        composition root (cobra CLI: `sie [file]`, `sie version`, `sie config`, `sie mcp`): loads settings, wires adapters to ports. Only place that knows concrete adapters.
 internal/buildinfo/             version, commit, commit/build time, Go version (ldflags first, then embedded VCS info)
 internal/core/domain/           pure logic, stdlib only (+ github.com/rivo/uniseg)
   buffer/   piece table over a Source (memory or file), sparse line index, UTF-8/grapheme-aware positions, line-ending detection (LF/CRLF preserved)
@@ -32,6 +32,7 @@ internal/core/app/              application layer (tcell-free, os-free)
 internal/core/ports/            interfaces only
   driving:  EditorService (HandleKey, HandleMouse, HandlePaste, Resize, Dispatch, View, Done, Poll)
   driven:   FileStore (Open, WriteFrom, Exists, List; Open returns a File: ReaderAt + Len + Close), RecentFiles, Validator, Clipboard, Keymap, Highlighter (async: Highlight job → Result)   (settings are read once by cmd/sie and passed as plain app.Config values, so no config port)
+  driving (control API): Remote (state, text, structured edits, find, validate, run, attach/detach; implemented by app.Editor, used by adapters/ipc)
   values:   KeyEvent, MouseEvent, ViewModel{Runs, Tints, Cursor, Animate}, Style, Token/TokenClass, HighlightJob/Result
 internal/adapters/
   tui/        Terminal (owns the tcell screen; New, SetClipboard, Run), event loop, key/mouse/paste normalization, painter + Theme
@@ -41,6 +42,7 @@ internal/adapters/
   syntax/     chroma highlighter: background worker (newest job wins), chroma token types → core TokenClass
   fs/         os-based FileStore (atomic streaming save: temp file + rename, preserves permissions; Open gives a chunk-cached, change-detecting file view)
   clipboard/  OSC52 (via Terminal.SetClipboard) + native: Win32 API on Windows, pbcopy / wl-copy / xclip / xsel elsewhere (optional)
+  ipc/        control API: unix socket per instance (~/.sie/sock/<pid>.sock), newline-delimited JSON-RPC 2.0, plus the `sie mcp` bridge (MCP over stdio → sockets). Imports only ports.
   config/     viper: /etc/sie/config.yaml merged with ~/.sie/config.yaml (user wins per key), SIE_* env vars, --config overrides
 ```
 
@@ -231,6 +233,21 @@ internal/adapters/
 - **Clipboard:** with several cursors, Copy/Cut put `SelectedTexts()` (document order, empty selections kept as empty lines) joined with `\n` on the clipboard, and say "nothing selected" if all are empty. Paste with N cursors splits the text into lines (a trailing line break first counts as an empty last line, then as a terminator); if there are N lines, `InsertEach` puts line *i* on the *i*-th cursor in document order (`forEachCursor` exposes the rank), else the whole text goes to every cursor. Copy, Cut and the toggle are `MultiCursor` commands.
 - **Cost:** `forEachCursor` snaps the other cursors once at the end of a run (not after every edit). Selecting any height is instant; typing into a 5,000-line rectangle takes about 0.5 s (piece table, O(pieces) per edit), 20,000 lines about 8 s.
 
+### MCP server (control API)
+
+Lets an agent (Claude Code) work on the live buffer, unsaved changes included. It complements the agent's file tools, it does not replace them.
+
+- **Instance side** (`adapters/ipc`, started by `cmd/sie/control.go` when `mcp` is true, default; env `SIE_MCP`): `ipc.Listen` creates `~/.sie/sock` (0700, must be ours, refuses a looser mode), sweeps sockets nobody listens on, and opens `<pid>.sock` with 0600 (umask set around `net.Listen`). SIGTERM/SIGHUP remove the socket, then the signal is re-sent. Not implemented on Windows (`dir_windows.go` returns an error, `startControl` is a no-op there): named pipe with ACL is future work.
+- **Threading:** the listener never touches the editor. Each request becomes a job for `tui.Terminal.Submit`, which queues it and wakes the loop; `loop()` in `ipc/server.go` waits for the answer with `CallTimeout` (10 s) and then abandons the job (a CAS flag keeps an abandoned job from editing later). Jobs run in `draw()` before `Poll`. `Submit` before `Run` is queued and runs on the first frame.
+- **Protocol:** JSON-RPC 2.0, one message per line, one connection per client; methods in `ipc/protocol.go`. Editor errors are `-32000` with a stable `data.code` (`ports.Code*`: `not_authorized`, `denied`, `busy`, `stale_revision`, `out_of_range`, `too_large`, `invalid_params`, `failed`). `hello` and `info` need no session; everything else does.
+- **Authorization** (`app/remote.go`): `Remote.Attach` shows the choice prompt `<client> wants to control this buffer` ([y]es [n]o [a]lways) through `choose`; `a` is remembered until `mcp.detach`. The client name comes from the handshake and is stripped of control characters. One session at a time (`busy` otherwise, also while the user is in a prompt or menu). The attach question times out after 60 s (`CancelAttach`); a dismissed question is a denial (`settleAttach`, run from `afterInput`). A client that disconnects detaches. While attached the status line shows `● MCP`. `mcp.detach` ("Detach MCP", **Ctrl+P D**, Help menu) ends the session and forgets *always*.
+- **Editing:** coordinates are 1-based lines and grapheme columns (`Document.OffsetAtGrapheme`/`GraphemePos`), ranges end exclusive, `(lines+1, 1)` is the end of the buffer. Edits carry the expected revision (`Document.Version()`); a mismatch is `stale_revision` and changes nothing. One call is one undo step (`BeginUndoGroup`). Edits never save. `Text` returns LF-normalized lines, at most 2000 per call, always a range for large (on-disk) files (`too_large`).
+- **Invalid UTF-8:** valid text travels as is. Otherwise the result has `escaped: true`: an invalid byte is `\xNN`, a backslash is `\\`; writes take `escaped: true` for the same form (`escapeInvalid`/`unescapeText`).
+- **run_command** goes through `Registry.ParseInline` and `Dispatch` (echoed and kept in history, so the user sees it). Refused: commands whose ID starts with `file.`, `ui.` or `mcp.` and `search.replace` (`remoteDenied`), commands with missing arguments, and anything that ends up opening a prompt (it is closed and reported). So the agent cannot save, open, quit or answer questions. `save` is deliberately not a tool.
+- **`sie mcp`** (`ipc/mcp.go`, `mcp_tools.go`): MCP over stdio, hand-written (no SDK). It discovers instances (`ipc.Discover`, removes stale sockets), attaches to the one used last (or `pid`) and maps tools onto socket methods with the same arguments. It calls `attach` itself on the first tool call, and never re-attaches after the user detached.
+- **Tests:** `ipc/server_test.go` (fake Remote: permissions, stale sockets, auth, timeouts, protocol errors), `app/remote_test.go`, `tui` Submit test, and `cmd/sie/mcp_e2e_test.go` (real editor + socket + bridge, the loop played by a goroutine, no pty).
+- **Not done yet:** Windows named pipe, change notifications, `sie --remote`, landing-page demo.
+
 ### Default keymap (v0)
 
 | Key | Command | Key | Command |
@@ -273,7 +290,7 @@ internal/adapters/
 | Ctrl+P R | Replace all… | Ctrl+P H | About |
 | Ctrl+P U / J | Move line up / down | Ctrl+P M | Toggle comment |
 | Ctrl+P V / Q | Select next / previous occurrence | Ctrl+P Z | Wrap lines |
-| Ctrl+P O | Column ruler | | |
+| Ctrl+P O | Column ruler | Ctrl+P D | Detach MCP |
 
 **Indent and word delete** (editing primitives in `editorKey`, not commands, not echoed; domain code in `domain/editor/lineops.go`):
 - **Tab** inserts `\t`; with a selection spanning lines (`Document.SelectsLines`, one selection only) it indents every non-blank touched line (`Indent`), one undo step.

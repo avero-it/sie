@@ -14,32 +14,39 @@ import (
 // "Set language…") and reports either that it is valid or the first
 // problem, moving the cursor onto it.
 func (e *Editor) cmdValidate([]string) error {
-	v := e.cfg.Validator
-	if v == nil {
-		return errors.New("validation is not available")
-	}
-	lang := e.hl.language
-	if !supports(v, lang) {
-		what := lang
-		if what == "" {
-			what = "plain text"
-		}
-		return fmt.Errorf("cannot validate %s (supported: %s)", what, strings.Join(v.Languages(), ", "))
-	}
-	if e.tooLarge() {
-		return fmt.Errorf("file too large to validate (%s, limit %s)", formatSize(e.doc.Len()), formatSize(e.largeFileSize()))
-	}
-	p, err := v.Validate(lang, []byte(e.doc.Text()))
+	_, p, err := e.runValidate()
 	switch {
 	case err != nil:
 		return err
 	case p == nil:
-		e.note("✓ valid " + lang)
+		e.note("✓ valid " + e.hl.language)
 		return nil
 	case p.Line > 0:
 		e.doc.SetSelection(editor.Cursor(e.problemOffset(p)))
 	}
 	return errors.New(problemText(p))
+}
+
+// runValidate checks the document as its language and returns the first
+// problem, nil when the document is valid.
+func (e *Editor) runValidate() (lang string, p *ports.Problem, err error) {
+	v := e.cfg.Validator
+	if v == nil {
+		return "", nil, errors.New("validation is not available")
+	}
+	lang = e.hl.language
+	if !supports(v, lang) {
+		what := lang
+		if what == "" {
+			what = "plain text"
+		}
+		return lang, nil, fmt.Errorf("cannot validate %s (supported: %s)", what, strings.Join(v.Languages(), ", "))
+	}
+	if e.tooLarge() {
+		return lang, nil, fmt.Errorf("file too large to validate (%s, limit %s)", formatSize(e.doc.Len()), formatSize(e.largeFileSize()))
+	}
+	p, err = v.Validate(lang, []byte(e.doc.Text()))
+	return lang, p, err
 }
 
 // problemOffset converts a problem's line and character column to a

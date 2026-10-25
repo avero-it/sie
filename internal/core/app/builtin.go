@@ -138,6 +138,7 @@ func builtins() []command {
 
 		{ID: "ui.prompt", Title: "Command prompt", Silent: true, Run: (*Editor).cmdTogglePrompt},
 		{ID: "ui.menu", Title: "Menu", Silent: true, Run: (*Editor).cmdToggleMenu},
+		{ID: "mcp.detach", Title: "Detach MCP", Aliases: []string{"mcp detach", "detach"}, Run: (*Editor).cmdDetachMCP},
 		{ID: "help.about", Title: "About sie", Aliases: []string{"version"}, Run: (*Editor).cmdAbout},
 	}
 }

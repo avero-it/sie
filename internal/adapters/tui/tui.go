@@ -17,6 +17,7 @@ import (
 type Terminal struct {
 	screen tcell.Screen
 	theme  Theme
+	jobs   jobQueue
 }
 
 // New opens the terminal (or Windows console) without initializing it yet.
@@ -34,15 +35,29 @@ func New() (*Terminal, error) {
 // every redraw anyway.
 func (t *Terminal) Wake() { _ = t.screen.PostEvent(tcell.NewEventInterrupt(nil)) }
 
+// Submit queues fn to run on the event loop goroutine, which owns the
+// editor, just before the next frame is drawn. Safe to call from any
+// goroutine. A job submitted before Run starts runs on its first frame;
+// one submitted after Run returned never runs, so callers wait for their
+// result with a timeout.
+func (t *Terminal) Submit(fn func()) {
+	t.jobs.add(fn)
+	if t.jobs.live.Load() {
+		t.Wake()
+	}
+}
+
 // SetClipboard sends data to the terminal clipboard via OSC52.
 func (t *Terminal) SetClipboard(data []byte) { t.screen.SetClipboard(data) }
 
 // Run runs the editor in the terminal until it reports Done.
-func (t *Terminal) Run(svc ports.EditorService) error { return run(t.screen, svc, t.theme) }
+func (t *Terminal) Run(svc ports.EditorService) error {
+	return run(t.screen, svc, t.theme, &t.jobs)
+}
 
 // run initializes the screen and runs the event loop until the service
 // reports Done. The terminal is always restored, also on panic.
-func run(screen tcell.Screen, svc ports.EditorService, theme Theme) (err error) {
+func run(screen tcell.Screen, svc ports.EditorService, theme Theme, jobs *jobQueue) (err error) {
 	if err := screen.Init(); err != nil {
 		return fmt.Errorf("init terminal: %w", err)
 	}
@@ -53,10 +68,14 @@ func run(screen tcell.Screen, svc ports.EditorService, theme Theme) (err error) 
 			panic(r) // re-panic after the terminal is restored, so the trace is readable
 		}
 	}()
+	if jobs != nil {
+		jobs.live.Store(true)
+		defer jobs.live.Store(false)
+	}
 	screen.EnableMouse(tcell.MouseButtonEvents | tcell.MouseDragEvents)
 	screen.EnablePaste()
 
-	l := &loop{screen: screen, svc: svc, theme: theme}
+	l := &loop{screen: screen, svc: svc, theme: theme, jobs: jobs}
 	svc.Resize(screen.Size())
 
 	events := make(chan tcell.Event, 256)
@@ -117,6 +136,7 @@ type loop struct {
 	svc    ports.EditorService
 	theme  Theme
 	mouse  mouseTracker
+	jobs   *jobQueue
 
 	pasting bool
 	paste   strings.Builder
@@ -168,6 +188,9 @@ func (l *loop) collectPaste(ev *tcell.EventKey) {
 
 // draw paints one frame and reports whether the view is animating.
 func (l *loop) draw() bool {
+	if l.jobs != nil {
+		l.jobs.run()
+	}
 	l.svc.Poll()
 	vm := l.svc.View()
 	paint(l.screen, vm, l.theme)

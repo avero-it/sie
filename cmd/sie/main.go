@@ -58,7 +58,7 @@ func newRootCmd() *cobra.Command {
 		},
 	}
 	root.PersistentFlags().StringVar(&configPath, "config", "", "read settings only from this file")
-	root.AddCommand(newVersionCmd(), newConfigCmd(&configPath))
+	root.AddCommand(newVersionCmd(), newConfigCmd(&configPath), newMCPCmd())
 	return root
 }
 
@@ -92,8 +92,8 @@ func newConfigCmd(configPath *string) *cobra.Command {
 			}
 			fmt.Fprintf(out, "tab_width: %d\nshow_invisibles: %t\nshow_empty_cells: %t\nclick_ripple: %t\nindent_guide: %t\nwrap: %t\ncolumn_ruler: %t\nline_ending: %s\njump_lines: %d\n",
 				s.TabWidth, s.ShowInvisibles, s.ShowEmptyCells, s.ClickRipple, s.IndentGuide, s.Wrap, s.ColumnRuler, s.LineEnding, s.JumpLines)
-			fmt.Fprintf(out, "syntax_highlighting: %t\nsyntax_max_size: %s\nvalidate_on_save: %t\nlarge_file_size: %s\n",
-				s.SyntaxHighlighting, s.SyntaxMaxSize, s.ValidateOnSave, s.LargeFileSize)
+			fmt.Fprintf(out, "syntax_highlighting: %t\nsyntax_max_size: %s\nvalidate_on_save: %t\nmcp: %t\nlarge_file_size: %s\n",
+				s.SyntaxHighlighting, s.SyntaxMaxSize, s.ValidateOnSave, s.MCP, s.LargeFileSize)
 			return nil
 		},
 	}
@@ -152,6 +152,9 @@ func runEditor(configPath string, args []string) error {
 	}
 	if len(args) == 1 {
 		_ = editor.Dispatch("file.open", args[0]) // errors show in the prompt line
+	}
+	if settings.MCP {
+		defer startControl(editor, term, os.Stderr)()
 	}
 	return term.Run(editor)
 }

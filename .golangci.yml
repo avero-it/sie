@@ -40,6 +40,7 @@ linters:
             - "**/internal/adapters/clipboard/**"
             - "**/internal/adapters/config/**"
             - "**/internal/adapters/keymap/**"
+            - "**/internal/adapters/ipc/**"
           deny:
             - pkg: "github.com/gdamore/tcell"
               desc: "tcell is allowed only in internal/adapters/tui"

@@ -114,7 +114,7 @@ Chords (press **Ctrl+P**, release, then the letter; Esc cancels):
 | Ctrl+P R | Replace all… | Ctrl+P H | About |
 | Ctrl+P U / J | Move line up / down | Ctrl+P M | Toggle comment |
 | Ctrl+P V / Q | Select next / previous occurrence | Ctrl+P Z | Wrap lines |
-| Ctrl+P O | Column ruler | | |
+| Ctrl+P O | Column ruler | Ctrl+P D | Detach MCP |
 
 **Ctrl+/** is the same as Ctrl+P M. On an Italian keyboard that is Ctrl+Shift+7. Some terminals don't send it (macOS Terminal.app may not), so use the chord there. Toggle comment needs a known language (see Set language…).
 
@@ -170,6 +170,32 @@ Files over `large_file_size` (32 MB by default) are not loaded into memory. They
 
 Saving also validates these file types. If the file has a problem, sie asks before writing: **v** shows the problem, **s** saves anyway, and **Esc** cancels. Turn this off with *View → Validate on save* or `validate_on_save: false`.
 
+### Working with an AI agent (MCP)
+
+`sie mcp` lets an agent such as Claude Code work on the buffer you have open in sie, including text you have not saved. You both edit the same text, and you see every change as it happens. The agent's own file tools stay in charge of everything else.
+
+Register it once:
+
+```sh
+claude mcp add sie -- sie mcp
+```
+
+Then open a file with `sie file.go` and ask Claude to work on it or on your selection. To keep it using the right tools, add this to your project's `CLAUDE.md`:
+
+```
+When the user asks to work on the file open in sie, on their selection
+or on unsaved changes, use the mcp__sie__* tools. For everything else
+(multiple files, refactoring, files not open) use the native tools.
+```
+
+- **You decide who gets in.** The first time the agent asks, the prompt line shows `Claude Code wants to control this buffer`: **y** allows it, **n** refuses, **a** allows it for as long as this sie runs. While an agent is attached the status line shows `● MCP`. *Help → Detach MCP* (or **Ctrl+P D**) takes the buffer back, and it also forgets an *always*.
+- **Its edits are yours to review.** An edit goes into the open buffer and marks it modified. One edit is one undo step, so **Ctrl+Z** takes it back. The agent can't save, quit or open files, so you save with **Ctrl+S** when you are happy.
+- **It never overwrites what you just typed.** Every edit names the revision of the text the agent read. If you typed in between, the edit is refused and the agent reads again.
+- **Only you can reach it.** Each running sie listens on `~/.sie/sock/<pid>.sock` (directory mode 0700, socket 0600), so only your user can connect. There is no network port. Set `mcp: false` (or `SIE_MCP=false`) to turn the socket off.
+- **Unix only for now:** Linux and macOS. On Windows the socket is not opened yet.
+
+With several sie running, the agent attaches to the one you used last, or to the one it picks with `list_sessions`. Text that isn't valid UTF-8 is handed to the agent with `\xNN` escapes so it can't be damaged by an edit.
+
 ### Showing whitespace
 
 - **Empty cells** (cells after the end of a line, and rows below the last line) show a faint `·` by default.
@@ -203,6 +229,7 @@ jump_lines: 5           # lines moved by Alt+↑/↓ (1–100)
 syntax_highlighting: true
 syntax_max_size: 2MB    # larger files are not colored
 validate_on_save: true  # check JSON/YAML/TOML/XML before saving
+mcp: true               # open the local socket that `sie mcp` talks to (SIE_MCP=false turns it off)
 large_file_size: 32MB   # larger files stay on disk and are read as needed
 ```
 

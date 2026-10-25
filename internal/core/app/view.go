@@ -104,6 +104,7 @@ func (e *Editor) showCompletions() bool {
 // the text area (click, shift-click and drag select; Alt+click adds a
 // cursor; wheel scrolls).
 func (e *Editor) HandleMouse(m ports.MouseEvent) {
+	e.remote.input = e.now()
 	if e.focus == focusEditor && m.Action == ports.MousePress {
 		e.chordPrefix = nil
 		e.clearMessage()
@@ -577,6 +578,9 @@ func (e *Editor) drawStatus(vm *viewBuilder, r regions) {
 	cursors := ""
 	if n := e.doc.CursorCount(); n > 1 {
 		cursors = fmt.Sprintf(" (%d cursors)", n)
+	}
+	if e.remote.session != 0 {
+		cursors += "   ● MCP"
 	}
 	if e.columnMode {
 		cursors += "   COLUMN"

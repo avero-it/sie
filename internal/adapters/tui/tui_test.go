@@ -235,7 +235,7 @@ func TestRunEndToEnd(t *testing.T) {
 	s := tcell.NewSimulationScreen("UTF-8")
 	svc := &fakeService{}
 	errc := make(chan error, 1)
-	go func() { errc <- run(s, svc, DefaultTheme()) }()
+	go func() { errc <- run(s, svc, DefaultTheme(), nil) }()
 
 	// run initializes the screen and then reports the size; injecting
 	// events before Init blocks the simulation screen.
@@ -286,6 +286,55 @@ func TestWakePollsBeforeDrawing(t *testing.T) {
 	for polls() == before {
 		if time.Now().After(deadline) {
 			t.Fatal("Wake did not lead to a poll")
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	s.InjectKey(tcell.KeyCtrlQ, 'q', tcell.ModCtrl)
+	if err := <-errc; err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSubmitRunsOnTheLoopBeforePolling(t *testing.T) {
+	s := tcell.NewSimulationScreen("UTF-8")
+	svc := &fakeService{}
+	term := &Terminal{screen: s, theme: DefaultTheme()}
+	errc := make(chan error, 1)
+	go func() { errc <- term.Run(svc) }()
+	ran := make(chan int, 1)
+	term.Submit(func() { // queued before or while the loop starts
+		svc.mu.Lock()
+		defer svc.mu.Unlock()
+		ran <- svc.polls
+	})
+	var before int
+	select {
+	case before = <-ran:
+	case <-time.After(5 * time.Second):
+		t.Fatal("job never ran")
+	}
+	// A later job wakes an idle loop, and runs before that frame's poll.
+	term.Submit(func() {
+		svc.mu.Lock()
+		defer svc.mu.Unlock()
+		ran <- svc.polls
+	})
+	var second int
+	select {
+	case second = <-ran:
+	case <-time.After(5 * time.Second):
+		t.Fatal("second job never ran")
+	}
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		svc.mu.Lock()
+		polls := svc.polls
+		svc.mu.Unlock()
+		if polls > second {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("no poll after the job (job saw %d, before %d)", second, before)
 		}
 		time.Sleep(5 * time.Millisecond)
 	}
