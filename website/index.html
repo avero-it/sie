@@ -358,6 +358,26 @@ sie v0.9.0 - even… Ln 13041772, Col 23   Plain   UTF-8   LF</pre></div></div>
     </article>
     <article class="feature">
       <div class="ftext">
+        <h3>Work with an AI agent</h3>
+        <p><code>sie mcp</code> lets an agent such as Claude Code work on the buffer you have open, unsaved changes included. You both edit the same text and see every change as it happens. Register it once with <code>claude mcp add sie -- sie mcp</code>.</p>
+        <p>You stay in charge: the agent must ask first (<kbd>y</kbd> yes, <kbd>n</kbd> no, <kbd>a</kbd> always), each edit is one undo step, and it can't save, quit or open files. An edit based on text you have since changed is refused. The socket is private to your user (<code>~/.sie/sock</code>, no network port) and is available on Linux and macOS.</p>
+        <p class="keys"><kbd>Ctrl+P D</kbd> detach the agent · <code>mcp</code> · <code>SIE_MCP=false</code></p>
+      </div>
+      <figure class="demo">
+        <div class="term" role="img" aria-label="sie asks whether Claude Code may control the buffer, then shows the MCP indicator in the status line"><div class="screen"><pre> File  Edit  Selection  Search  View  Help
+         .........10........20........30........40........50
+   1 │ func main() {
+   2 │     fmt.Println("hi")
+   3 │ }
+   4 │ ·····························
+         ···················································
+         ···················································
+Claude Code wants to control this buffer  [y]es [n]o [a]lways
+sie v0.9.0 - main.go [modified] Ln 2, Col 6   ● MCP   Go   UTF-8   LF</pre></div></div>
+      </figure>
+    </article>
+    <article class="feature">
+      <div class="ftext">
         <h3>One binary</h3>
         <p>Pure Go with <code>CGO_ENABLED=0</code>: one static file for Linux, macOS and Windows on amd64 and arm64. No runtime, no libraries, nothing to install on the server.</p>
         <p class="keys">Linux · macOS · Windows · amd64 · arm64</p>
@@ -465,7 +485,7 @@ sudo apk add --allow-untrusted ./sie_&lt;version&gt;_linux_amd64.apk</pre></div>
         </table>
       </div>
     </div>
-    <p class="sub" style="margin-top:16px">Every other command is a chord: press <kbd>Ctrl+P</kbd>, then a letter. <kbd>Ctrl+P L</kbd> trims leading spaces, <kbd>Ctrl+P T</kbd> trailing ones, <kbd>Ctrl+P P</kbd> / <kbd>Ctrl+P N</kbd> align the line to the previous / next one, <kbd>Ctrl+P A</kbd> is Save as, <kbd>Ctrl+P F</kbd> / <kbd>B</kbd> find next / previous, <kbd>Ctrl+P U</kbd> / <kbd>J</kbd> move the line up / down, <kbd>Ctrl+P V</kbd> / <kbd>Q</kbd> select the next / previous occurrence, <kbd>Ctrl+P M</kbd> toggles comments (as <kbd>Ctrl+/</kbd>). <kbd>Ctrl+P Z</kbd> wraps long lines, <kbd>Ctrl+P O</kbd> toggles the column ruler. <kbd>Shift+Tab</kbd> outdents and <kbd>Alt+Backspace</kbd> deletes a word. The full list is in the README.</p>
+    <p class="sub" style="margin-top:16px">Every other command is a chord: press <kbd>Ctrl+P</kbd>, then a letter. <kbd>Ctrl+P L</kbd> trims leading spaces, <kbd>Ctrl+P T</kbd> trailing ones, <kbd>Ctrl+P P</kbd> / <kbd>Ctrl+P N</kbd> align the line to the previous / next one, <kbd>Ctrl+P A</kbd> is Save as, <kbd>Ctrl+P F</kbd> / <kbd>B</kbd> find next / previous, <kbd>Ctrl+P U</kbd> / <kbd>J</kbd> move the line up / down, <kbd>Ctrl+P V</kbd> / <kbd>Q</kbd> select the next / previous occurrence, <kbd>Ctrl+P M</kbd> toggles comments (as <kbd>Ctrl+/</kbd>). <kbd>Ctrl+P Z</kbd> wraps long lines, <kbd>Ctrl+P O</kbd> toggles the column ruler. <kbd>Ctrl+P D</kbd> detaches an AI agent (MCP). <kbd>Shift+Tab</kbd> outdents and <kbd>Alt+Backspace</kbd> deletes a word. The full list is in the README.</p>
     <p class="sub" style="margin-top:16px">Move by word with <kbd>Alt+←/→</kbd> or <kbd>Ctrl+←/→</kbd>, by <code>jump_lines</code> lines with <kbd>Alt+↑/↓</kbd>, to the line ends with <kbd>Home</kbd>/<kbd>End</kbd> and to the file ends with <kbd>Ctrl+Home</kbd>/<kbd>End</kbd>. Add a cursor with <kbd>Alt+click</kbd>.</p>
   </div>
 </section>
