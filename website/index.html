@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>sie – a simple terminal editor</title>
-<meta name="description" content="sie (siMPLE eDITOR) is a small, modeless terminal text editor written in Go: one static binary for Linux, macOS and Windows.">
+<meta name="description" content="sie (siMPLE eDITOR) is a small, modeless terminal text editor written in Go: one static binary for Linux, macOS and Windows. An AI agent such as Claude Code can edit the open buffer with you over MCP.">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -14,6 +14,7 @@
     <a class="brand" href="#">sie</a>
     <nav>
       <a href="#features">Features</a>
+      <a href="#agent">AI agent</a>
       <a href="#install">Install</a>
       <a href="#keys">Keys</a>
       <a href="#config">Config</a>
@@ -28,7 +29,7 @@
   <div class="hero">
     <p><a class="badge" href="https://github.com/avero-it/sie/releases/tag/__VERSION__">__VERSION__</a></p>
     <h1>The editor that doesn’t get in your way</h1>
-    <p class="lead"><strong>sie</strong> stands for <strong>siMPLE eDITOR</strong>. A small, modeless terminal editor in Go: open a file, type, save. One static binary for Linux, macOS and Windows, with no C dependencies.</p>
+    <p class="lead"><strong>sie</strong> stands for <strong>siMPLE eDITOR</strong>. A small, modeless terminal editor in Go: open a file, type, save. One static binary for Linux, macOS and Windows, with no C dependencies. And an AI agent such as Claude Code can <a href="#agent">edit the open buffer with you</a> over MCP.</p>
     <div class="actions">
       <a class="btn" href="#install">Install</a>
       <a class="btn alt" href="https://github.com/avero-it/sie">View on GitHub</a>
@@ -100,6 +101,30 @@ sie v0.9.0 - notes… Ln 3, Col 8   YAML   UTF-8   LF</pre></div></div>
   Trim trailing spaces
 &gt; trim
 sie v0.9.0 - note… Ln 3, Col 6   Plain   UTF-8   LF</pre></div></div>
+        <div class="keystrip" aria-hidden="true"></div>
+        <p class="caption" aria-live="off"></p>
+      </figure>
+    </article>
+    <article class="feature" id="agent">
+      <div class="ftext">
+        <h3>Work with an AI agent (MCP)</h3>
+        <p><code>sie mcp</code> lets an agent such as Claude Code work on the buffer you have open, unsaved changes included. You both edit the same text and see every change as it happens. Register it once with <code>claude mcp add sie -- sie mcp</code>.</p>
+        <p>You stay in charge: the agent must ask first (<kbd>y</kbd> yes, <kbd>n</kbd> no, <kbd>a</kbd> always), each edit is one undo step, and it can't save, quit or open files. An edit based on text you have since changed is refused. The socket is private to your user (<code>~/.sie/sock</code>, no network port) and is available on Linux and macOS.</p>
+        <p class="keys"><kbd>Ctrl+P D</kbd> detach the agent · <code>mcp</code> · <code>SIE_MCP=false</code></p>
+      </div>
+      <figure class="demo">
+        <div class="term" data-demo="agent" role="img" aria-label="Claude Code asks to control the buffer, the user answers yes, the agent fixes two typos and adds a comment, the user undoes the comment, saves and detaches the agent"><div class="screen"><pre> File  Edit  Selection  Search  View  Help
+   .........10........20........30........40........50......
+ 1 package main·············································
+ 2 ·························································
+ 3 import "fmt"·············································
+ 4 ·························································
+ 5 func main() {············································
+ 6     fmt.Println("hello, world")··························
+ 7 }························································
+   ·························································
+Claude Code edited the buffer (Ctrl+Z undoes it)
+sie v0.9.0 - main.g… Ln 6, Col 30   ● MCP   Go   UTF-8   LF</pre></div></div>
         <div class="keystrip" aria-hidden="true"></div>
         <p class="caption" aria-live="off"></p>
       </figure>
@@ -380,26 +405,6 @@ sie v0.9.0 - main.go   Ln 6, Col 13   Go   UTF-8   LF</pre></div></div>
 sie v0.9.0 - even… Ln 13041772, Col 23   Plain   UTF-8   LF</pre></div></div>
         <div class="keystrip" aria-hidden="true"></div>
         <p class="caption" aria-live="off"></p>
-      </figure>
-    </article>
-    <article class="feature">
-      <div class="ftext">
-        <h3>Work with an AI agent</h3>
-        <p><code>sie mcp</code> lets an agent such as Claude Code work on the buffer you have open, unsaved changes included. You both edit the same text and see every change as it happens. Register it once with <code>claude mcp add sie -- sie mcp</code>.</p>
-        <p>You stay in charge: the agent must ask first (<kbd>y</kbd> yes, <kbd>n</kbd> no, <kbd>a</kbd> always), each edit is one undo step, and it can't save, quit or open files. An edit based on text you have since changed is refused. The socket is private to your user (<code>~/.sie/sock</code>, no network port) and is available on Linux and macOS.</p>
-        <p class="keys"><kbd>Ctrl+P D</kbd> detach the agent · <code>mcp</code> · <code>SIE_MCP=false</code></p>
-      </div>
-      <figure class="demo">
-        <div class="term" role="img" aria-label="sie asks whether Claude Code may control the buffer, then shows the MCP indicator in the status line"><div class="screen"><pre> File  Edit  Selection  Search  View  Help
-         .........10........20........30........40........50
-   1 │ func main() {
-   2 │     fmt.Println("hi")
-   3 │ }
-   4 │ ·····························
-         ···················································
-         ···················································
-Claude Code wants to control this buffer  [y]es [n]o [a]lways
-sie v0.9.0 - main.go [modified] Ln 2, Col 6   ● MCP   Go   UTF-8   LF</pre></div></div>
       </figure>
     </article>
     <article class="feature">

@@ -139,12 +139,13 @@
       focus2: false,
       left: 0, // horizontal scroll, in cells
       find: null, // live search: the text typed in the Find prompt
+      mcp: false, // an agent is attached: the status line shows "● MCP"
       cursors: [{ l: 0, c: 0 }],
       sels: [],
       pointer: null,
       ripple: null,
       guide: null,
-      prompt: null, // {kind: "echo"|"input"|"error"|"choice", text, hint}
+      prompt: null, // {kind: "echo"|"input"|"error"|"choice"|"info", text, hint}
       popup: null, // {rows: [{t, hint}], sel}
       keyUntil: 0,
       top: 0
@@ -244,7 +245,18 @@
   // find sets the text of the live search: its other matches are underlined.
   Demo.prototype.find = function (q) { this.s.find = q || null; };
   Demo.prototype.error = function (text) { this.s.prompt = { kind: "error", text: text, hint: "" }; };
-  Demo.prototype.choice = function (text) { this.s.prompt = { kind: "choice", text: text, hint: "" }; };
+  // choice shows a one-key question. With answers (["[y]es", "[n]o"]) the line
+  // is built like the editor's: the question is cut so the answers stay visible.
+  Demo.prototype.choice = function (text, answers) {
+    if (answers) {
+      var tail = answers.map(function (a) { return "  " + a; }).join("") + "  Esc ";
+      var room = this.cols - tail.length;
+      text = (text.length > room ? text.slice(0, Math.max(0, room - 1)) + "\u2026" : text) + tail;
+    }
+    this.s.prompt = { kind: "choice", text: text, hint: "" };
+  };
+  // info shows a message that is not a command echo (no "> " in front).
+  Demo.prototype.info = function (text) { this.s.prompt = { kind: "info", text: text, hint: "" }; };
   Demo.prototype.idle = function () { this.s.prompt = null; this.s.popup = null; };
   Demo.prototype.popup = function (rows, sel) { this.s.popup = rows ? { rows: rows, sel: sel || 0 } : null; };
 
@@ -454,7 +466,7 @@
     // status line
     for (c = 0; c < W; c++) put(H - 1, c, " ", "s");
     var left = "sie v0.9.0 - " + s.name + (s.modified ? " [modified]" : "");
-    var pos = "Ln " + (cur0.l + 1 + (s.base || 0)) + ", Col " + (cur0.c + 1) + (s.cursors.length > 1 ? " (" + s.cursors.length + " cursors)" : "") + (s.wrap ? "   WRAP" : "");
+    var pos = "Ln " + (cur0.l + 1 + (s.base || 0)) + ", Col " + (cur0.c + 1) + (s.cursors.length > 1 ? " (" + s.cursors.length + " cursors)" : "") + (s.mcp ? "   \u25cf MCP" : "") + (s.wrap ? "   WRAP" : "");
     var right = pos + "   " + s.lang + "   UTF-8" + (s.bom ? " BOM" : "") + "   " + s.eol;
     var room = W - right.length - 2;
     if (left.length > room) left = left.slice(0, Math.max(0, room - 1)) + "…";

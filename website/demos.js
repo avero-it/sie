@@ -587,6 +587,51 @@
     }
   };
 
+  // ---- AI agent (MCP) -----------------------------------------------------------
+
+  var GOAGENT = ["package main", "", 'import "fmt"', "", "func main() {", '    fmt.Println("helo, wrld")', "}"];
+  var GOFIXED = GOAGENT.slice(0, 5).concat(['    fmt.Println("hello, world")', "}"]);
+  var GODOC = GOFIXED.slice(0, 4).concat(["// main greets the world."], GOFIXED.slice(4));
+  var AGENT_EDIT = "Claude Code edited the buffer (Ctrl+Z undoes it)";
+
+  defs.agent = {
+    cols: 60,
+    run: async function (d) {
+      d.s.name = "main.go"; d.s.lang = "Go"; d.setLines(GOAGENT); d.cursor(4, 13); d.s.modified = true;
+      d.say("You are editing main.go and have not saved yet.");
+      await d.sleep(1600);
+      d.say("In Claude Code you ask: \u201cfix the typos in the file I have open in sie\u201d.");
+      await d.sleep(2200);
+      d.say("The agent has to ask first: y allows it, a allows it until you detach.");
+      d.choice("Claude Code wants to control this buffer", ["[y]es", "[n]o", "[a]lways"]);
+      await d.sleep(2600);
+      d.press("y"); d.s.mcp = true;
+      d.info("Claude Code attached (Detach MCP: Ctrl+P D)");
+      d.say("The status line shows \u25cf MCP for as long as it is attached.");
+      await d.sleep(2200);
+      d.say("It reads your unsaved text and edits it in place: you see every change.");
+      d.setLines(GOFIXED); d.cursor(5, 29); d.info(AGENT_EDIT);
+      await d.sleep(2200);
+      d.setLines(GODOC); d.cursor(5, 0); d.info(AGENT_EDIT);
+      await d.sleep(2200);
+      d.say("Each edit is one undo step: Ctrl+Z takes the last one back.");
+      d.press("Ctrl+Z"); d.setLines(GOFIXED); d.cursor(5, 29); d.echo("Undo", "Ctrl+Z");
+      await d.sleep(2200);
+      d.say("The agent can't save, quit or open files. You save when you are happy.");
+      d.press("Ctrl+S"); d.s.modified = false; d.echo("Save file \u2014 wrote 7 lines", "Ctrl+S");
+      await d.sleep(2200);
+      d.say("Ctrl+P D takes the buffer back.");
+      d.press("Ctrl+P D"); d.s.mcp = false;
+      d.echo("Detach MCP \u2014 Claude Code detached", "Ctrl+P D");
+      await d.sleep(2600);
+    },
+    still: function (d) {
+      d.s.name = "main.go"; d.s.lang = "Go"; d.setLines(GOFIXED); d.cursor(5, 29);
+      d.s.modified = true; d.s.mcp = true;
+      d.info(AGENT_EDIT);
+    }
+  };
+
   // ---- one binary ----------------------------------------------------------------
 
   defs.binary = {
